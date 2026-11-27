@@ -1,16 +1,16 @@
-// tests/qc-final.test.mjs — THẺ "KIỂM SAU SẢN XUẤT" (tab QC — js/qc-final.js).
-// Bao phủ: cặp 2 tuần xuất hàng (tuần lẻ + tuần kế — kiểm tuần 39 hay 40 đều
-// lấy cặp 39–40) · danh sách nguồn Kiểm Ván = 2 nhóm (VÁN THÔ BTP của lượt ép
-// chưa điền thành phẩm + Thành phẩm Ép Ván — LOẠI mục ĐVT = Thanh theo định mức)
-// · lưu/chặn validate ·
-// công thức Tổng kiểm = Đạt+Ngoại lệ+Loại · Tổng đạt = Đạt+Ngoại lệ · Tỉ lệ lỗi
-// · người kiểm + giờ HC/TC tự động từ vị trí bộ phận QC tên chứa "kiểm" · định
-// mức theo tháng + Hiệu suất · sửa/xóa + tombstone · render thẻ ngày + mini
-// card · cấu trúc (index.html · qc.js · events.js · state/storage/cloud/history/
-// main · sw.js v190 · styles.css).
+﻿// tests/qc-final.test.mjs â€” THáºº "KIá»‚M SAU Sáº¢N XUáº¤T" (tab QC â€” js/qc-final.js).
+// Bao phá»§: cáº·p 2 tuáº§n xuáº¥t hÃ ng (tuáº§n láº» + tuáº§n káº¿ â€” kiá»ƒm tuáº§n 39 hay 40 Ä‘á»u
+// láº¥y cáº·p 39â€“40) Â· danh sÃ¡ch nguá»“n Kiá»ƒm VÃ¡n = 2 nhÃ³m (VÃN THÃ” BTP cá»§a lÆ°á»£t Ã©p
+// chÆ°a Ä‘iá»n thÃ nh pháº©m + ThÃ nh pháº©m Ã‰p VÃ¡n â€” LOáº I má»¥c ÄVT = Thanh theo Ä‘á»‹nh má»©c)
+// Â· lÆ°u/cháº·n validate Â·
+// cÃ´ng thá»©c Tá»•ng kiá»ƒm = Äáº¡t+Ngoáº¡i lá»‡+Loáº¡i Â· Tá»•ng Ä‘áº¡t = Äáº¡t+Ngoáº¡i lá»‡ Â· Tá»‰ lá»‡ lá»—i
+// Â· ngÆ°á»i kiá»ƒm + giá» HC/TC tá»± Ä‘á»™ng tá»« vá»‹ trÃ­ bá»™ pháº­n QC tÃªn chá»©a "kiá»ƒm" Â· Ä‘á»‹nh
+// má»©c theo thÃ¡ng + Hiá»‡u suáº¥t Â· sá»­a/xÃ³a + tombstone Â· render tháº» ngÃ y + mini
+// card Â· cáº¥u trÃºc (index.html Â· qc.js Â· events.js Â· state/storage/cloud/history/
+// main Â· sw.js v190 Â· styles.css).
 'use strict';
 
-// ─── Stubs môi trường (giống qc.test.mjs) ──────────────────────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng qc.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -72,9 +72,9 @@ function check(name, cond) {
   else { failed++; console.error('FAIL ' + name); }
 }
 const approx = (a, b) => Math.abs(a - b) < 1e-6;
-// ═══ PHẦN 2 ═══
+// â•â•â• PHáº¦N 2 â•â•â•
 
-// ─── IMPORT MODULES (sau khi stub xong) ────────────────────────────
+// â”€â”€â”€ IMPORT MODULES (sau khi stub xong) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const { state, STORAGE_KEY_DELETED_IDS, STORAGE_KEY_QC_FINAL, STORAGE_KEY_QC_FINAL_RATE } = await import('../js/state.js');
 const qcf = await import('../js/qc-final.js');
 const qc = await import('../js/qc.js');
@@ -82,101 +82,101 @@ const fsMod = await import('node:fs');
 
 function setVal(id, v) { const el = document.getElementById(id); el.value = v; return el; }
 
-// ─── DỮ LIỆU GIẢ ──────────────────────────────────────────────
-// Năm 2026: tuần 39 = 21/09–27/09 · tuần 40 = 28/09–04/10 · tuần 41 = 05/10–11/10
+// â”€â”€â”€ Dá»® LIá»†U GIáº¢ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// NÄƒm 2026: tuáº§n 39 = 21/09â€“27/09 Â· tuáº§n 40 = 28/09â€“04/10 Â· tuáº§n 41 = 05/10â€“11/10
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.pressRecords = [
-  { id: 'p1', date: '2026-09-22', week: '2026-W39', year: 2026, productId: 'sp1', productName: 'Ván 1220×2440×9',  finishedQty: 300, vanTho: [], sticks: [] },
-  { id: 'p2', date: '2026-09-24', week: '2026-W39', year: 2026, productId: 'sp1', productName: 'Ván 1220×2440×9',  finishedQty: 200, vanTho: [], sticks: [] },
-  { id: 'p3', date: '2026-09-30', week: '2026-W40', year: 2026, productId: 'sp2', productName: 'Bullig 1200×300×50', finishedQty: 120, vanTho: [], sticks: [] },
-  { id: 'p4', date: '2026-09-23', week: '2026-W39', year: 2026, productId: 'sp2', productName: 'Bullig 1200×300×50', finishedQty: 80,  vanTho: [], sticks: [] },
-  { id: 'p5', date: '2026-09-15', week: '2026-W38', year: 2026, productId: 'sp1', productName: 'Ván 1220×2440×9',  finishedQty: 999, vanTho: [], sticks: [] } // NGOÀI cặp
+  { id: 'p1', date: '2026-09-22', week: '2026-W39', year: 2026, productId: 'sp1', productName: 'VÃ¡n 1220Ã—2440Ã—9',  finishedQty: 300, vanTho: [], sticks: [] },
+  { id: 'p2', date: '2026-09-24', week: '2026-W39', year: 2026, productId: 'sp1', productName: 'VÃ¡n 1220Ã—2440Ã—9',  finishedQty: 200, vanTho: [], sticks: [] },
+  { id: 'p3', date: '2026-09-30', week: '2026-W40', year: 2026, productId: 'sp2', productName: 'Bullig 1200Ã—300Ã—50', finishedQty: 120, vanTho: [], sticks: [] },
+  { id: 'p4', date: '2026-09-23', week: '2026-W39', year: 2026, productId: 'sp2', productName: 'Bullig 1200Ã—300Ã—50', finishedQty: 80,  vanTho: [], sticks: [] },
+  { id: 'p5', date: '2026-09-15', week: '2026-W38', year: 2026, productId: 'sp1', productName: 'VÃ¡n 1220Ã—2440Ã—9',  finishedQty: 999, vanTho: [], sticks: [] } // NGOÃ€I cáº·p
 ];
 state.hrPositions = [
-  { id: 'pqcf', name: 'QC Kiểm ván+thanh', department: 'QC', note: '' },
-  { id: 'pqcoth', name: 'Kiểm chất',        department: 'QC', note: '' }, // vị trí QC KHÁC — KHÔNG được tính giờ
-  { id: 'pep',  name: 'Ép ván',            department: 'Xưởng 2', note: '' }
+  { id: 'pqcf', name: 'QC Kiá»ƒm vÃ¡n+thanh', department: 'QC', note: '' },
+  { id: 'pqcoth', name: 'Kiá»ƒm cháº¥t',        department: 'QC', note: '' }, // vá»‹ trÃ­ QC KHÃC â€” KHÃ”NG Ä‘Æ°á»£c tÃ­nh giá»
+  { id: 'pep',  name: 'Ã‰p vÃ¡n',            department: 'XÆ°á»Ÿng 2', note: '' }
 ];
 state.hrEmployees = [
-  { id: 'e1', code: 'NV01', name: 'Nguyễn Văn A', department: 'QC', status: 'active', skills: [] },
-  { id: 'e2', code: 'NV02', name: 'Trần Thị B',   department: 'QC', status: 'active', skills: [] },
-  { id: 'e3', code: 'NV03', name: 'Lê Văn C',     department: 'QC', status: 'active', skills: [] }
+  { id: 'e1', code: 'NV01', name: 'Nguyá»…n VÄƒn A', department: 'QC', status: 'active', skills: [] },
+  { id: 'e2', code: 'NV02', name: 'Tráº§n Thá»‹ B',   department: 'QC', status: 'active', skills: [] },
+  { id: 'e3', code: 'NV03', name: 'LÃª VÄƒn C',     department: 'QC', status: 'active', skills: [] }
 ];
 state.hrAssignments = [
   { id: 'asg1', date: '2026-09-23', department: 'QC', positionId: 'pqcf', employeeId: 'e1', start: '07:00', end: '11:30', shiftIdx: 0 },
   { id: 'asg2', date: '2026-09-23', department: 'QC', positionId: 'pqcf', employeeId: 'e2', start: '13:00', end: '',      shiftIdx: 0 },
   { id: 'asg3', date: '2026-09-23', department: 'QC', positionId: 'pqcoth', employeeId: 'e3', start: '07:00', end: '16:00', shiftIdx: 0 }
 ];
-// ═══ PHẦN 3 ═══
+// â•â•â• PHáº¦N 3 â•â•â•
 
-// ─── A. CẶP 2 TUẦN XUẤT HÀNG + DANH SÁCH THÀNH PHẨM ──────────
-check('CẶP TUẦN: ngày ở tuần 39 (23/09) → cặp 39–40', (() => {
+// â”€â”€â”€ A. Cáº¶P 2 TUáº¦N XUáº¤T HÃ€NG + DANH SÃCH THÃ€NH PHáº¨M â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('Cáº¶P TUáº¦N: ngÃ y á»Ÿ tuáº§n 39 (23/09) â†’ cáº·p 39â€“40', (() => {
   const p = qcf.qcFinalPairWeeks('2026-09-23'); return p.start === 39 && p.end === 40;
 })());
-check('CẶP TUẦN: ngày ở tuần 40 (29/09) → VẪN cặp 39–40 (không chồng lấn)',
+check('Cáº¶P TUáº¦N: ngÃ y á»Ÿ tuáº§n 40 (29/09) â†’ VáºªN cáº·p 39â€“40 (khÃ´ng chá»“ng láº¥n)',
   (() => { const p = qcf.qcFinalPairWeeks('2026-09-29'); return p.start === 39 && p.end === 40; })());
-check('CẶP TUẦN: tuần 41 (07/10) → cặp 41–42 · nhãn "Tuần 41–42"',
-  (() => { const p = qcf.qcFinalPairWeeks('2026-10-07'); return p.start === 41 && p.end === 42 && qcf.qcFinalPairLabel('2026-10-07') === 'Tuần 41–42'; })());
-check('CẶP TUẦN: tuần 53 tính riêng (không có tuần 54)',
+check('Cáº¶P TUáº¦N: tuáº§n 41 (07/10) â†’ cáº·p 41â€“42 Â· nhÃ£n "Tuáº§n 41â€“42"',
+  (() => { const p = qcf.qcFinalPairWeeks('2026-10-07'); return p.start === 41 && p.end === 42 && qcf.qcFinalPairLabel('2026-10-07') === 'Tuáº§n 41â€“42'; })());
+check('Cáº¶P TUáº¦N: tuáº§n 53 tÃ­nh riÃªng (khÃ´ng cÃ³ tuáº§n 54)',
   (() => { const p = qcf.qcFinalPairWeeks('2027-01-01'); return p.end === null; })());
-check('THÀNH PHẨM 2 TUẦN: ngày 23/09 → gộp Ép Ván cặp 39–40 (sp1 = 500 · sp2 = 200 · loại lượt tuần 38)',
+check('THÃ€NH PHáº¨M 2 TUáº¦N: ngÃ y 23/09 â†’ gá»™p Ã‰p VÃ¡n cáº·p 39â€“40 (sp1 = 500 Â· sp2 = 200 Â· loáº¡i lÆ°á»£t tuáº§n 38)',
   (() => {
     const rows = qcf.qcFinalProducts2Weeks('2026-09-23');
     const s1 = rows.find(r => r.productId === 'sp1'), s2 = rows.find(r => r.productId === 'sp2');
     return rows.length === 2 && s1 && s1.qty === 500 && s2 && s2.qty === 200 && rows[0].qty >= rows[1].qty;
   })());
-check('THÀNH PHẨM 2 TUẦN: ngày 07/10 (cặp 41–42) → danh sách rỗng (chưa có lượt ép)',
+check('THÃ€NH PHáº¨M 2 TUáº¦N: ngÃ y 07/10 (cáº·p 41â€“42) â†’ danh sÃ¡ch rá»—ng (chÆ°a cÃ³ lÆ°á»£t Ã©p)',
   qcf.qcFinalProducts2Weeks('2026-10-07').length === 0);
 
-// ─── B. NGƯỜI KIỂM + GIỜ TỰ ĐỘNG TỪ NHÂN SỰ ──────────────────
-check('VỊ TRÍ KIỂM: CHỈ khớp tên chứa "kiểm" + ("ván"|"thanh") — loại "Kiểm chất"/"Ép ván"',
-  qcf.isQcFinalPos('QC Kiểm ván+thanh') === true && qcf.isQcFinalPos('Kiểm ván') === true &&
-  qcf.isQcFinalPos('Kiểm thanh') === true && qcf.isQcFinalPos('kiểm ván+thanh') === true &&
-  qcf.isQcFinalPos('Kiểm chất') === false && qcf.isQcFinalPos('Kiểm lò sấy') === false &&
-  qcf.isQcFinalPos('Kiểm đầu vào') === false && qcf.isQcFinalPos('Ép ván') === false &&
-  qcf.isQcFinalPos('Cắt chọn') === false);
-check('NGƯỜI KIỂM: 23/09 có 2 người bộ phận QC (người chính + giờ, giờ ra trống = hết ca)',
+// â”€â”€â”€ B. NGÆ¯á»œI KIá»‚M + GIá»œ Tá»° Äá»˜NG Tá»ª NHÃ‚N Sá»° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('Vá»Š TRÃ KIá»‚M: CHá»ˆ khá»›p tÃªn chá»©a "kiá»ƒm" + ("vÃ¡n"|"thanh") â€” loáº¡i "Kiá»ƒm cháº¥t"/"Ã‰p vÃ¡n"',
+  qcf.isQcFinalPos('QC Kiá»ƒm vÃ¡n+thanh') === true && qcf.isQcFinalPos('Kiá»ƒm vÃ¡n') === true &&
+  qcf.isQcFinalPos('Kiá»ƒm thanh') === true && qcf.isQcFinalPos('kiá»ƒm vÃ¡n+thanh') === true &&
+  qcf.isQcFinalPos('Kiá»ƒm cháº¥t') === false && qcf.isQcFinalPos('Kiá»ƒm lÃ² sáº¥y') === false &&
+  qcf.isQcFinalPos('Kiá»ƒm Ä‘áº§u vÃ o') === false && qcf.isQcFinalPos('Ã‰p vÃ¡n') === false &&
+  qcf.isQcFinalPos('Cáº¯t chá»n') === false);
+check('NGÆ¯á»œI KIá»‚M: 23/09 cÃ³ 2 ngÆ°á»i bá»™ pháº­n QC (ngÆ°á»i chÃ­nh + giá», giá» ra trá»‘ng = háº¿t ca)',
   (() => {
     const rows = qcf.hrQcFinalAssignmentsOf('2026-09-23');
-    return rows.length === 2 && rows[0].name === 'Nguyễn Văn A' && rows[0].time === '07:00–11:30' &&
-           rows[1].name === 'Trần Thị B' && rows[1].time === '13:00 → hết ca';
+    return rows.length === 2 && rows[0].name === 'Nguyá»…n VÄƒn A' && rows[0].time === '07:00â€“11:30' &&
+           rows[1].name === 'Tráº§n Thá»‹ B' && rows[1].time === '13:00 â†’ háº¿t ca';
   })());
-check('NGƯỜI KIỂM: LỌC VỊ TRÍ — bố trí "Kiểm chất" cùng bộ phận QC cùng ngày KHÔNG bị lấy',
+check('NGÆ¯á»œI KIá»‚M: Lá»ŒC Vá»Š TRÃ â€” bá»‘ trÃ­ "Kiá»ƒm cháº¥t" cÃ¹ng bá»™ pháº­n QC cÃ¹ng ngÃ y KHÃ”NG bá»‹ láº¥y',
   (() => {
     const rows = qcf.hrQcFinalAssignmentsOf('2026-09-23');
-    return rows.length === 2 && rows.every(r => r.positionName === 'QC Kiểm ván+thanh') &&
-           !rows.some(r => r.name === 'Lê Văn C');
+    return rows.length === 2 && rows.every(r => r.positionName === 'QC Kiá»ƒm vÃ¡n+thanh') &&
+           !rows.some(r => r.name === 'LÃª VÄƒn C');
   })());
-check('GIỜ KIỂM HC/TC: 07:00–11:30 + 13:00–hết ca = 9h HC · 0h TC (KHÔNG cộng giờ vị trí QC khác)',
+check('GIá»œ KIá»‚M HC/TC: 07:00â€“11:30 + 13:00â€“háº¿t ca = 9h HC Â· 0h TC (KHÃ”NG cá»™ng giá» vá»‹ trÃ­ QC khÃ¡c)',
   (() => {
     const sp = qcf.sumQcFinalHoursSplit(qcf.hrQcFinalAssignmentsOf('2026-09-23'), '2026-09-23');
-    // Bố trí "Kiểm chất" 07:00–16:00 (9h) nếu bị lọt vào sẽ làm giờ ≠ 9h
+    // Bá»‘ trÃ­ "Kiá»ƒm cháº¥t" 07:00â€“16:00 (9h) náº¿u bá»‹ lá»t vÃ o sáº½ lÃ m giá» â‰  9h
     return approx(sp.hc, 9) && approx(sp.tc, 0);
   })());
-check('GIỜ NGÀY: qcFinalDayHoursOf chỉ đếm vị trí Kiểm ván+thanh (9h, không phải 18h)',
+check('GIá»œ NGÃ€Y: qcFinalDayHoursOf chá»‰ Ä‘áº¿m vá»‹ trÃ­ Kiá»ƒm vÃ¡n+thanh (9h, khÃ´ng pháº£i 18h)',
   (() => {
     const h = qcf.qcFinalDayHoursOf('2026-09-23', []);
     return approx(h.hours, 9) && approx(h.hc, 9) && approx(h.tc, 0);
   })());
-check('SNAPSHOT: hrQcFinalSnapshot lưu tên + giờ + HC/TC cùng lượt (phòng khi bố trí bị xóa)',
+check('SNAPSHOT: hrQcFinalSnapshot lÆ°u tÃªn + giá» + HC/TC cÃ¹ng lÆ°á»£t (phÃ²ng khi bá»‘ trÃ­ bá»‹ xÃ³a)',
   (() => {
     const s = qcf.hrQcFinalSnapshot('2026-09-23');
-    return s.workerNames === 'Nguyễn Văn A, Trần Thị B' && approx(s.workHours, 9) && approx(s.workHoursHC, 9);
+    return s.workerNames === 'Nguyá»…n VÄƒn A, Tráº§n Thá»‹ B' && approx(s.workHours, 9) && approx(s.workHoursHC, 9);
   })());
 
-// ─── C. LOAD / LƯU ────────────────────────────────────────────
+// â”€â”€â”€ C. LOAD / LÆ¯U â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 qcf.loadQcFinal();
-check('LOAD: chưa có dữ liệu → mảng rỗng', Array.isArray(state.qcFinalRecords) && state.qcFinalRecords.length === 0);
+check('LOAD: chÆ°a cÃ³ dá»¯ liá»‡u â†’ máº£ng rá»—ng', Array.isArray(state.qcFinalRecords) && state.qcFinalRecords.length === 0);
 qcf.loadQcFinalRates();
-check('LOAD ĐỊNH MỨC: chưa có → object rỗng', state.qcFinalRates && typeof state.qcFinalRates === 'object');
+check('LOAD Äá»ŠNH Má»¨C: chÆ°a cÃ³ â†’ object rá»—ng', state.qcFinalRates && typeof state.qcFinalRates === 'object');
 storeBacking.set(STORAGE_KEY_QC_FINAL, JSON.stringify([
   { id: 'qcf-old', date: '2026-09-20', workshop: 'x2', inputQty: 100, qtyOk: 90, qtyExcept: 5, qtyReject: 5, updatedAt: '2026-09-20T00:00:00Z' }
 ]));
 qcf.loadQcFinal();
-check('LOAD: nạp từ localStorage', state.qcFinalRecords.length === 1 && state.qcFinalRecords[0].id === 'qcf-old');
-// ═══ PHẦN 4 ═══
+check('LOAD: náº¡p tá»« localStorage', state.qcFinalRecords.length === 1 && state.qcFinalRecords[0].id === 'qcf-old');
+// â•â•â• PHáº¦N 4 â•â•â•
 
-// ─── D. LƯU LƯỢT KIỂM + CHẶN VALIDATE ─────────────────────────
+// â”€â”€â”€ D. LÆ¯U LÆ¯á»¢T KIá»‚M + CHáº¶N VALIDATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.qcFinalRecords = [];
 setVal('qcf-workshop', 'x2');
 setVal('qcf-kind', 'van');
@@ -190,105 +190,105 @@ setVal('qcf-ok', '380');
 setVal('qcf-except', '60');
 setVal('qcf-reject', '40');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('LƯU: 1 lượt kiểm mới (Xưởng 2 · ngày 23/09 · đầu vào 500)', state.qcFinalRecords.length === 1 &&
+check('LÆ¯U: 1 lÆ°á»£t kiá»ƒm má»›i (XÆ°á»Ÿng 2 Â· ngÃ y 23/09 Â· Ä‘áº§u vÃ o 500)', state.qcFinalRecords.length === 1 &&
   state.qcFinalRecords[0].workshop === 'x2' && state.qcFinalRecords[0].date === '2026-09-23' && state.qcFinalRecords[0].inputQty === 500);
-check('LƯU: SNAPSHOT người kiểm + giờ cùng lượt (tự động từ Nhân Sự)',
-  state.qcFinalRecords[0].workerNames === 'Nguyễn Văn A, Trần Thị B' && approx(state.qcFinalRecords[0].workHoursHC, 9));
-check('LƯU: localStorage ghi đúng key bamboo_tracker_qc_final_v1',
+check('LÆ¯U: SNAPSHOT ngÆ°á»i kiá»ƒm + giá» cÃ¹ng lÆ°á»£t (tá»± Ä‘á»™ng tá»« NhÃ¢n Sá»±)',
+  state.qcFinalRecords[0].workerNames === 'Nguyá»…n VÄƒn A, Tráº§n Thá»‹ B' && approx(state.qcFinalRecords[0].workHoursHC, 9));
+check('LÆ¯U: localStorage ghi Ä‘Ãºng key bamboo_tracker_qc_final_v1',
   JSON.parse(storeBacking.get(STORAGE_KEY_QC_FINAL)).length === 1);
 const rec1 = state.qcFinalRecords[0];
 
-// Chặn: thiếu đầu vào kiểm
+// Cháº·n: thiáº¿u Ä‘áº§u vÃ o kiá»ƒm
 const n0 = state.qcFinalRecords.length;
 setVal('qcf-input-qty', '');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('CHẶN: thiếu Đầu vào kiểm → không lưu', state.qcFinalRecords.length === n0);
-// Chặn: chưa có kết quả kiểm
+check('CHáº¶N: thiáº¿u Äáº§u vÃ o kiá»ƒm â†’ khÃ´ng lÆ°u', state.qcFinalRecords.length === n0);
+// Cháº·n: chÆ°a cÃ³ káº¿t quáº£ kiá»ƒm
 setVal('qcf-input-qty', '500');
 setVal('qcf-ok', ''); setVal('qcf-except', ''); setVal('qcf-reject', '');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('CHẶN: Đạt/Ngoại lệ/Loại đều trống → không lưu', state.qcFinalRecords.length === n0);
-// Chặn: tổng > đầu vào
+check('CHáº¶N: Äáº¡t/Ngoáº¡i lá»‡/Loáº¡i Ä‘á»u trá»‘ng â†’ khÃ´ng lÆ°u', state.qcFinalRecords.length === n0);
+// Cháº·n: tá»•ng > Ä‘áº§u vÃ o
 setVal('qcf-ok', '400'); setVal('qcf-except', '80'); setVal('qcf-reject', '40');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('CHẶN: Đạt + Ngoại lệ + Loại (520) > Đầu vào (500) → không lưu', state.qcFinalRecords.length === n0);
+check('CHáº¶N: Äáº¡t + Ngoáº¡i lá»‡ + Loáº¡i (520) > Äáº§u vÃ o (500) â†’ khÃ´ng lÆ°u', state.qcFinalRecords.length === n0);
 
-// ─── E. CÔNG THỨC 3 CON SỐ ────────────────────────────────────
+// â”€â”€â”€ E. CÃ”NG THá»¨C 3 CON Sá» â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const d1 = qcf.qcFinalDisplay(rec1);
-check('CÔNG THỨC: Tổng kiểm = Đạt + Ngoại lệ + Loại = 480', d1.qtyChecked === 480);
-check('CÔNG THỨC: Tổng đạt = Đạt + Ngoại lệ = 440', d1.qtyPass === 440);
-check('CÔNG THỨC: Tỉ lệ lỗi = Loại ÷ Tổng kiểm ≈ 8,33%', approx(d1.errPct, (40 / 480) * 100));
-check('CÔNG THỨC: Công suất = Tổng kiểm ÷ giờ (480 ÷ 9 ≈ 53,33 tấm/h) · chưa có định mức → Hiệu suất null',
+check('CÃ”NG THá»¨C: Tá»•ng kiá»ƒm = Äáº¡t + Ngoáº¡i lá»‡ + Loáº¡i = 480', d1.qtyChecked === 480);
+check('CÃ”NG THá»¨C: Tá»•ng Ä‘áº¡t = Äáº¡t + Ngoáº¡i lá»‡ = 440', d1.qtyPass === 440);
+check('CÃ”NG THá»¨C: Tá»‰ lá»‡ lá»—i = Loáº¡i Ã· Tá»•ng kiá»ƒm â‰ˆ 8,33%', approx(d1.errPct, (40 / 480) * 100));
+check('CÃ”NG THá»¨C: CÃ´ng suáº¥t = Tá»•ng kiá»ƒm Ã· giá» (480 Ã· 9 â‰ˆ 53,33 táº¥m/h) Â· chÆ°a cÃ³ Ä‘á»‹nh má»©c â†’ Hiá»‡u suáº¥t null',
   approx(d1.cap, 480 / 9) && d1.eff === null && d1.rate === null);
-check('HIỂN THỊ: nhãn vị trí "Xưởng 2"', d1.workshopLabel === 'Xưởng 2');
-// ═══ PHẦN 5 ═══
+check('HIá»‚N THá»Š: nhÃ£n vá»‹ trÃ­ "XÆ°á»Ÿng 2"', d1.workshopLabel === 'XÆ°á»Ÿng 2');
+// â•â•â• PHáº¦N 5 â•â•â•
 
-// ─── F. POPUP ĐỊNH MỨC 2 LOẠI (Kiểm Thanh thanh/h · Kiểm Ván tấm/h) ──
+// â”€â”€â”€ F. POPUP Äá»ŠNH Má»¨C 2 LOáº I (Kiá»ƒm Thanh thanh/h Â· Kiá»ƒm VÃ¡n táº¥m/h) â”€â”€
 qcf.openQcFinalRateModal();
-check('POPUP ĐỊNH MỨC: bấm nút mở được (overlay show) + bảng có hàng tháng',
+check('POPUP Äá»ŠNH Má»¨C: báº¥m nÃºt má»Ÿ Ä‘Æ°á»£c (overlay show) + báº£ng cÃ³ hÃ ng thÃ¡ng',
   document.getElementById('modal-qcf-rate').classList._s.has('show') &&
-  document.getElementById('qcf-rate-rows').innerHTML.includes('Tháng'));
+  document.getElementById('qcf-rate-rows').innerHTML.includes('ThÃ¡ng'));
 setVal('qcf-rate-2026-09-thanh', '500');
 setVal('qcf-rate-2026-09-van', '600');
 qcf.handleQcFinalRateRowSave('2026-09');
-check('ĐỊNH MỨC 2 LOẠI: lưu tháng 9 = { thanh: 500 thanh/h · van: 600 tấm/h } (state + localStorage)',
+check('Äá»ŠNH Má»¨C 2 LOáº I: lÆ°u thÃ¡ng 9 = { thanh: 500 thanh/h Â· van: 600 táº¥m/h } (state + localStorage)',
   state.qcFinalRates['2026-09'] && state.qcFinalRates['2026-09'].thanh === 500 &&
   state.qcFinalRates['2026-09'].van === 600 &&
   JSON.parse(storeBacking.get(STORAGE_KEY_QC_FINAL_RATE))['2026-09'].van === 600);
-check('CHẶN ĐỊNH MỨC: cả 2 ô trống → không lưu', (() => {
+check('CHáº¶N Äá»ŠNH Má»¨C: cáº£ 2 Ã´ trá»‘ng â†’ khÃ´ng lÆ°u', (() => {
   setVal('qcf-rate-2026-09-thanh', ''); setVal('qcf-rate-2026-09-van', '');
   qcf.handleQcFinalRateRowSave('2026-09');
   return state.qcFinalRates['2026-09'].van === 600;
 })());
-check('ĐỊNH MỨC CŨ (số thuần): qcFinalRateEntryOf hiểu là định mức Kiểm Ván', (() => {
-  state.qcFinalRates['2026-08'] = 450; // bản cũ lưu bằng số
+check('Äá»ŠNH Má»¨C CÅ¨ (sá»‘ thuáº§n): qcFinalRateEntryOf hiá»ƒu lÃ  Ä‘á»‹nh má»©c Kiá»ƒm VÃ¡n', (() => {
+  state.qcFinalRates['2026-08'] = 450; // báº£n cÅ© lÆ°u báº±ng sá»‘
   const e = qcf.qcFinalRateEntryOf('2026-08');
   return e.thanh === 0 && e.van === 450 && qcf.qcFinalRateOf('2026-08-15', 'van') === 450 &&
          qcf.qcFinalRateOf('2026-08-15', 'thanh') === null;
 })());
-check('ĐỊNH MỨC THEO LOẠI: rec1 (Kiểm Ván) lấy đúng ĐM van — Công suất 53,33 ÷ 600 ≈ 8,89%',
+check('Äá»ŠNH Má»¨C THEO LOáº I: rec1 (Kiá»ƒm VÃ¡n) láº¥y Ä‘Ãºng ÄM van â€” CÃ´ng suáº¥t 53,33 Ã· 600 â‰ˆ 8,89%',
   (() => { const d = qcf.qcFinalDisplay(rec1); return approx(d.rate, 600) && approx(d.eff, ((480 / 9) / 600) * 100); })());
 qcf.closeQcFinalRateModal();
-check('POPUP ĐỊNH MỨC: đóng được (overlay ẩn)',
+check('POPUP Äá»ŠNH Má»¨C: Ä‘Ã³ng Ä‘Æ°á»£c (overlay áº©n)',
   !document.getElementById('modal-qcf-rate').classList._s.has('show'));
 
-// ─── G. RENDER: THẺ NGÀY + THỐNG KÊ + MINI CARD ───────────────
+// â”€â”€â”€ G. RENDER: THáºº NGÃ€Y + THá»NG KÃŠ + MINI CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.qcFinalRecords = [rec1];
 qcf.renderQcFinalCard();
 const dayHtml = document.getElementById('qcf-day-cards').innerHTML;
-check('THẺ NGÀY: đầu thẻ có Ngày 23/09/26 (dd/mm/yy) + vị trí Xưởng 2',
-  dayHtml.includes('x2-day-head') && dayHtml.includes('23/09/26') && dayHtml.includes('Xưởng 2'));
-check('THẺ NGÀY: NGƯỜI KIỂM tự động (Nguyễn Văn A + giờ 07:00–11:30, "+1 người khác")',
-  dayHtml.includes('Nguyễn Văn A') && dayHtml.includes('07:00–11:30') && dayHtml.includes('+1 người khác'));
-check('THẺ NGÀY: GIỜ HC/TC (9h HC · 0h TC)', dayHtml.includes('9h HC') && dayHtml.includes('0h TC'));
-check('THẺ NGÀY: đủ Tổng kiểm 480 · Tổng đạt 440 · Tỉ lệ lỗi 8,3%',
-  dayHtml.includes('Tổng kiểm') && dayHtml.includes('480') &&
-  dayHtml.includes('Tổng đạt') && dayHtml.includes('440') && dayHtml.includes('8,3'));
-check('THẺ NGÀY: chip LOẠI KIỂM + ĐM tấm 600 + CÔNG SUẤT 53,3 + HIỆU SUẤT 8,9% (định mức theo loại)',
-  dayHtml.includes('qcf-kind-chip') && dayHtml.includes('Kiểm Ván') &&
-  dayHtml.includes('ĐM tấm') && dayHtml.includes('600') &&
-  dayHtml.includes('53,3') && dayHtml.includes('Hiệu suất') && dayHtml.includes('8,9'));
-check('THẺ NGÀY: dòng lượt kiểm có nút Sửa/Xóa gắn data-perm="qc"',
+check('THáºº NGÃ€Y: Ä‘áº§u tháº» cÃ³ NgÃ y 23/09/26 (dd/mm/yy) + vá»‹ trÃ­ XÆ°á»Ÿng 2',
+  dayHtml.includes('x2-day-head') && dayHtml.includes('23/09/26') && dayHtml.includes('XÆ°á»Ÿng 2'));
+check('THáºº NGÃ€Y: NGÆ¯á»œI KIá»‚M tá»± Ä‘á»™ng (Nguyá»…n VÄƒn A + giá» 07:00â€“11:30, "+1 ngÆ°á»i khÃ¡c")',
+  dayHtml.includes('Nguyá»…n VÄƒn A') && dayHtml.includes('07:00â€“11:30') && dayHtml.includes('+1 ngÆ°á»i khÃ¡c'));
+check('THáºº NGÃ€Y: GIá»œ HC/TC (9h HC Â· 0h TC)', dayHtml.includes('9h HC') && dayHtml.includes('0h TC'));
+check('THáºº NGÃ€Y: Ä‘á»§ Tá»•ng kiá»ƒm 480 Â· Tá»•ng Ä‘áº¡t 440 Â· Tá»‰ lá»‡ lá»—i 8,3%',
+  dayHtml.includes('Tá»•ng kiá»ƒm') && dayHtml.includes('480') &&
+  dayHtml.includes('Tá»•ng Ä‘áº¡t') && dayHtml.includes('440') && dayHtml.includes('8,3'));
+check('THáºº NGÃ€Y: chip LOáº I KIá»‚M + ÄM táº¥m 600 + CÃ”NG SUáº¤T 53,3 + HIá»†U SUáº¤T 8,9% (Ä‘á»‹nh má»©c theo loáº¡i)',
+  dayHtml.includes('qcf-kind-chip') && dayHtml.includes('Kiá»ƒm VÃ¡n') &&
+  dayHtml.includes('ÄM táº¥m') && dayHtml.includes('600') &&
+  dayHtml.includes('53,3') && dayHtml.includes('Hiá»‡u suáº¥t') && dayHtml.includes('8,9'));
+check('THáºº NGÃ€Y: dÃ²ng lÆ°á»£t kiá»ƒm cÃ³ nÃºt Sá»­a/XÃ³a gáº¯n data-perm="qc"',
   dayHtml.includes('data-qcf-edit') && dayHtml.includes('data-qcf-delete') && dayHtml.includes('data-perm="qc"'));
 const statsHtml = document.getElementById('qcf-stats').innerHTML;
-check('THỐNG KÊ: đủ Lượt kiểm · Đầu vào · Tổng kiểm · Tổng đạt · Loại · Tỉ lệ lỗi · Công suất TB',
-  statsHtml.includes('Lượt kiểm') && statsHtml.includes('Đầu vào kiểm') && statsHtml.includes('Tổng số lượng kiểm') &&
-  statsHtml.includes('Tổng đạt') && statsHtml.includes('Tỉ lệ lỗi') && statsHtml.includes('Công suất TB'));
-check('MINI CARD: đếm "1 lượt · 440 tấm đạt"', qcf.qcFinalCardCount() === '1 lượt · 440 tấm đạt');
+check('THá»NG KÃŠ: Ä‘á»§ LÆ°á»£t kiá»ƒm Â· Äáº§u vÃ o Â· Tá»•ng kiá»ƒm Â· Tá»•ng Ä‘áº¡t Â· Loáº¡i Â· Tá»‰ lá»‡ lá»—i Â· CÃ´ng suáº¥t TB',
+  statsHtml.includes('LÆ°á»£t kiá»ƒm') && statsHtml.includes('Äáº§u vÃ o kiá»ƒm') && statsHtml.includes('Tá»•ng sá»‘ lÆ°á»£ng kiá»ƒm') &&
+  statsHtml.includes('Tá»•ng Ä‘áº¡t') && statsHtml.includes('Tá»‰ lá»‡ lá»—i') && statsHtml.includes('CÃ´ng suáº¥t TB'));
+check('MINI CARD: Ä‘áº¿m "1 lÆ°á»£t Â· 440 táº¥m Ä‘áº¡t"', qcf.qcFinalCardCount() === '1 lÆ°á»£t Â· 440 táº¥m Ä‘áº¡t');
 qc.renderQcView();
-check('MINI CARD: renderQcView cập nhật đếm thẻ launcher',
-  document.getElementById('qc-mini-count-final').textContent === '1 lượt · 440 tấm đạt');
-// ═══ PHẦN 6 ═══
+check('MINI CARD: renderQcView cáº­p nháº­t Ä‘áº¿m tháº» launcher',
+  document.getElementById('qc-mini-count-final').textContent === '1 lÆ°á»£t Â· 440 táº¥m Ä‘áº¡t');
+// â•â•â• PHáº¦N 6 â•â•â•
 
-// ─── G2. TỒN CHỜ QC LŨY KẾ (Tổng · Đã kiểm · Đã xuất · Còn lại) ──
-// Sản lượng tuần 38 (999) chuyển sang tồn; tuần 39–40 ép thêm 500, kiểm 200.
+// â”€â”€â”€ G2. Tá»’N CHá»œ QC LÅ¨Y Káº¾ (Tá»•ng Â· ÄÃ£ kiá»ƒm Â· ÄÃ£ xuáº¥t Â· CÃ²n láº¡i) â”€â”€
+// Sáº£n lÆ°á»£ng tuáº§n 38 (999) chuyá»ƒn sang tá»“n; tuáº§n 39â€“40 Ã©p thÃªm 500, kiá»ƒm 200.
 state.qcExports = [];
 state.qcFinalRecords = [
   { id: 'qcf-ignore', kind: 'other' },
   {
     id: 'qcf-sp1', date: '2026-09-24', workshop: 'x2', kind: 'van',
     pairKey: qcf.qcFinalPairKeyOf('2026-09-24'),
-    productId: 'sp1', productName: 'Ván 1220×2440×9', inputQty: 200,
+    productId: 'sp1', productName: 'VÃ¡n 1220Ã—2440Ã—9', inputQty: 200,
     qtyOk: 190, qtyExcept: 10, qtyReject: 0,
     workerNames: '', workTime: '', workHours: 0, workHoursHC: 0, workHoursTC: 0,
     createdAt: '2026-09-24T00:00:00Z', updatedAt: '2026-09-24T00:00:00Z'
@@ -297,137 +297,137 @@ state.qcFinalRecords = [
 const stocks = qcf.qcFinalProductStocks('2026-10-01');
 const stSp1 = stocks.find(s => s.productId === 'sp1');
 const stSp2 = stocks.find(s => s.productId === 'sp2');
-check('TỒN CHỜ QC: sp1 có tồn chuyển từ tuần 38 · Tổng 1499 · Đã kiểm 200 · Còn 1299',
+check('Tá»’N CHá»œ QC: sp1 cÃ³ tá»“n chuyá»ƒn tá»« tuáº§n 38 Â· Tá»•ng 1499 Â· ÄÃ£ kiá»ƒm 200 Â· CÃ²n 1299',
   stSp1 && stSp1.total === 1499 && stSp1.used === 200 && stSp1.remain === 1299);
-check('TỒN KIỂM: sp2 chưa kiểm → Còn lại = Tổng (200)',
+check('Tá»’N KIá»‚M: sp2 chÆ°a kiá»ƒm â†’ CÃ²n láº¡i = Tá»•ng (200)',
   stSp2 && stSp2.total === 200 && stSp2.used === 0 && stSp2.remain === 200);
 state.qcExports = [
-  { id: 'ship-overlap', productId: 'sp1', name: 'Ván 1220×2440×9', year: 2026, weeks: [39, 40], qty: 80, exportDate: '2026-09-25' }
+  { id: 'ship-overlap', productId: 'sp1', name: 'VÃ¡n 1220Ã—2440Ã—9', year: 2026, weeks: [39, 40], qty: 80, exportDate: '2026-09-25' }
 ];
-check('TỒN CHỜ QC: hàng đã kiểm rồi xuất không bị trừ hai lần',
+check('Tá»’N CHá»œ QC: hÃ ng Ä‘Ã£ kiá»ƒm rá»“i xuáº¥t khÃ´ng bá»‹ trá»« hai láº§n',
   (qcf.qcFinalProductStocks('2026-10-01').find(x => x.productId === 'sp1') || {}).remain === 1299);
 state.qcExports[0].qty = 250;
-check('TỒN CHỜ QC: xuất vượt lượng đã kiểm thì cũng loại phần đã xuất khỏi nguồn QC',
+check('Tá»’N CHá»œ QC: xuáº¥t vÆ°á»£t lÆ°á»£ng Ä‘Ã£ kiá»ƒm thÃ¬ cÅ©ng loáº¡i pháº§n Ä‘Ã£ xuáº¥t khá»i nguá»“n QC',
   (qcf.qcFinalProductStocks('2026-10-01').find(x => x.productId === 'sp1') || {}).remain === 1249);
 state.qcExports = [];
-check('TỒN KIỂM: lượt kiểm KHÔNG có pairKey (dữ liệu cũ) vẫn tính theo ngày', (() => {
+check('Tá»’N KIá»‚M: lÆ°á»£t kiá»ƒm KHÃ”NG cÃ³ pairKey (dá»¯ liá»‡u cÅ©) váº«n tÃ­nh theo ngÃ y', (() => {
   delete state.qcFinalRecords[1].pairKey;
   const s = qcf.qcFinalProductStocks('2026-10-01').find(x => x.productId === 'sp1');
   state.qcFinalRecords[1].pairKey = qcf.qcFinalPairKeyOf('2026-09-24');
   return s && s.used === 200 && s.remain === 1299;
 })());
-// Danh sách thẻ hiển thị tồn lũy kế + chọn thẻ → tự điền CHỜ KIỂM
+// Danh sÃ¡ch tháº» hiá»ƒn thá»‹ tá»“n lÅ©y káº¿ + chá»n tháº» â†’ tá»± Ä‘iá»n CHá»œ KIá»‚M
 setVal('qcf-workshop', 'x2'); setVal('qcf-kind', 'van'); setVal('qcf-date', '2026-10-01');
 qcf.syncQcFinalKindFields();
 qcf.setQcFinalSearchQ('');
 qcf.setQcFinalPickerOpen(true);
 const pickHtml = document.getElementById('qcf-product-list').innerHTML;
-check('DROPDOWN NỔI: mở → node PORTAL ra `#qc-detail-overlay` (lớp fixed phủ màn hình — không rơi đáy trang)',
+check('DROPDOWN Ná»”I: má»Ÿ â†’ node PORTAL ra `#qc-detail-overlay` (lá»›p fixed phá»§ mÃ n hÃ¬nh â€” khÃ´ng rÆ¡i Ä‘Ã¡y trang)',
   document.getElementById('qcf-picker').parentElement === document.getElementById('qc-detail-overlay'));
-check('DROPDOWN NỔI: neo bằng INLINE STYLE — position:absolute + z-index:240 (thắng MỌI stylesheet cũ do cache) + top/left/width là số',
+check('DROPDOWN Ná»”I: neo báº±ng INLINE STYLE â€” position:absolute + z-index:240 (tháº¯ng Má»ŒI stylesheet cÅ© do cache) + top/left/width lÃ  sá»‘',
   document.getElementById('qcf-picker').style.position === 'absolute' &&
   document.getElementById('qcf-picker').style.zIndex === '240' &&
   /^\d+px$/.test(document.getElementById('qcf-picker').style.top) &&
   /^\d+px$/.test(document.getElementById('qcf-picker').style.left) &&
   /^\d+px$/.test(document.getElementById('qcf-picker').style.width));
-check('DANH SÁCH THẺ: tồn chuyển kỳ hiển thị "Tổng 1499 · Đã kiểm 200 · Chờ kiểm 1299"',
-  pickHtml.includes('Tổng <strong>1.499</strong>') && pickHtml.includes('Đã kiểm 200') &&
-  pickHtml.includes('Đã xuất 0') && pickHtml.includes('Chờ kiểm 1.299'));
+check('DANH SÃCH THáºº: tá»“n chuyá»ƒn ká»³ hiá»ƒn thá»‹ "Tá»•ng 1499 Â· ÄÃ£ kiá»ƒm 200 Â· Chá» kiá»ƒm 1299"',
+  pickHtml.includes('Tá»•ng <strong>1.499</strong>') && pickHtml.includes('ÄÃ£ kiá»ƒm 200') &&
+  pickHtml.includes('ÄÃ£ xuáº¥t 0') && pickHtml.includes('Chá» kiá»ƒm 1.299'));
 const pickEvt = { target: { closest: (sel) => (sel === '[data-qcf-product]' ? { getAttribute: () => 'sp1' } : null) } };
 qcf.onQcFinalListClick(pickEvt);
-check('CHỌN THẺ: ô Đầu vào kiểm tự điền số CHỜ KIỂM (1299 — không phải tổng 1499)',
+check('CHá»ŒN THáºº: Ã´ Äáº§u vÃ o kiá»ƒm tá»± Ä‘iá»n sá»‘ CHá»œ KIá»‚M (1299 â€” khÃ´ng pháº£i tá»•ng 1499)',
   document.getElementById('qcf-input-qty').value === '1299');
 qcf.resetQcFinalForm();
-check('DROPDOWN NỔI: đóng → node TRỞ VỀ ô Đầu vào kiểm (không còn trong overlay)',
+check('DROPDOWN Ná»”I: Ä‘Ã³ng â†’ node TRá»ž Vá»€ Ã´ Äáº§u vÃ o kiá»ƒm (khÃ´ng cÃ²n trong overlay)',
   document.getElementById('qcf-picker').parentElement !== document.getElementById('qc-detail-overlay'));
-state.qcFinalRecords = [rec1]; // dọn dữ liệu thêm — trả về 1 lượt để các mục sau đúng
-// ═══ PHẦN 6b ═══
+state.qcFinalRecords = [rec1]; // dá»n dá»¯ liá»‡u thÃªm â€” tráº£ vá» 1 lÆ°á»£t Ä‘á»ƒ cÃ¡c má»¥c sau Ä‘Ãºng
+// â•â•â• PHáº¦N 6b â•â•â•
 
-// ─── H. LOẠI KIỂM (Thanh / Ván): đơn vị + nguồn danh sách ──────
+// â”€â”€â”€ H. LOáº I KIá»‚M (Thanh / VÃ¡n): Ä‘Æ¡n vá»‹ + nguá»“n danh sÃ¡ch â”€â”€â”€â”€â”€â”€
 setVal('qcf-kind', 'thanh');
 qcf.syncQcFinalKindFields();
-check('KIỂM THANH: đơn vị các ô số lượng đổi thành "thanh" + HIỆN danh sách CỠ thanh (Bào thanh)',
+check('KIá»‚M THANH: Ä‘Æ¡n vá»‹ cÃ¡c Ã´ sá»‘ lÆ°á»£ng Ä‘á»•i thÃ nh "thanh" + HIá»†N danh sÃ¡ch Cá»  thanh (BÃ o thanh)',
   document.getElementById('qcf-unit-in').textContent === 'thanh' &&
   document.getElementById('qcf-unit-ok').textContent === 'thanh' &&
   document.getElementById('qcf-picker-btn').hidden === false &&
-  document.getElementById('qcf-picker-text').textContent === 'Cỡ thanh Bào thanh');
+  document.getElementById('qcf-picker-text').textContent === 'Cá»¡ thanh BÃ o thanh');
 setVal('qcf-kind', 'van');
 qcf.syncQcFinalKindFields();
-check('KIỂM VÁN: đơn vị về "tấm" + hiện lại picker (Xưởng 2)',
-  document.getElementById('qcf-unit-in').textContent === 'tấm' &&
+check('KIá»‚M VÃN: Ä‘Æ¡n vá»‹ vá» "táº¥m" + hiá»‡n láº¡i picker (XÆ°á»Ÿng 2)',
+  document.getElementById('qcf-unit-in').textContent === 'táº¥m' &&
   document.getElementById('qcf-picker-btn').hidden === false);
 
-// ─── H. SỬA / XÓA + TOMBSTONE ─────────────────────────────────
+// â”€â”€â”€ H. Sá»¬A / XÃ“A + TOMBSTONE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 qcf.editQcFinalRecord(rec1.id);
-check('SỬA: nạp lại đúng lượt vào form + banner "đang sửa" hiện',
+check('Sá»¬A: náº¡p láº¡i Ä‘Ãºng lÆ°á»£t vÃ o form + banner "Ä‘ang sá»­a" hiá»‡n',
   document.getElementById('qcf-date').value === '2026-09-23' &&
   document.getElementById('qcf-input-qty').value === '500' &&
   document.getElementById('qcf-ok').value === '380' &&
   document.getElementById('qcf-edit-banner').style.display === '');
-setVal('qcf-ok', '400'); // 400 + 60 + 40 = 500 ≤ đầu vào 500
+setVal('qcf-ok', '400'); // 400 + 60 + 40 = 500 â‰¤ Ä‘áº§u vÃ o 500
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('SỬA: đạt 380 → 400 (Tổng kiểm 500 · Tổng đạt 460 · vẫn 1 lượt · không tạo lượt mới)',
+check('Sá»¬A: Ä‘áº¡t 380 â†’ 400 (Tá»•ng kiá»ƒm 500 Â· Tá»•ng Ä‘áº¡t 460 Â· váº«n 1 lÆ°á»£t Â· khÃ´ng táº¡o lÆ°á»£t má»›i)',
   state.qcFinalRecords.length === 1 && qcf.qcFinalDisplay(state.qcFinalRecords[0]).qtyPass === 460 &&
   qcf.qcFinalDisplay(state.qcFinalRecords[0]).qtyChecked === 500);
 qcf.editQcFinalRecord(rec1.id);
 qcf.deleteQcFinalRecord(rec1.id);
-check('XÓA: xóa lượt kiểm + ghi tombstone (qcFinalRecords)',
+check('XÃ“A: xÃ³a lÆ°á»£t kiá»ƒm + ghi tombstone (qcFinalRecords)',
   state.qcFinalRecords.length === 0 &&
   state.deletedIds.qcFinalRecords && state.deletedIds.qcFinalRecords[rec1.id]);
 
-// ─── I. VỊ TRÍ XƯỞNG 1: "Sắp có" ──────────────────────────────
+// â”€â”€â”€ I. Vá»Š TRÃ XÆ¯á»žNG 1: "Sáº¯p cÃ³" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 setVal('qcf-workshop', 'x1');
 qcf.syncQcFinalWorkshopFields();
-check('XƯỞNG 1: ẩn nút chọn thành phẩm · hiện chip "Sắp có"',
+check('XÆ¯á»žNG 1: áº©n nÃºt chá»n thÃ nh pháº©m Â· hiá»‡n chip "Sáº¯p cÃ³"',
   document.getElementById('qcf-picker-btn').hidden === true &&
   document.getElementById('qcf-in-soon').hidden === false);
 setVal('qcf-workshop', 'x2');
 qcf.syncQcFinalWorkshopFields();
-check('XƯỞNG 2: hiện lại nút chọn thành phẩm · ẩn chip "Sắp có"',
+check('XÆ¯á»žNG 2: hiá»‡n láº¡i nÃºt chá»n thÃ nh pháº©m Â· áº©n chip "Sáº¯p cÃ³"',
   document.getElementById('qcf-picker-btn').hidden === false &&
   document.getElementById('qcf-in-soon').hidden === true);
 
-// ─── I2. 'KIỂM THANH' — LINK CỠ THANH ĐẦU RA CỦA BÀO THANH ─────
-// Lượt Bào thanh ghi cỡ đầu ra 640×14×12 (đem bào 500 thanh) → QC chọn cỡ này,
-// tự điền Đầu vào kiểm = số CÒN LẠI, lưu `sizeKey` để thẻ Bào Tinh đọc lại.
+// â”€â”€â”€ I2. 'KIá»‚M THANH' â€” LINK Cá»  THANH Äáº¦U RA Cá»¦A BÃ€O THANH â”€â”€â”€â”€â”€
+// LÆ°á»£t BÃ o thanh ghi cá»¡ Ä‘áº§u ra 640Ã—14Ã—12 (Ä‘em bÃ o 500 thanh) â†’ QC chá»n cá»¡ nÃ y,
+// tá»± Ä‘iá»n Äáº§u vÃ o kiá»ƒm = sá»‘ CÃ’N Láº I, lÆ°u `sizeKey` Ä‘á»ƒ tháº» BÃ o Tinh Ä‘á»c láº¡i.
 state.xuong2BaoTinhRecords = [
-  { id: 'bt1', date: '2026-09-20', kind: 'bao_thanh', inSizeKey: '1200×18×15', inDims: [1200, 18, 15],
-    inQty: 500, inSource: 'press', outSizeKey: '640×14×12', outDims: [640, 14, 12] },
-  { id: 'bt2', date: '2026-09-21', kind: 'bao_thanh', inSizeKey: '1200×18×15', inDims: [1200, 18, 15],
-    inQty: 300, inSource: 'press', outSizeKey: '1200×10×8', outDims: [1200, 10, 8] }
+  { id: 'bt1', date: '2026-09-20', kind: 'bao_thanh', inSizeKey: '1200Ã—18Ã—15', inDims: [1200, 18, 15],
+    inQty: 500, inSource: 'press', outSizeKey: '640Ã—14Ã—12', outDims: [640, 14, 12] },
+  { id: 'bt2', date: '2026-09-21', kind: 'bao_thanh', inSizeKey: '1200Ã—18Ã—15', inDims: [1200, 18, 15],
+    inQty: 300, inSource: 'press', outSizeKey: '1200Ã—10Ã—8', outDims: [1200, 10, 8] }
 ];
 setVal('qcf-kind', 'thanh'); setVal('qcf-workshop', 'x2');
 qcf.syncQcFinalKindFields();
 const sizeStocks = qcf.qcFinalThanhSizeStocks();
-check('TỒN CỠ THANH: 2 cỡ đầu ra của Bào thanh — 640×14×12 Tổng 500 · Còn 500',
+check('Tá»’N Cá»  THANH: 2 cá»¡ Ä‘áº§u ra cá»§a BÃ o thanh â€” 640Ã—14Ã—12 Tá»•ng 500 Â· CÃ²n 500',
   sizeStocks.length === 2 &&
-  (sizeStocks.find(x => x.sizeKey === '640×14×12') || {}).total === 500 &&
-  (sizeStocks.find(x => x.sizeKey === '640×14×12') || {}).remain === 500);
+  (sizeStocks.find(x => x.sizeKey === '640Ã—14Ã—12') || {}).total === 500 &&
+  (sizeStocks.find(x => x.sizeKey === '640Ã—14Ã—12') || {}).remain === 500);
 qcf.setQcFinalPickerOpen(true);
 const thanhListHtml = document.getElementById('qcf-product-list').innerHTML;
-check('DANH SÁCH CỠ THANH: thẻ hiện cỡ mm + Tổng/Đã kiểm/Còn lại + nút chọn data-qcf-size',
-  thanhListHtml.includes('640 × 14 × 12 mm') && thanhListHtml.includes('data-qcf-size="640×14×12"') &&
-  thanhListHtml.includes('Tổng <strong>500</strong>') && thanhListHtml.includes('Còn lại 500'));
-qcf.onQcFinalListClick({ target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640×14×12' } : null } });
-check('CHỌN CỠ THANH: ô Đầu vào kiểm tự điền số CÒN LẠI (500)',
+check('DANH SÃCH Cá»  THANH: tháº» hiá»‡n cá»¡ mm + Tá»•ng/ÄÃ£ kiá»ƒm/CÃ²n láº¡i + nÃºt chá»n data-qcf-size',
+  thanhListHtml.includes('640 Ã— 14 Ã— 12 mm') && thanhListHtml.includes('data-qcf-size="640Ã—14Ã—12"') &&
+  thanhListHtml.includes('Tá»•ng <strong>500</strong>') && thanhListHtml.includes('CÃ²n láº¡i 500'));
+qcf.onQcFinalListClick({ target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640Ã—14Ã—12' } : null } });
+check('CHá»ŒN Cá»  THANH: Ã´ Äáº§u vÃ o kiá»ƒm tá»± Ä‘iá»n sá»‘ CÃ’N Láº I (500)',
   document.getElementById('qcf-input-qty').value === '500');
 setVal('qcf-date', '2026-09-22');
 setVal('qcf-input-qty', '500'); setVal('qcf-ok', '470'); setVal('qcf-except', '10'); setVal('qcf-reject', '20');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
 const qcThanh = state.qcFinalRecords[state.qcFinalRecords.length - 1];
-check('LƯU KIỂM THANH: lưu kind=thanh + sizeKey/sizeDims của cỡ được kiểm',
-  qcThanh.kind === 'thanh' && qcThanh.sizeKey === '640×14×12' &&
-  qcThanh.sizeDims.join('×') === '640×14×12' && qcThanh.qtyOk === 470);
-check('TỒN CỠ THANH SAU KIỂM: 640×14×12 đã kiểm 500 → Còn 0 · cỡ kia vẫn 300',
-  (qcf.qcFinalThanhSizeStocks().find(x => x.sizeKey === '640×14×12') || {}).remain === 0 &&
-  (qcf.qcFinalThanhSizeStocks().find(x => x.sizeKey === '1200×10×8') || {}).remain === 300);
+check('LÆ¯U KIá»‚M THANH: lÆ°u kind=thanh + sizeKey/sizeDims cá»§a cá»¡ Ä‘Æ°á»£c kiá»ƒm',
+  qcThanh.kind === 'thanh' && qcThanh.sizeKey === '640Ã—14Ã—12' &&
+  qcThanh.sizeDims.join('Ã—') === '640Ã—14Ã—12' && qcThanh.qtyOk === 470);
+check('Tá»’N Cá»  THANH SAU KIá»‚M: 640Ã—14Ã—12 Ä‘Ã£ kiá»ƒm 500 â†’ CÃ²n 0 Â· cá»¡ kia váº«n 300',
+  (qcf.qcFinalThanhSizeStocks().find(x => x.sizeKey === '640Ã—14Ã—12') || {}).remain === 0 &&
+  (qcf.qcFinalThanhSizeStocks().find(x => x.sizeKey === '1200Ã—10Ã—8') || {}).remain === 300);
 qcf.renderQcFinalTable();
-check('THẺ NGÀY: lượt Kiểm thanh hiện CHIP CỠ thay cho tên thành phẩm',
-  document.getElementById('qcf-day-cards').innerHTML.includes('Cỡ 640 × 14 × 12') &&
-  qcf.qcFinalDisplay(qcThanh).sizeKey === '640×14×12');
-// SỬA lượt kiểm thanh → khôi phục đúng cỡ + xoá sạch dữ liệu thêm
+check('THáºº NGÃ€Y: lÆ°á»£t Kiá»ƒm thanh hiá»‡n CHIP Cá»  thay cho tÃªn thÃ nh pháº©m',
+  document.getElementById('qcf-day-cards').innerHTML.includes('Cá»¡ 640 Ã— 14 Ã— 12') &&
+  qcf.qcFinalDisplay(qcThanh).sizeKey === '640Ã—14Ã—12');
+// Sá»¬A lÆ°á»£t kiá»ƒm thanh â†’ khÃ´i phá»¥c Ä‘Ãºng cá»¡ + xoÃ¡ sáº¡ch dá»¯ liá»‡u thÃªm
 qcf.editQcFinalRecord(qcThanh.id);
-check('SỬA KIỂM THANH: khôi phục lựa chọn cỡ 640 × 14 × 12', (() => {
+check('Sá»¬A KIá»‚M THANH: khÃ´i phá»¥c lá»±a chá»n cá»¡ 640 Ã— 14 Ã— 12', (() => {
   qcf.setQcFinalPickerOpen(true);
   const h = document.getElementById('qcf-product-list').innerHTML;
   qcf.setQcFinalPickerOpen(false);
@@ -437,10 +437,10 @@ qcf.deleteQcFinalRecord(qcThanh.id);
 state.xuong2BaoTinhRecords = [];
 state.qcFinalRecords = [];
 
-// ─── I3. 'KIỂM VÁN' — 2 NHÓM NGUỒN: VÁN THÔ BTP + THÀNH PHẨM ──────────────
-// ĐVT phân loại THÀNH PHẨM (1220x2440x9 = Tấm · 640x14x12 = Thanh);
-// THỂ TÍCH 1 thế < 0,0015 m³ phân loại VÁN THÔ BTP (không cần định mức).
-check('KHỚP SẢN PHẨM: 640x14x12 KHÔNG khớp 640x14x120 — chỉ kích thước chính xác',
+// â”€â”€â”€ I3. 'KIá»‚M VÃN' â€” 2 NHÃ“M NGUá»’N: VÃN THÃ” BTP + THÃ€NH PHáº¨M â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ÄVT phÃ¢n loáº¡i THÃ€NH PHáº¨M (1220x2440x9 = Táº¥m Â· 640x14x12 = Thanh);
+// THá»‚ TÃCH 1 tháº¿ < 0,0015 mÂ³ phÃ¢n loáº¡i VÃN THÃ” BTP (khÃ´ng cáº§n Ä‘á»‹nh má»©c).
+check('KHá»šP Sáº¢N PHáº¨M: 640x14x12 KHÃ”NG khá»›p 640x14x120 â€” chá»‰ kÃ­ch thÆ°á»›c chÃ­nh xÃ¡c',
   (() => {
     const rows = [
       { productId: 'r-120', name: '640x14x120' },
@@ -450,35 +450,35 @@ check('KHỚP SẢN PHẨM: 640x14x12 KHÔNG khớp 640x14x120 — chỉ kích t
     return !!hit && hit.productId === 'r-12';
   })());
 state.materialRates = [
-  { id: 'r-van',   product: '1220x2440x9', unit: 'Tấm',  nanUse: 'Ván' },
-  { id: 'r-thanh', product: '640x14x12',   unit: 'Thanh', nanUse: 'Ván' }
+  { id: 'r-van',   product: '1220x2440x9', unit: 'Táº¥m',  nanUse: 'VÃ¡n' },
+  { id: 'r-thanh', product: '640x14x12',   unit: 'Thanh', nanUse: 'VÃ¡n' }
 ];
 state.pressRecords = [
-  // ① Lượt BTP: CHỈ điền "Ván Thô Tạo Ra", KHÔNG điền Thành Phẩm (cặp 39–40)
+  // â‘  LÆ°á»£t BTP: CHá»ˆ Ä‘iá»n "VÃ¡n ThÃ´ Táº¡o Ra", KHÃ”NG Ä‘iá»n ThÃ nh Pháº©m (cáº·p 39â€“40)
   { id: 'pb1', date: '2026-09-22', week: '2026-W39', year: 2026, productId: '', productName: '',
     finishedQty: 0, sticks: [],
-    vanTho: [{ vtDim: '1220×2440×9', vtQty: 50 }, { vtDim: '640x14x12', vtQty: 300 },
-             { vtDim: '1200×18×15', vtQty: 700 }] }, // 1200×18×15 KHÔNG có định mức → phải LOẠI nhờ thể tích
-  // ② Thành phẩm ĐVT = Thanh → PHẢI bị loại khỏi danh sách Kiểm Ván (VD 640x14x12)
+    vanTho: [{ vtDim: '1220Ã—2440Ã—9', vtQty: 50 }, { vtDim: '640x14x12', vtQty: 300 },
+             { vtDim: '1200Ã—18Ã—15', vtQty: 700 }] }, // 1200Ã—18Ã—15 KHÃ”NG cÃ³ Ä‘á»‹nh má»©c â†’ pháº£i LOáº I nhá» thá»ƒ tÃ­ch
+  // â‘¡ ThÃ nh pháº©m ÄVT = Thanh â†’ PHáº¢I bá»‹ loáº¡i khá»i danh sÃ¡ch Kiá»ƒm VÃ¡n (VD 640x14x12)
   { id: 'pp1', date: '2026-09-23', week: '2026-W39', year: 2026, productId: 'r-thanh', productName: '640x14x12',
     finishedQty: 99, vanTho: [], sticks: [] },
-  // ③ Thành phẩm ĐVT = Tấm → giữ lại
+  // â‘¢ ThÃ nh pháº©m ÄVT = Táº¥m â†’ giá»¯ láº¡i
   { id: 'pp2', date: '2026-09-24', week: '2026-W39', year: 2026, productId: 'r-van', productName: '1220x2440x9',
     finishedQty: 40, vanTho: [], sticks: [] }
 ];
 setVal('qcf-kind', 'van'); setVal('qcf-workshop', 'x2'); setVal('qcf-date', '2026-09-23');
 qcf.syncQcFinalKindFields();
 qcf.setQcFinalSearchQ('');
-check('VÁN THÔ BTP: tồn gộp theo cỡ — chỉ còn 1220×2440×9 (Tổng 50) · LOẠI 640×14×12 + 1200×18×15 theo THỂ TÍCH', (() => {
+check('VÃN THÃ” BTP: tá»“n gá»™p theo cá»¡ â€” chá»‰ cÃ²n 1220Ã—2440Ã—9 (Tá»•ng 50) Â· LOáº I 640Ã—14Ã—12 + 1200Ã—18Ã—15 theo THá»‚ TÃCH', (() => {
   const rows = qcf.qcFinalVanBtpStocks('2026-09-23');
-  const van = rows.find(x => x.sizeKey === '1220×2440×9');
+  const van = rows.find(x => x.sizeKey === '1220Ã—2440Ã—9');
   return rows.length === 1 && van && van.total === 50 && van.remain === 50 &&
-    van.name === 'Ván thô 1220 × 2440 × 9' &&
-    !rows.find(x => x.sizeKey === '640×14×12');
+    van.name === 'VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9' &&
+    !rows.find(x => x.sizeKey === '640Ã—14Ã—12');
 })());
-check('VÁN THÔ BTP: cỡ 1200×18×15 KHÔNG có trong định mức vẫn bị LOẠI nhờ thể tích (0,000324 m³ < 0,0015)',
-  !qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1200×18×15'));
-check('THÀNH PHẨM 2 TUẦN: chỉ còn sp ĐVT Tấm (1220x2440x9 = 40) — loại ĐVT Thanh + lượt BTP', (() => {
+check('VÃN THÃ” BTP: cá»¡ 1200Ã—18Ã—15 KHÃ”NG cÃ³ trong Ä‘á»‹nh má»©c váº«n bá»‹ LOáº I nhá» thá»ƒ tÃ­ch (0,000324 mÂ³ < 0,0015)',
+  !qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1200Ã—18Ã—15'));
+check('THÃ€NH PHáº¨M 2 TUáº¦N: chá»‰ cÃ²n sp ÄVT Táº¥m (1220x2440x9 = 40) â€” loáº¡i ÄVT Thanh + lÆ°á»£t BTP', (() => {
   const rows = qcf.qcFinalProducts2Weeks('2026-09-23');
   return rows.length === 1 && rows[0].productId === 'r-van' && rows[0].qty === 40;
 })());
@@ -487,55 +487,55 @@ qcf.syncQcFinalKindFields();
 qcf.setQcFinalSearchQ('');
 qcf.setQcFinalPickerOpen(true);
 const vanListHtml = document.getElementById('qcf-product-list').innerHTML;
-check('DANH SÁCH KIỂM VÁN: 2 nhóm head (Ván thô BTP · Thành phẩm Ép Ván) + thẻ data-qcf-vt',
-  vanListHtml.includes('Ván thô BTP chưa kiểm đến') && vanListHtml.includes('Thành phẩm Ép Ván chưa kiểm đến') &&
-  vanListHtml.includes('data-qcf-vt="1220×2440×9"') && vanListHtml.includes('data-qcf-product="r-van"'));
-check('DANH SÁCH KIỂM VÁN: KHÔNG còn sót thanh — 640×14×12 · 1200×18×15 (BTP) và sp ĐVT Thanh',
-  !vanListHtml.includes('640 × 14 × 12') && !vanListHtml.includes('1200 × 18 × 15') &&
+check('DANH SÃCH KIá»‚M VÃN: 2 nhÃ³m head (VÃ¡n thÃ´ BTP Â· ThÃ nh pháº©m Ã‰p VÃ¡n) + tháº» data-qcf-vt',
+  vanListHtml.includes('VÃ¡n thÃ´ BTP chÆ°a kiá»ƒm Ä‘áº¿n') && vanListHtml.includes('ThÃ nh pháº©m Ã‰p VÃ¡n chÆ°a kiá»ƒm Ä‘áº¿n') &&
+  vanListHtml.includes('data-qcf-vt="1220Ã—2440Ã—9"') && vanListHtml.includes('data-qcf-product="r-van"'));
+check('DANH SÃCH KIá»‚M VÃN: KHÃ”NG cÃ²n sÃ³t thanh â€” 640Ã—14Ã—12 Â· 1200Ã—18Ã—15 (BTP) vÃ  sp ÄVT Thanh',
+  !vanListHtml.includes('640 Ã— 14 Ã— 12') && !vanListHtml.includes('1200 Ã— 18 Ã— 15') &&
   !vanListHtml.includes('data-qcf-product="r-thanh"'));
-check('THẺ VÁN THÔ BTP: 2 dòng — "Ván thô 1220 × 2440 × 9 mm" + Tổng 50 · Đã kiểm 0 · Chờ kiểm 50',
-  vanListHtml.includes('Ván thô 1220 × 2440 × 9 mm') &&
-  vanListHtml.includes('Tổng <strong>50</strong>') &&
-  vanListHtml.includes('Đã kiểm 0') && vanListHtml.includes('Chờ kiểm 50'));
+check('THáºº VÃN THÃ” BTP: 2 dÃ²ng â€” "VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9 mm" + Tá»•ng 50 Â· ÄÃ£ kiá»ƒm 0 Â· Chá» kiá»ƒm 50',
+  vanListHtml.includes('VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9 mm') &&
+  vanListHtml.includes('Tá»•ng <strong>50</strong>') &&
+  vanListHtml.includes('ÄÃ£ kiá»ƒm 0') && vanListHtml.includes('Chá» kiá»ƒm 50'));
 setVal('qcf-date', '2026-09-23');
-qcf.onQcFinalListClick({ target: { closest: sel => sel === '[data-qcf-vt]' ? { getAttribute: () => '1220×2440×9' } : null } });
-check('CHỌN THẺ VÁN THÔ: tự điền CÒN LẠI (50) + nhãn nút đổi thành tên ván thô',
+qcf.onQcFinalListClick({ target: { closest: sel => sel === '[data-qcf-vt]' ? { getAttribute: () => '1220Ã—2440Ã—9' } : null } });
+check('CHá»ŒN THáºº VÃN THÃ”: tá»± Ä‘iá»n CÃ’N Láº I (50) + nhÃ£n nÃºt Ä‘á»•i thÃ nh tÃªn vÃ¡n thÃ´',
   document.getElementById('qcf-input-qty').value === '50' &&
-  document.getElementById('qcf-picker-text').textContent === 'Ván thô 1220 × 2440 × 9');
-setVal('qcf-ok', '45'); setVal('qcf-except', '3'); setVal('qcf-reject', '2'); // 45+3+2 = 50 = đầu vào
+  document.getElementById('qcf-picker-text').textContent === 'VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9');
+setVal('qcf-ok', '45'); setVal('qcf-except', '3'); setVal('qcf-reject', '2'); // 45+3+2 = 50 = Ä‘áº§u vÃ o
 qcf.handleQcFinalSubmit({ preventDefault(){} });
 const qcBtp = state.qcFinalRecords[state.qcFinalRecords.length - 1];
-check('LƯU KIỂM VÁN BTP: kind=van + sizeKey/sizeDims 1220×2440×9 + productName "Ván thô …" + productId rỗng',
-  state.qcFinalRecords.length === 1 && qcBtp.kind === 'van' && qcBtp.sizeKey === '1220×2440×9' &&
-  qcBtp.sizeDims.join('×') === '1220×2440×9' &&
-  qcBtp.productName === 'Ván thô 1220 × 2440 × 9' && !qcBtp.productId && qcBtp.qtyOk === 45);
-check('TỒN BTP SAU KIỂM: 1220×2440×9 đã kiểm 50 → Còn 0',
-  (qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1220×2440×9') || {}).remain === 0);
+check('LÆ¯U KIá»‚M VÃN BTP: kind=van + sizeKey/sizeDims 1220Ã—2440Ã—9 + productName "VÃ¡n thÃ´ â€¦" + productId rá»—ng',
+  state.qcFinalRecords.length === 1 && qcBtp.kind === 'van' && qcBtp.sizeKey === '1220Ã—2440Ã—9' &&
+  qcBtp.sizeDims.join('Ã—') === '1220Ã—2440Ã—9' &&
+  qcBtp.productName === 'VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9' && !qcBtp.productId && qcBtp.qtyOk === 45);
+check('Tá»’N BTP SAU KIá»‚M: 1220Ã—2440Ã—9 Ä‘Ã£ kiá»ƒm 50 â†’ CÃ²n 0',
+  (qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1220Ã—2440Ã—9') || {}).remain === 0);
 qcf.renderQcFinalTable();
-check('THẺ NGÀY: lượt Kiểm ván BTP hiện chip productName "Ván thô 1220 × 2440 × 9"',
-  document.getElementById('qcf-day-cards').innerHTML.includes('Ván thô 1220 × 2440 × 9'));
-// SỬA lượt BTP → khôi phục lựa chọn (thẻ highlighted trong danh sách 2 nhóm)
+check('THáºº NGÃ€Y: lÆ°á»£t Kiá»ƒm vÃ¡n BTP hiá»‡n chip productName "VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9"',
+  document.getElementById('qcf-day-cards').innerHTML.includes('VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9'));
+// Sá»¬A lÆ°á»£t BTP â†’ khÃ´i phá»¥c lá»±a chá»n (tháº» highlighted trong danh sÃ¡ch 2 nhÃ³m)
 qcf.editQcFinalRecord(qcBtp.id);
-check('SỬA KIỂM VÁN BTP: khôi phục cỡ 1220×2440×9 (thẻ picked trong danh sách)', (() => {
+check('Sá»¬A KIá»‚M VÃN BTP: khÃ´i phá»¥c cá»¡ 1220Ã—2440Ã—9 (tháº» picked trong danh sÃ¡ch)', (() => {
   qcf.setQcFinalPickerOpen(true);
   const h = document.getElementById('qcf-product-list').innerHTML;
   qcf.setQcFinalPickerOpen(false);
-  return h.includes('data-qcf-vt="1220×2440×9"') && h.includes('qcf-product picked');
+  return h.includes('data-qcf-vt="1220Ã—2440Ã—9"') && h.includes('qcf-product picked');
 })());
 qcf.deleteQcFinalRecord(qcBtp.id);
-check('XÓA LƯỢT BTP: không còn lượt nào + tồn trả lại 50',
+check('XÃ“A LÆ¯á»¢T BTP: khÃ´ng cÃ²n lÆ°á»£t nÃ o + tá»“n tráº£ láº¡i 50',
   state.qcFinalRecords.length === 0 &&
-  (qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1220×2440×9') || {}).remain === 50);
+  (qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1220Ã—2440Ã—9') || {}).remain === 50);
 state.pressRecords.push({
   id: 'pb-old', date: '2026-09-15', week: '2026-W38', year: 2026,
   productId: '', productName: '', finishedQty: 0, sticks: [],
-  vanTho: [{ vtDim: '1220×2440×9', vtQty: 30 }]
+  vanTho: [{ vtDim: '1220Ã—2440Ã—9', vtQty: 30 }]
 });
-check('VÁN THÔ BTP: tồn chưa kiểm tuần 38 vẫn chuyển sang ngày kiểm tuần 39',
-  (qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1220×2440×9') || {}).remain === 80);
+check('VÃN THÃ” BTP: tá»“n chÆ°a kiá»ƒm tuáº§n 38 váº«n chuyá»ƒn sang ngÃ y kiá»ƒm tuáº§n 39',
+  (qcf.qcFinalVanBtpStocks('2026-09-23').find(x => x.sizeKey === '1220Ã—2440Ã—9') || {}).remain === 80);
 state.pressRecords = []; state.materialRates = []; state.qcFinalRecords = [];
 
-// ─── J. CẤU TRÚC (index.html · qc.js · events.js · 4 nơi · sw.js · css) ──
+// â”€â”€â”€ J. Cáº¤U TRÃšC (index.html Â· qc.js Â· events.js Â· 4 nÆ¡i Â· sw.js Â· css) â”€â”€
 const idxHtml = fsMod.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const qcJs = fsMod.readFileSync(new URL('../js/qc.js', import.meta.url), 'utf8');
 const evJs = fsMod.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
@@ -548,45 +548,45 @@ const swJs = fsMod.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const cssHtml = fsMod.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 const pkJs = fsMod.readFileSync(new URL('../package.json', import.meta.url), 'utf8');
 
-check('CẤU TRÚC (index.html): thẻ qc-final-card có form · ô Kiểm Loại · picker thành phẩm · thẻ ngày',
+check('Cáº¤U TRÃšC (index.html): tháº» qc-final-card cÃ³ form Â· Ã´ Kiá»ƒm Loáº¡i Â· picker thÃ nh pháº©m Â· tháº» ngÃ y',
   idxHtml.includes('id="qc-final-card"') && idxHtml.includes('id="qcf-form"') &&
   idxHtml.includes('id="qcf-kind"') && idxHtml.includes('id="qcf-product-list"') &&
   idxHtml.includes('id="qcf-day-cards"') && idxHtml.includes('id="qcf-input-qty"'));
-check('CẤU TRÚC (index.html): nút "Định mức" TRONG form + popup bảng định mức 2 loại (bỏ thanh .x2-rate-bar cũ)',
+check('Cáº¤U TRÃšC (index.html): nÃºt "Äá»‹nh má»©c" TRONG form + popup báº£ng Ä‘á»‹nh má»©c 2 loáº¡i (bá» thanh .x2-rate-bar cÅ©)',
   idxHtml.includes('id="btn-qcf-rate"') && idxHtml.includes('id="modal-qcf-rate"') &&
-  idxHtml.includes('id="qcf-rate-rows"') && idxHtml.includes('Kiểm Thanh (thanh/h)') &&
-  idxHtml.includes('Kiểm Ván (tấm/h)') && !idxHtml.includes('id="qcf-rate-bar"'));
-check('CẤU TRÚC (index.html): mini card không còn chú thích "sắp bổ sung"',
-  !idxHtml.includes('Kiểm Sau Sản Xuất — kiểm tra thành phẩm trước khi xuất xưởng (sắp bổ sung)'));
-check('CẤU TRÚC (qc.js): đếm thẻ qc-final-card dùng qcFinalCardCount + render trong renderQcView',
+  idxHtml.includes('id="qcf-rate-rows"') && idxHtml.includes('Kiá»ƒm Thanh (thanh/h)') &&
+  idxHtml.includes('Kiá»ƒm VÃ¡n (táº¥m/h)') && !idxHtml.includes('id="qcf-rate-bar"'));
+check('Cáº¤U TRÃšC (index.html): mini card khÃ´ng cÃ²n chÃº thÃ­ch "sáº¯p bá»• sung"',
+  !idxHtml.includes('Kiá»ƒm Sau Sáº£n Xuáº¥t â€” kiá»ƒm tra thÃ nh pháº©m trÆ°á»›c khi xuáº¥t xÆ°á»Ÿng (sáº¯p bá»• sung)'));
+check('Cáº¤U TRÃšC (qc.js): Ä‘áº¿m tháº» qc-final-card dÃ¹ng qcFinalCardCount + render trong renderQcView',
   qcJs.includes("'qc-final-card':    { el: 'qc-mini-count-final',    count: () => qcFinalCardCount() }") &&
   qcJs.includes('renderQcFinalCard();'));
-check('CẤU TRÚC (events.js): wire form · Loại kiểm · picker · sửa/xóa · popup định mức + đóng picker ngoài',
+check('Cáº¤U TRÃšC (events.js): wire form Â· Loáº¡i kiá»ƒm Â· picker Â· sá»­a/xÃ³a Â· popup Ä‘á»‹nh má»©c + Ä‘Ã³ng picker ngoÃ i',
   evJs.includes("safeOn('qcf-form', 'submit'") && evJs.includes('toggleQcFinalPicker') &&
   evJs.includes('onQcFinalTableClick') && evJs.includes("safeOn('qcf-kind', 'change'") &&
   evJs.includes('openQcFinalRateModal') && evJs.includes('onQcFinalRateRowClick') &&
   evJs.includes('qcFinalMaybeClosePicker'));
-check('CẤU TRÚC (js/qc-final.js): tồn chờ QC lũy kế theo ngày (pairKey báo cáo) + đơn vị theo Loại kiểm + tồn ván thô BTP',
+check('Cáº¤U TRÃšC (js/qc-final.js): tá»“n chá» QC lÅ©y káº¿ theo ngÃ y (pairKey bÃ¡o cÃ¡o) + Ä‘Æ¡n vá»‹ theo Loáº¡i kiá»ƒm + tá»“n vÃ¡n thÃ´ BTP',
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('qcFinalProductStocks') &&
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('qcFinalPairKeyOf') &&
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('syncQcFinalKindFields') &&
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('qcFinalVanBtpStocks') &&
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('QC_FINAL_BTP_PIECE_MAX_VOL') &&
   fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8').includes('data-qcf-vt'));
-check('CẤU TRÚC (state.js): 2 key bamboo_tracker_qc_final_v1 + bamboo_tracker_qc_final_rate_v1',
+check('Cáº¤U TRÃšC (state.js): 2 key bamboo_tracker_qc_final_v1 + bamboo_tracker_qc_final_rate_v1',
   stJs.includes("bamboo_tracker_qc_final_v1") && stJs.includes("bamboo_tracker_qc_final_rate_v1"));
-check('CẤU TRÚC (4 nơi): storage (restore) · cloud (snapshot/core) · history (DOMAINS) · main (load boot)',
+check('Cáº¤U TRÃšC (4 nÆ¡i): storage (restore) Â· cloud (snapshot/core) Â· history (DOMAINS) Â· main (load boot)',
   stoJs.includes('restoreQcFinal') && stoJs.includes('qcFinalRecords') &&
   clJs.includes('qcFinalRecords') && clJs.includes('qcFinalRates') &&
   hiJs.includes('qcFinalRecords') && mnJs.includes('loadQcFinal'));
-check('CẤU TRÚC (sw.js): CACHE_NAME v456 + js/qc-final.js vào APP_SHELL',
-  /nha-may-ngoc-son-v456/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
-check('CẤU TRÚC (styles.css): khối CSS riêng của thẻ (form gọn + dropdown nổi position:absolute + dòng lượt kiểm + popup ĐM)',
+check('Cáº¤U TRÃšC (sw.js): CACHE_NAME v486 + js/qc-final.js vÃ o APP_SHELL',
+  /nha-may-ngoc-son-v486/.test(swJs) && swJs.includes("'./js/qc-final.js'"));
+check('Cáº¤U TRÃšC (styles.css): khá»‘i CSS riÃªng cá»§a tháº» (form gá»n + dropdown ná»•i position:absolute + dÃ²ng lÆ°á»£t kiá»ƒm + popup ÄM)',
   cssHtml.includes('.qcf-picker') && cssHtml.includes('.qcf-row-main') && cssHtml.includes('.qcf-ws-chip') &&
   cssHtml.includes('.qcf-kind-chip') && cssHtml.includes('.qcf-product-meta') &&
   cssHtml.includes('.qcf-rate-input') &&
   /\.qcf-picker\s*\{[^}]*position:\s*absolute/.test(cssHtml) && !/\.qcf-picker\s*\{[^}]*position:\s*(static|fixed)/.test(cssHtml));
-check('CẤU TRÚC (dropdown nổi): portal ra overlay + neo tọa độ (mở xuống/lên) + giữ neo khi cuộn/resize/Esc',
+check('Cáº¤U TRÃšC (dropdown ná»•i): portal ra overlay + neo tá»a Ä‘á»™ (má»Ÿ xuá»‘ng/lÃªn) + giá»¯ neo khi cuá»™n/resize/Esc',
   (() => {
     const qcfJs = fsMod.readFileSync(new URL('../js/qc-final.js', import.meta.url), 'utf8');
     const evSrc = fsMod.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
@@ -598,39 +598,39 @@ check('CẤU TRÚC (dropdown nổi): portal ra overlay + neo tọa độ (mở x
            evSrc.includes("window.addEventListener('scroll', positionQcFinalPicker, true)") &&
            evSrc.includes('setQcFinalPickerOpen(false); return;');
   })());
-check('CẤU TRÚC (cloud.js): đăng ký SW với updateViaCache:"none" — sw.js luôn tải mới, hết dính bundle cũ',
+check('Cáº¤U TRÃšC (cloud.js): Ä‘Äƒng kÃ½ SW vá»›i updateViaCache:"none" â€” sw.js luÃ´n táº£i má»›i, háº¿t dÃ­nh bundle cÅ©',
   fsMod.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8').includes("register('./sw.js', { updateViaCache: 'none' })"));
-check('CẤU TRÚC (package.json): tests/qc-final.test.mjs đã vào npm test',
+check('Cáº¤U TRÃšC (package.json): tests/qc-final.test.mjs Ä‘Ã£ vÃ o npm test',
   pkJs.includes('tests/qc-final.test.mjs'));
 
-// ─── J. CẬP NHẬT MỚI: tồn Thanh theo ngày + đổi Loại + xem trước ──
+// â”€â”€â”€ J. Cáº¬P NHáº¬T Má»šI: tá»“n Thanh theo ngÃ y + Ä‘á»•i Loáº¡i + xem trÆ°á»›c â”€â”€
 state.xuong2BaoTinhRecords = [
   { id: 'bt-date-a', date: '2026-09-20', kind: 'bao_thanh', inQty: 500,
-    outSizeKey: '640×14×12', outDims: [640, 14, 12] },
+    outSizeKey: '640Ã—14Ã—12', outDims: [640, 14, 12] },
   { id: 'bt-date-b', date: '2026-09-25', kind: 'bao_thanh', inQty: 300,
-    outSizeKey: '640×14×12', outDims: [640, 14, 12] }
+    outSizeKey: '640Ã—14Ã—12', outDims: [640, 14, 12] }
 ];
 state.qcFinalRecords = [
-  { id: 'qc-date-a', date: '2026-09-21', kind: 'thanh', sizeKey: '640×14×12', inputQty: 200 },
-  { id: 'qc-date-b', date: '2026-09-26', kind: 'thanh', sizeKey: '640×14×12', inputQty: 100 },
-  { id: 'qc-edit-ignore', date: '2026-09-22', kind: 'thanh', sizeKey: '640×14×12', inputQty: 50 }
+  { id: 'qc-date-a', date: '2026-09-21', kind: 'thanh', sizeKey: '640Ã—14Ã—12', inputQty: 200 },
+  { id: 'qc-date-b', date: '2026-09-26', kind: 'thanh', sizeKey: '640Ã—14Ã—12', inputQty: 100 },
+  { id: 'qc-edit-ignore', date: '2026-09-22', kind: 'thanh', sizeKey: '640Ã—14Ã—12', inputQty: 50 }
 ];
-check('TỒN THANH THEO NGÀY: chỉ lấy lượt Bào/QC có ngày ≤ ngày kiểm',
+check('Tá»’N THANH THEO NGÃ€Y: chá»‰ láº¥y lÆ°á»£t BÃ o/QC cÃ³ ngÃ y â‰¤ ngÃ y kiá»ƒm',
   (() => {
     const rows = qcf.qcFinalThanhSizeStocks('', '2026-09-23');
-    const row = rows.find(x => x.sizeKey === '640×14×12');
+    const row = rows.find(x => x.sizeKey === '640Ã—14Ã—12');
     return row && row.total === 500 && row.used === 250 && row.remain === 250;
   })());
-check('SỬA LƯỢT THANH: loại lượt đang sửa khỏi tổng Đã kiểm, trả lại tồn ngay theo ngày',
+check('Sá»¬A LÆ¯á»¢T THANH: loáº¡i lÆ°á»£t Ä‘ang sá»­a khá»i tá»•ng ÄÃ£ kiá»ƒm, tráº£ láº¡i tá»“n ngay theo ngÃ y',
   (() => {
     const rows = qcf.qcFinalThanhSizeStocks('qc-edit-ignore', '2026-09-23');
-    const row = rows.find(x => x.sizeKey === '640×14×12');
+    const row = rows.find(x => x.sizeKey === '640Ã—14Ã—12');
     return row && row.used === 200 && row.remain === 300;
   })());
-check('TỒN THANH THEO NGÀY: ngày 25 gồm cả lượt Bào 25 nhưng chưa gồm QC ngày 26',
+check('Tá»’N THANH THEO NGÃ€Y: ngÃ y 25 gá»“m cáº£ lÆ°á»£t BÃ o 25 nhÆ°ng chÆ°a gá»“m QC ngÃ y 26',
   (() => {
     const row = qcf.qcFinalThanhSizeStocks('', '2026-09-25')
-      .find(x => x.sizeKey === '640×14×12');
+      .find(x => x.sizeKey === '640Ã—14Ã—12');
     return row && row.total === 800 && row.used === 250 && row.remain === 550;
   })());
 
@@ -639,60 +639,60 @@ setVal('qcf-date', '2026-09-23');
 setVal('qcf-kind', 'thanh');
 qcf.syncQcFinalKindFields();
 qcf.onQcFinalListClick({
-  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640×14×12' } : null }
+  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640Ã—14Ã—12' } : null }
 });
 setVal('qcf-input-qty', '100');
 setVal('qcf-ok', '80');
 setVal('qcf-except', '10');
 setVal('qcf-reject', '10');
 const preview = qcf.updateQcFinalPreview();
-check('XEM TRƯỚC QC: tính Đầu vào, Đạt, Ngoại lệ, Loại, Tổng kiểm/đạt, còn lại nguồn và tỉ lệ lỗi',
+check('XEM TRÆ¯á»šC QC: tÃ­nh Äáº§u vÃ o, Äáº¡t, Ngoáº¡i lá»‡, Loáº¡i, Tá»•ng kiá»ƒm/Ä‘áº¡t, cÃ²n láº¡i nguá»“n vÃ  tá»‰ lá»‡ lá»—i',
   preview && preview.inputQty === 100 && preview.qtyOk === 80 && preview.qtyExcept === 10 &&
   preview.qtyReject === 10 && preview.totalChecked === 100 && preview.totalPass === 90 &&
   preview.remaining === 150 && approx(preview.errorPct, 10));
-check('ĐỔI LOẠI: Thanh → Ván xóa sạch lựa chọn Thanh và ô Đầu vào',
+check('Äá»”I LOáº I: Thanh â†’ VÃ¡n xÃ³a sáº¡ch lá»±a chá»n Thanh vÃ  Ã´ Äáº§u vÃ o',
   (() => {
     setVal('qcf-kind', 'van');
     qcf.syncQcFinalKindFields();
     return document.getElementById('qcf-input-qty').value === '' &&
-      document.getElementById('qcf-picker-text').textContent === 'Ván thô Ép Ván';
+      document.getElementById('qcf-picker-text').textContent === 'VÃ¡n thÃ´ Ã‰p VÃ¡n';
   })());
-check('ĐỔI LOẠI: Ván → Thanh xóa sạch lựa chọn Ván',
+check('Äá»”I LOáº I: VÃ¡n â†’ Thanh xÃ³a sáº¡ch lá»±a chá»n VÃ¡n',
   (() => {
     setVal('qcf-kind', 'thanh');
     qcf.syncQcFinalKindFields();
     return document.getElementById('qcf-input-qty').value === '' &&
-      document.getElementById('qcf-picker-text').textContent === 'Cỡ thanh Bào thanh';
+      document.getElementById('qcf-picker-text').textContent === 'Cá»¡ thanh BÃ o thanh';
   })());
 
-check('NHÃN MỚI + PREVIEW: index.html dùng nhãn người dùng yêu cầu và có khối xem trước',
-  idxHtml.includes('Số đang đưa kiểm') && idxHtml.includes('Ngoại lệ (vẫn tính đạt)') &&
-  idxHtml.includes('Loại / Hỏng') && idxHtml.includes('Hủy / Nhập mới') &&
+check('NHÃƒN Má»šI + PREVIEW: index.html dÃ¹ng nhÃ£n ngÆ°á»i dÃ¹ng yÃªu cáº§u vÃ  cÃ³ khá»‘i xem trÆ°á»›c',
+  idxHtml.includes('Sá»‘ Ä‘ang Ä‘Æ°a kiá»ƒm') && idxHtml.includes('Ngoáº¡i lá»‡ (váº«n tÃ­nh Ä‘áº¡t)') &&
+  idxHtml.includes('Loáº¡i / Há»ng') && idxHtml.includes('Há»§y / Nháº­p má»›i') &&
   idxHtml.includes('id="qcf-preview"'));
 
 state.xuong2BaoTinhRecords = [];
 state.qcFinalRecords = [];
 
-// ─── TEST CẬP NHẬT TỒN / ĐƠN VỊ NGUỒN ─────────────────────
-// Đếm thẻ mini theo đơn vị từng Loại; hỗn hợp phải tách rõ tấm/thanh.
+// â”€â”€â”€ TEST Cáº¬P NHáº¬T Tá»’N / ÄÆ N Vá»Š NGUá»’N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Äáº¿m tháº» mini theo Ä‘Æ¡n vá»‹ tá»«ng Loáº¡i; há»—n há»£p pháº£i tÃ¡ch rÃµ táº¥m/thanh.
 state.qcFinalRecords = [
   { id: 'card-v', kind: 'van', qtyOk: 20, qtyExcept: 5, qtyReject: 0 },
   { id: 'card-t', kind: 'thanh', qtyOk: 12, qtyExcept: 3, qtyReject: 1 }
 ];
-check('CARD HỖN HỢP: hiện riêng 25 tấm đạt và 15 thanh đạt',
-  qcf.qcFinalCardCount() === '2 lượt · 25 tấm đạt · 15 thanh đạt');
+check('CARD Há»–N Há»¢P: hiá»‡n riÃªng 25 táº¥m Ä‘áº¡t vÃ  15 thanh Ä‘áº¡t',
+  qcf.qcFinalCardCount() === '2 lÆ°á»£t Â· 25 táº¥m Ä‘áº¡t Â· 15 thanh Ä‘áº¡t');
 state.qcFinalRecords = [{ id: 'card-t-only', kind: 'thanh', qtyOk: 8, qtyExcept: 2, qtyReject: 0 }];
-check('CARD CHỈ THANH: dùng nhãn thanh đạt',
-  qcf.qcFinalCardCount() === '1 lượt · 10 thanh đạt');
+check('CARD CHá»ˆ THANH: dÃ¹ng nhÃ£n thanh Ä‘áº¡t',
+  qcf.qcFinalCardCount() === '1 lÆ°á»£t Â· 10 thanh Ä‘áº¡t');
 state.qcFinalRecords = [{ id: 'card-v-only', kind: 'van', qtyOk: 7, qtyExcept: 1, qtyReject: 0 }];
-check('CARD CHỈ VÁN: dùng nhãn tấm đạt',
-  qcf.qcFinalCardCount() === '1 lượt · 8 tấm đạt');
+check('CARD CHá»ˆ VÃN: dÃ¹ng nhÃ£n táº¥m Ä‘áº¡t',
+  qcf.qcFinalCardCount() === '1 lÆ°á»£t Â· 8 táº¥m Ä‘áº¡t');
 
-// Chặn nhập vượt nguồn Thanh/Ván khi đã chọn nguồn có tồn.
+// Cháº·n nháº­p vÆ°á»£t nguá»“n Thanh/VÃ¡n khi Ä‘Ã£ chá»n nguá»“n cÃ³ tá»“n.
 state.qcFinalRecords = [];
 state.xuong2BaoTinhRecords = [
   { id: 'bt-submit', date: '2026-09-20', kind: 'bao_thanh',
-    outSizeKey: '640×14×12', outDims: [640, 14, 12], inQty: 100,
+    outSizeKey: '640Ã—14Ã—12', outDims: [640, 14, 12], inQty: 100,
     inSource: 'press' }
 ];
 setVal('qcf-workshop', 'x2');
@@ -700,18 +700,18 @@ setVal('qcf-kind', 'thanh');
 setVal('qcf-date', '2026-09-23');
 qcf.syncQcFinalKindFields();
 qcf.onQcFinalListClick({
-  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640×14×12' } : null }
+  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640Ã—14Ã—12' } : null }
 });
 setVal('qcf-input-qty', '101');
 setVal('qcf-ok', '101'); setVal('qcf-except', '0'); setVal('qcf-reject', '0');
 const thanhCountBeforeOverstock = state.qcFinalRecords.length;
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('CHẶN SOURCE THANH: đầu vào 101 vượt tồn 100 thì không lưu',
+check('CHáº¶N SOURCE THANH: Ä‘áº§u vÃ o 101 vÆ°á»£t tá»“n 100 thÃ¬ khÃ´ng lÆ°u',
   state.qcFinalRecords.length === thanhCountBeforeOverstock);
 
 state.pressRecords = [
   { id: 'p-v-submit', date: '2026-09-20', week: '2026-W38', year: 2026,
-    productId: 'sp-v-submit', productName: 'Ván 1000×2000×10',
+    productId: 'sp-v-submit', productName: 'VÃ¡n 1000Ã—2000Ã—10',
     finishedQty: 50, vanTho: [], sticks: [] }
 ];
 setVal('qcf-kind', 'van');
@@ -724,16 +724,16 @@ setVal('qcf-input-qty', '51');
 setVal('qcf-ok', '51'); setVal('qcf-except', '0'); setVal('qcf-reject', '0');
 const vanCountBeforeOverstock = state.qcFinalRecords.length;
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('CHẶN SOURCE VÁN: đầu vào 51 vượt tồn 50 thì không lưu',
+check('CHáº¶N SOURCE VÃN: Ä‘áº§u vÃ o 51 vÆ°á»£t tá»“n 50 thÃ¬ khÃ´ng lÆ°u',
   state.qcFinalRecords.length === vanCountBeforeOverstock);
 
-// Đổi ngày Thanh: lượt mới nạp lại live remain; lượt sửa cộng lại lượng gốc
-// nhưng không ghi đè ô Đầu vào đang sửa.
+// Äá»•i ngÃ y Thanh: lÆ°á»£t má»›i náº¡p láº¡i live remain; lÆ°á»£t sá»­a cá»™ng láº¡i lÆ°á»£ng gá»‘c
+// nhÆ°ng khÃ´ng ghi Ä‘Ã¨ Ã´ Äáº§u vÃ o Ä‘ang sá»­a.
 state.pressRecords = [];
 state.qcFinalRecords = [];
 state.xuong2BaoTinhRecords = [
   { id: 'bt-date', date: '2026-09-20', kind: 'bao_thanh',
-    outSizeKey: '640×14×12', outDims: [640, 14, 12], inQty: 100,
+    outSizeKey: '640Ã—14Ã—12', outDims: [640, 14, 12], inQty: 100,
     inSource: 'press' }
 ];
 setVal('qcf-workshop', 'x2');
@@ -743,29 +743,29 @@ qcf.resetQcFinalForm();
 setVal('qcf-date', '2026-09-22');
 qcf.syncQcFinalKindFields();
 qcf.onQcFinalListClick({
-  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640×14×12' } : null }
+  target: { closest: sel => sel === '[data-qcf-size]' ? { getAttribute: () => '640Ã—14Ã—12' } : null }
 });
-check('ĐỔI NGÀY THANH — MỚI: nạp tồn live 100 vào Đầu vào',
+check('Äá»”I NGÃ€Y THANH â€” Má»šI: náº¡p tá»“n live 100 vÃ o Äáº§u vÃ o',
   document.getElementById('qcf-input-qty').value === '100');
 setVal('qcf-date', '2026-09-23');
 qcf.qcFinalOnDateChange();
-check('ĐỔI NGÀY THANH — MỚI: đổi ngày vẫn nạp tồn live 100',
+check('Äá»”I NGÃ€Y THANH â€” Má»šI: Ä‘á»•i ngÃ y váº«n náº¡p tá»“n live 100',
   document.getElementById('qcf-input-qty').value === '100');
 
 state.qcFinalRecords = [
   { id: 'edit-thanh-date', date: '2026-09-22', workshop: 'x2', kind: 'thanh',
     inputQty: 30, qtyOk: 25, qtyExcept: 3, qtyReject: 2,
-    sizeKey: '640×14×12', sizeDims: [640, 14, 12] },
+    sizeKey: '640Ã—14Ã—12', sizeDims: [640, 14, 12] },
   { id: 'other-thanh-date', date: '2026-09-22', workshop: 'x2', kind: 'thanh',
     inputQty: 30, qtyOk: 30, qtyExcept: 0, qtyReject: 0,
-    sizeKey: '640×14×12', sizeDims: [640, 14, 12] }
+    sizeKey: '640Ã—14Ã—12', sizeDims: [640, 14, 12] }
 ];
 qcf.editQcFinalRecord('edit-thanh-date');
-check('ĐỔI NGÀY THANH — SỬA: giữ ô Đầu vào gốc 30',
+check('Äá»”I NGÃ€Y THANH â€” Sá»¬A: giá»¯ Ã´ Äáº§u vÃ o gá»‘c 30',
   document.getElementById('qcf-input-qty').value === '30');
 setVal('qcf-date', '2026-09-23');
 qcf.qcFinalOnDateChange();
-check('ĐỔI NGÀY THANH — SỬA: tồn live 70 cộng lượng gốc 30, ô gốc không đổi',
+check('Äá»”I NGÃ€Y THANH â€” Sá»¬A: tá»“n live 70 cá»™ng lÆ°á»£ng gá»‘c 30, Ã´ gá»‘c khÃ´ng Ä‘á»•i',
   document.getElementById('qcf-input-qty').value === '30' &&
   qcf.updateQcFinalPreview().sourceRemain === 100);
 
@@ -773,7 +773,7 @@ state.xuong2BaoTinhRecords = [];
 state.pressRecords = [];
 state.qcFinalRecords = [];
 
-// ─── CHẶN THIẾU NGUỒN X2 + GIỮ NGUỒN KHI SỬA ĐỔI NGÀY VÁN ──
+// â”€â”€â”€ CHáº¶N THIáº¾U NGUá»’N X2 + GIá»® NGUá»’N KHI Sá»¬A Äá»”I NGÃ€Y VÃN â”€â”€
 qcf.resetQcFinalForm();
 setVal('qcf-workshop', 'x2');
 setVal('qcf-kind', 'van');
@@ -785,7 +785,7 @@ setVal('qcf-except', '0');
 setVal('qcf-reject', '0');
 const sourceLessVanCount = state.qcFinalRecords.length;
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('CHẶN SOURCE-LESS X2: Kiểm Ván chưa chọn nguồn tồn → không lưu',
+check('CHáº¶N SOURCE-LESS X2: Kiá»ƒm VÃ¡n chÆ°a chá»n nguá»“n tá»“n â†’ khÃ´ng lÆ°u',
   state.qcFinalRecords.length === sourceLessVanCount);
 
 qcf.resetQcFinalForm();
@@ -799,69 +799,69 @@ setVal('qcf-except', '0');
 setVal('qcf-reject', '0');
 const sourceLessThanhCount = state.qcFinalRecords.length;
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('CHẶN SOURCE-LESS X2: Kiểm Thanh chưa chọn cỡ nguồn → không lưu',
+check('CHáº¶N SOURCE-LESS X2: Kiá»ƒm Thanh chÆ°a chá»n cá»¡ nguá»“n â†’ khÃ´ng lÆ°u',
   state.qcFinalRecords.length === sourceLessThanhCount);
 
-// Sửa Kiểm Ván: đổi ngày phải tra lại theo sizeKey gốc, không xem như thiếu nguồn.
+// Sá»­a Kiá»ƒm VÃ¡n: Ä‘á»•i ngÃ y pháº£i tra láº¡i theo sizeKey gá»‘c, khÃ´ng xem nhÆ° thiáº¿u nguá»“n.
 state.pressRecords = [
   { id: 'p-edit-v-size', date: '2026-09-20', week: '2026-W38', year: 2026,
     productId: '', productName: '', finishedQty: 0, vanTho: [
-      { vtDim: '1220×2440×9', vtQty: 50 }
+      { vtDim: '1220Ã—2440Ã—9', vtQty: 50 }
     ], sticks: [] }
 ];
 state.qcFinalRecords = [
   { id: 'edit-v-size', date: '2026-09-22', workshop: 'x2', kind: 'van',
     inputQty: 30, qtyOk: 25, qtyExcept: 3, qtyReject: 2,
-    sizeKey: '1220×2440×9', sizeDims: [1220, 2440, 9],
-    productId: '', productName: 'Ván thô 1220 × 2440 × 9' }
+    sizeKey: '1220Ã—2440Ã—9', sizeDims: [1220, 2440, 9],
+    productId: '', productName: 'VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9' }
 ];
 qcf.editQcFinalRecord('edit-v-size');
 setVal('qcf-date', '2026-09-23');
 qcf.qcFinalOnDateChange();
-check('SỬA NGÀY VÁN THEO CỠ: giữ lựa chọn sizeKey gốc + đầu vào gốc 30',
+check('Sá»¬A NGÃ€Y VÃN THEO Cá» : giá»¯ lá»±a chá»n sizeKey gá»‘c + Ä‘áº§u vÃ o gá»‘c 30',
   document.getElementById('qcf-input-qty').value === '30' &&
   document.getElementById('qcf-picker-text').textContent.includes('1220'));
 setVal('qcf-ok', '25');
 setVal('qcf-except', '3');
 setVal('qcf-reject', '2');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('SỬA NGÀY VÁN THEO CỠ: re-resolution tồn tại → lưu không bị coi là source-less',
+check('Sá»¬A NGÃ€Y VÃN THEO Cá» : re-resolution tá»“n táº¡i â†’ lÆ°u khÃ´ng bá»‹ coi lÃ  source-less',
   state.qcFinalRecords.length === 1 &&
-  state.qcFinalRecords[0].sizeKey === '1220×2440×9' &&
+  state.qcFinalRecords[0].sizeKey === '1220Ã—2440Ã—9' &&
   state.qcFinalRecords[0].inputQty === 30);
 
-// Fallback theo thành phẩm khi bản ghi Ván cũ không có sizeKey.
+// Fallback theo thÃ nh pháº©m khi báº£n ghi VÃ¡n cÅ© khÃ´ng cÃ³ sizeKey.
 state.pressRecords = [
   { id: 'p-edit-v-product', date: '2026-09-20', week: '2026-W38', year: 2026,
-    productId: 'sp-edit-v', productName: 'Ván 1000×2000×10',
+    productId: 'sp-edit-v', productName: 'VÃ¡n 1000Ã—2000Ã—10',
     finishedQty: 40, vanTho: [], sticks: [] }
 ];
 state.qcFinalRecords = [
   { id: 'edit-v-product', date: '2026-09-22', workshop: 'x2', kind: 'van',
     inputQty: 12, qtyOk: 10, qtyExcept: 1, qtyReject: 1,
-    productId: 'sp-edit-v', productName: 'Ván 1000×2000×10' }
+    productId: 'sp-edit-v', productName: 'VÃ¡n 1000Ã—2000Ã—10' }
 ];
 qcf.editQcFinalRecord('edit-v-product');
 setVal('qcf-date', '2026-09-23');
 qcf.qcFinalOnDateChange();
-check('SỬA NGÀY VÁN THEO SẢN PHẨM: khôi phục lựa chọn + đầu vào gốc',
+check('Sá»¬A NGÃ€Y VÃN THEO Sáº¢N PHáº¨M: khÃ´i phá»¥c lá»±a chá»n + Ä‘áº§u vÃ o gá»‘c',
   document.getElementById('qcf-input-qty').value === '12' &&
-  document.getElementById('qcf-picker-text').textContent === 'Ván 1000×2000×10');
+  document.getElementById('qcf-picker-text').textContent === 'VÃ¡n 1000Ã—2000Ã—10');
 setVal('qcf-ok', '10');
 setVal('qcf-except', '1');
 setVal('qcf-reject', '1');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('SỬA NGÀY VÁN THEO SẢN PHẨM: re-resolution tồn tại → lưu không bị coi là source-less',
+check('Sá»¬A NGÃ€Y VÃN THEO Sáº¢N PHáº¨M: re-resolution tá»“n táº¡i â†’ lÆ°u khÃ´ng bá»‹ coi lÃ  source-less',
   state.qcFinalRecords.length === 1 &&
   state.qcFinalRecords[0].productId === 'sp-edit-v' &&
   state.qcFinalRecords[0].inputQty === 12);
 
-// Lượt sửa bị xóa khỏi dữ liệu trong lúc form vẫn giữ editId: không được lưu thành lượt mới.
+// LÆ°á»£t sá»­a bá»‹ xÃ³a khá»i dá»¯ liá»‡u trong lÃºc form váº«n giá»¯ editId: khÃ´ng Ä‘Æ°á»£c lÆ°u thÃ nh lÆ°á»£t má»›i.
 qcf.resetQcFinalForm();
 state.qcFinalRecords = [
   { id: 'missing-edit', date: '2026-09-22', workshop: 'x2', kind: 'van',
     inputQty: 8, qtyOk: 7, qtyExcept: 1, qtyReject: 0,
-    productId: 'sp-missing', productName: 'Ván 1220×2440×9' }
+    productId: 'sp-missing', productName: 'VÃ¡n 1220Ã—2440Ã—9' }
 ];
 qcf.editQcFinalRecord('missing-edit');
 state.qcFinalRecords = [];
@@ -872,59 +872,59 @@ setVal('qcf-reject', '0');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
 const toastContainer = document.getElementById('toast-container');
 const missingToast = toastContainer._children && toastContainer._children.at(-1);
-check('SỬA MẤT LƯỢT: không tạo lượt kiểm trùng',
+check('Sá»¬A Máº¤T LÆ¯á»¢T: khÃ´ng táº¡o lÆ°á»£t kiá»ƒm trÃ¹ng',
   state.qcFinalRecords.length === 0);
-check('SỬA MẤT LƯỢT: hiện đúng toast yêu cầu bấm Làm mới',
-  missingToast && String(missingToast.innerHTML || '').includes('Lượt đang sửa không còn tồn tại. Hãy bấm Làm mới...'));
+check('Sá»¬A Máº¤T LÆ¯á»¢T: hiá»‡n Ä‘Ãºng toast yÃªu cáº§u báº¥m LÃ m má»›i',
+  missingToast && String(missingToast.innerHTML || '').includes('LÆ°á»£t Ä‘ang sá»­a khÃ´ng cÃ²n tá»“n táº¡i. HÃ£y báº¥m LÃ m má»›i...'));
 
-// Legacy Ván: bản ghi cũ không có sizeKey nhưng productName có 3 kích thước.
-// Ưu tiên re-resolution từ tồn Ván-thô trước, rồi mới tra thành phẩm.
+// Legacy VÃ¡n: báº£n ghi cÅ© khÃ´ng cÃ³ sizeKey nhÆ°ng productName cÃ³ 3 kÃ­ch thÆ°á»›c.
+// Æ¯u tiÃªn re-resolution tá»« tá»“n VÃ¡n-thÃ´ trÆ°á»›c, rá»“i má»›i tra thÃ nh pháº©m.
 state.pressRecords = [
   { id: 'p-edit-v-legacy', date: '2026-09-20', week: '2026-W38', year: 2026,
     productId: '', productName: '', finishedQty: 0, vanTho: [
-      { vtDim: '1220×2440×9', vtQty: 18 }
+      { vtDim: '1220Ã—2440Ã—9', vtQty: 18 }
     ], sticks: [] }
 ];
 state.qcFinalRecords = [
   { id: 'edit-v-legacy', date: '2026-09-22', workshop: 'x2', kind: 'van',
     inputQty: 12, qtyOk: 10, qtyExcept: 1, qtyReject: 1,
-    productId: '', productName: 'Ván thô 1220 × 2440 × 9' }
+    productId: '', productName: 'VÃ¡n thÃ´ 1220 Ã— 2440 Ã— 9' }
 ];
 qcf.editQcFinalRecord('edit-v-legacy');
 setVal('qcf-date', '2026-09-23');
 qcf.qcFinalOnDateChange();
-check('LEGACY VÁN KHÔNG sizeKey: parse tên, tìm Ván-thô live trước thành phẩm',
+check('LEGACY VÃN KHÃ”NG sizeKey: parse tÃªn, tÃ¬m VÃ¡n-thÃ´ live trÆ°á»›c thÃ nh pháº©m',
   document.getElementById('qcf-input-qty').value === '12' &&
   document.getElementById('qcf-picker-text').textContent.includes('1220'));
 setVal('qcf-ok', '10');
 setVal('qcf-except', '1');
 setVal('qcf-reject', '1');
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('LEGACY VÁN KHÔNG sizeKey: lưu lại gắn sizeKey Ván-thô và đúng đầu vào gốc',
+check('LEGACY VÃN KHÃ”NG sizeKey: lÆ°u láº¡i gáº¯n sizeKey VÃ¡n-thÃ´ vÃ  Ä‘Ãºng Ä‘áº§u vÃ o gá»‘c',
   state.qcFinalRecords.length === 1 &&
-  state.qcFinalRecords[0].sizeKey === '1220×2440×9' &&
+  state.qcFinalRecords[0].sizeKey === '1220Ã—2440Ã—9' &&
   state.qcFinalRecords[0].inputQty === 12);
 
-// ─── XUẤT HÀNG THEO TÊN + LƯU THẤT BẠI PHẢI KHÔI PHỤC TRẠNG THÁI ──
+// â”€â”€â”€ XUáº¤T HÃ€NG THEO TÃŠN + LÆ¯U THáº¤T Báº I PHáº¢I KHÃ”I PHá»¤C TRáº NG THÃI â”€â”€
 state.pressRecords = [
   { id: 'p-export-name', date: '2026-09-20', week: '2026-W38', year: 2026,
-    productId: 'sp-export-name', productName: 'Ván 1220×2440×9',
+    productId: 'sp-export-name', productName: 'VÃ¡n 1220Ã—2440Ã—9',
     finishedQty: 100, vanTho: [], sticks: [] }
 ];
 state.materialRates = [
-  { id: 'sp-export-name', product: '1220x2440x9', unit: 'Tấm' }
+  { id: 'sp-export-name', product: '1220x2440x9', unit: 'Táº¥m' }
 ];
 state.qcFinalRecords = [];
 state.qcExports = [
   { id: 'export-name', name: '1220 x 2440 x 9', qty: 30,
     exportDate: '2026-09-25', year: 2026, weeks: [39, 40] }
 ];
-check('TỒN XUẤT THEO TÊN: phiếu xuất name khớp tên chuẩn hoá và materialRates',
+check('Tá»’N XUáº¤T THEO TÃŠN: phiáº¿u xuáº¥t name khá»›p tÃªn chuáº©n hoÃ¡ vÃ  materialRates',
   (() => {
     const row = qcf.qcFinalProductStocks('2026-10-01')
       .find(x => x.productId === 'sp-export-name');
     return row && row.exported === 30 && row.remain === 70
-      && qcf.qcFinalNormalizeName('Ván 1220×2440×9') === qcf.qcFinalNormalizeName('Ván 1220 x 2440 x 9');
+      && qcf.qcFinalNormalizeName('VÃ¡n 1220Ã—2440Ã—9') === qcf.qcFinalNormalizeName('VÃ¡n 1220 x 2440 x 9');
   })());
 state.qcExports = [];
 state.pressRecords = [];
@@ -944,7 +944,7 @@ global.localStorage.setItem = (k, v) => {
   return setItemOriginal(k, v);
 };
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('LƯU TẠO THẤT BẠI: không thêm lượt kiểm và không reset form',
+check('LÆ¯U Táº O THáº¤T Báº I: khÃ´ng thÃªm lÆ°á»£t kiá»ƒm vÃ  khÃ´ng reset form',
   state.qcFinalRecords.length === 0 &&
   document.getElementById('qcf-input-qty').value === '25' &&
   document.getElementById('qcf-ok').value === '20');
@@ -967,7 +967,7 @@ global.localStorage.setItem = (k, v) => {
   return setItemOriginal(k, v);
 };
 qcf.handleQcFinalSubmit({ preventDefault(){} });
-check('LƯU SỬA THẤT BẠI: khôi phục snapshot và giữ form đang sửa',
+check('LÆ¯U Sá»¬A THáº¤T Báº I: khÃ´i phá»¥c snapshot vÃ  giá»¯ form Ä‘ang sá»­a',
   state.qcFinalRecords.length === 1 &&
   state.qcFinalRecords[0].qtyOk === 20 &&
   state.qcFinalRecords[0].qtyExcept === 3 &&
@@ -984,7 +984,7 @@ global.localStorage.setItem = (k, v) => {
   return setItemOriginal(k, v);
 };
 qcf.deleteQcFinalRecord(saveFailRecord.id);
-check('XÓA THẤT BẠI: khôi phục danh sách và không để tombstone mới tồn tại',
+check('XÃ“A THáº¤T Báº I: khÃ´i phá»¥c danh sÃ¡ch vÃ  khÃ´ng Ä‘á»ƒ tombstone má»›i tá»“n táº¡i',
   state.qcFinalRecords.length === 1 &&
   state.qcFinalRecords[0].id === saveFailRecord.id &&
   !!state.deletedIds.qcFinalRecords.keep &&
@@ -995,6 +995,7 @@ check('XÓA THẤT BẠI: khôi phục danh sách và không để tombstone m�
     .qcFinalRecords[saveFailRecord.id]);
 global.localStorage.setItem = setItemOriginal;
 
-// ─── TỔNG KẾT ────────────────────────────────────────────────
-console.log(`\n=== qc-final.test.mjs: ${passed} PASS · ${failed} FAIL ===`);
+// â”€â”€â”€ Tá»”NG Káº¾T â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+console.log(`\n=== qc-final.test.mjs: ${passed} PASS Â· ${failed} FAIL ===`);
 if (failed) process.exit(1);
+

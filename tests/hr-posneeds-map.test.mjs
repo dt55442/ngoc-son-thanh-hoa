@@ -1,11 +1,11 @@
-// tests/hr-posneeds-map.test.mjs — SƠ ĐỒ BONG BÓNG NHÂN SỰ 3 CẤP (21/10/2026)
-// Kiểm thử: chia nhu cầu theo ca · số liệu LIVE từ Bảng bố trí (đang bố trí /
-// kỹ năng / dùng chung / trùng giờ / ngoài kỹ năng / dự bị) · ngày chưa có bố
-// trí (no-data) · markup bong bóng → pill → chip · Bảng bố trí chia ca ·
-// gộp bộ phận Lò Hơi → Cơ Điện · cấu trúc (index/events/CSS/cache).
+﻿// tests/hr-posneeds-map.test.mjs â€” SÆ  Äá»’ BONG BÃ“NG NHÃ‚N Sá»° 3 Cáº¤P (21/10/2026)
+// Kiá»ƒm thá»­: chia nhu cáº§u theo ca Â· sá»‘ liá»‡u LIVE tá»« Báº£ng bá»‘ trÃ­ (Ä‘ang bá»‘ trÃ­ /
+// ká»¹ nÄƒng / dÃ¹ng chung / trÃ¹ng giá» / ngoÃ i ká»¹ nÄƒng / dá»± bá»‹) Â· ngÃ y chÆ°a cÃ³ bá»‘
+// trÃ­ (no-data) Â· markup bong bÃ³ng â†’ pill â†’ chip Â· Báº£ng bá»‘ trÃ­ chia ca Â·
+// gá»™p bá»™ pháº­n LÃ² HÆ¡i â†’ CÆ¡ Äiá»‡n Â· cáº¥u trÃºc (index/events/CSS/cache).
 'use strict';
 
-// ─── Stubs môi trường (giống hr-posneeds.test.mjs) ───────────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng hr-posneeds.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -57,7 +57,7 @@ if (!global.URL.createObjectURL) global.URL.createObjectURL = () => 'blob:stub';
 if (!global.URL.revokeObjectURL) global.URL.revokeObjectURL = () => {};
 
 let pass = 0, fail = 0;
-function check(name, cond) { if (cond) { pass++; console.log('PASS — ' + name); } else { fail++; console.log('FAIL — ' + name); } }
+function check(name, cond) { if (cond) { pass++; console.log('PASS â€” ' + name); } else { fail++; console.log('FAIL â€” ' + name); } }
 
 const fs = await import('fs');
 const { state } = await import('../js/state.js');
@@ -67,156 +67,156 @@ state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvan
 const DAY = '2026-10-20';
 const NO_DAY = '2026-10-21';
 state.hrShifts = [
-  { id: 'Xưởng 2', type: 'lamca', shifts: [
-    { name: 'Ca ngày', start: '07:00', end: '19:00', brk: 1.5 },
-    { name: 'Ca đêm',  start: '19:00', end: '07:00', brk: 1 }
+  { id: 'XÆ°á»Ÿng 2', type: 'lamca', shifts: [
+    { name: 'Ca ngÃ y', start: '07:00', end: '19:00', brk: 1.5 },
+    { name: 'Ca Ä‘Ãªm',  start: '19:00', end: '07:00', brk: 1 }
   ] }
 ];
 state.hrPositions = [
-  { id: 'p1', name: 'Ép ván', department: 'Xưởng 2' },
-  { id: 'p2', name: 'Cắt chọn', department: 'Xưởng 2' },
-  { id: 'pq', name: 'Kiểm chất', department: 'QC' }
+  { id: 'p1', name: 'Ã‰p vÃ¡n', department: 'XÆ°á»Ÿng 2' },
+  { id: 'p2', name: 'Cáº¯t chá»n', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pq', name: 'Kiá»ƒm cháº¥t', department: 'QC' }
 ];
 state.hrEmployees = [
-  { id: 'e1', name: 'Nguyễn Văn A', department: 'Xưởng 2', status: 'active', skills: ['p1'] },
-  { id: 'e2', name: 'Trần Thị B', department: 'Xưởng 2', status: 'active', skills: ['p1', 'p2'] },
-  { id: 'e3', name: 'Lê Văn C', department: 'Xưởng 2', status: 'active', skills: ['p2'] },
-  { id: 'e4', name: 'Phạm Văn D', department: 'QC', status: 'active', skills: ['p1'] },
-  { id: 'e5', name: 'Võ Văn E', department: 'Xưởng 2', status: 'active', skills: [] },
-  { id: 'e6', name: 'Đỗ Thị F', department: 'Xưởng 2', status: 'quit', skills: ['p1'] }
+  { id: 'e1', name: 'Nguyá»…n VÄƒn A', department: 'XÆ°á»Ÿng 2', status: 'active', skills: ['p1'] },
+  { id: 'e2', name: 'Tráº§n Thá»‹ B', department: 'XÆ°á»Ÿng 2', status: 'active', skills: ['p1', 'p2'] },
+  { id: 'e3', name: 'LÃª VÄƒn C', department: 'XÆ°á»Ÿng 2', status: 'active', skills: ['p2'] },
+  { id: 'e4', name: 'Pháº¡m VÄƒn D', department: 'QC', status: 'active', skills: ['p1'] },
+  { id: 'e5', name: 'VÃµ VÄƒn E', department: 'XÆ°á»Ÿng 2', status: 'active', skills: [] },
+  { id: 'e6', name: 'Äá»— Thá»‹ F', department: 'XÆ°á»Ÿng 2', status: 'quit', skills: ['p1'] }
 ];
 state.hrPositionNeeds = [
-  { id: 'n1', department: 'Xưởng 2', position: 'Ép ván', positionId: 'p1', needQty: 3, haveQty: 9 },
-  { id: 'n2', department: 'Xưởng 2', position: 'Cắt chọn', positionId: 'p2', needQty: 1, haveQty: 9 },
-  { id: 'nq', department: 'QC', position: 'Kiểm chất', positionId: 'pq', needQty: 1, haveQty: 0 }
+  { id: 'n1', department: 'XÆ°á»Ÿng 2', position: 'Ã‰p vÃ¡n', positionId: 'p1', needQty: 3, haveQty: 9 },
+  { id: 'n2', department: 'XÆ°á»Ÿng 2', position: 'Cáº¯t chá»n', positionId: 'p2', needQty: 1, haveQty: 9 },
+  { id: 'nq', department: 'QC', position: 'Kiá»ƒm cháº¥t', positionId: 'pq', needQty: 1, haveQty: 0 }
 ];
 state.hrAssignments = [
-  { id: 'a1', date: DAY, department: 'Xưởng 2', positionId: 'p1', employeeId: 'e1', shiftIdx: 0, start: '07:00', end: '19:00' },
-  { id: 'a2', date: DAY, department: 'Xưởng 2', positionId: 'p2', employeeId: 'e1', shiftIdx: 0, start: '07:00', end: '10:00' },
-  { id: 'a3', date: DAY, department: 'Xưởng 2', positionId: 'p1', employeeId: 'e2', shiftIdx: 1, start: '19:00', end: '' },
-  { id: 'a4', date: DAY, department: 'Xưởng 2', positionId: 'p2', employeeId: 'e3', shiftIdx: 1, start: '19:00', end: '' }
+  { id: 'a1', date: DAY, department: 'XÆ°á»Ÿng 2', positionId: 'p1', employeeId: 'e1', shiftIdx: 0, start: '07:00', end: '19:00' },
+  { id: 'a2', date: DAY, department: 'XÆ°á»Ÿng 2', positionId: 'p2', employeeId: 'e1', shiftIdx: 0, start: '07:00', end: '10:00' },
+  { id: 'a3', date: DAY, department: 'XÆ°á»Ÿng 2', positionId: 'p1', employeeId: 'e2', shiftIdx: 1, start: '19:00', end: '' },
+  { id: 'a4', date: DAY, department: 'XÆ°á»Ÿng 2', positionId: 'p2', employeeId: 'e3', shiftIdx: 1, start: '19:00', end: '' }
 ];
 state.hrBoardDate = DAY;
-state.hrBoardDept = 'Xưởng 2';
+state.hrBoardDept = 'XÆ°á»Ÿng 2';
 hr.hrNeedWriteUi({ dept: '', date: DAY, onlyShort: false, showSkillLinks: false, q: '', openPos: null });
 
-// ─── A. CHIA NHU CẦU NGÀY → TỪNG CA ────────────────────────────
-check('CHIA CA: 2 ca · 4 → 2+2', hr.hrNeedSplitOf(4, 2, 'even').join('+') === '2+2');
-check('CHIA CA: 2 ca · 3 → 2+1 (dư dồn ca đầu)', hr.hrNeedSplitOf(3, 2, 'even').join('+') === '2+1');
-check('CHIA CA: 2 ca · 5 → 3+2', hr.hrNeedSplitOf(5, 2, 'even').join('+') === '3+2');
-check('CHIA CA: 2 ca · 1 → 1+1 (mỗi ca tối thiểu 1)', hr.hrNeedSplitOf(1, 2, 'even').join('+') === '1+1');
-check('CHIA CA: need 0 → 0+0 (không tự bịa 1)', hr.hrNeedSplitOf(0, 2, 'even').join('+') === '0+0');
-check('CHIA CA: 1 ca → giữ nguyên', hr.hrNeedSplitOf(3, 1, 'even').join('+') === '3');
-check('CHIA CA: chế độ "mỗi ca đủ N" → 3+3', hr.hrNeedSplitOf(3, 2, 'each').join('+') === '3+3');
-check('CHIA CA: 3 ca · 4 → 2+1+1', hr.hrNeedSplitOf(4, 3, 'even').join('+') === '2+1+1');
+// â”€â”€â”€ A. CHIA NHU Cáº¦U NGÃ€Y â†’ Tá»ªNG CA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('CHIA CA: 2 ca Â· 4 â†’ 2+2', hr.hrNeedSplitOf(4, 2, 'even').join('+') === '2+2');
+check('CHIA CA: 2 ca Â· 3 â†’ 2+1 (dÆ° dá»“n ca Ä‘áº§u)', hr.hrNeedSplitOf(3, 2, 'even').join('+') === '2+1');
+check('CHIA CA: 2 ca Â· 5 â†’ 3+2', hr.hrNeedSplitOf(5, 2, 'even').join('+') === '3+2');
+check('CHIA CA: 2 ca Â· 1 â†’ 1+1 (má»—i ca tá»‘i thiá»ƒu 1)', hr.hrNeedSplitOf(1, 2, 'even').join('+') === '1+1');
+check('CHIA CA: need 0 â†’ 0+0 (khÃ´ng tá»± bá»‹a 1)', hr.hrNeedSplitOf(0, 2, 'even').join('+') === '0+0');
+check('CHIA CA: 1 ca â†’ giá»¯ nguyÃªn', hr.hrNeedSplitOf(3, 1, 'even').join('+') === '3');
+check('CHIA CA: cháº¿ Ä‘á»™ "má»—i ca Ä‘á»§ N" â†’ 3+3', hr.hrNeedSplitOf(3, 2, 'each').join('+') === '3+3');
+check('CHIA CA: 3 ca Â· 4 â†’ 2+1+1', hr.hrNeedSplitOf(4, 3, 'even').join('+') === '2+1+1');
 
-// ─── B. SỐ LIỆU LIVE TỪ BẢNG BỐ TRÍ ────────────────────────────
+// â”€â”€â”€ B. Sá» LIá»†U LIVE Tá»ª Báº¢NG Bá» TRÃ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const all = hr.hrNeedAllRows(DAY);
 const ctx = all.ctx;
 const r1 = all.rows.find(r => r.positionId === 'p1');
 const r2 = all.rows.find(r => r.positionId === 'p2');
 const rq = all.rows.find(r => r.positionId === 'pq');
-check('LIVE: đọc được 4 lượt bố trí của ngày', ctx.assigns.length === 4 && ctx.hasData === true);
-check('LIVE: Ép ván cần 3 → chia 2+1', r1.needPerShift.join('+') === '2+1' && r1.needTotal === 3);
-check('LIVE: Ép ván có 1 người ca 1 + 1 người ca 2', r1.counts.join('+') === '1+1' && r1.assignedTotal === 2);
-check('LIVE: Ép ván thiếu 1 (theo ca, KHÔNG theo unique)', r1.shortage === 1 && r1.status === 'short');
-check('LIVE: Cắt chọn cần 1 → 1+1 = 2 suất', r2.needPerShift.join('+') === '1+1' && r2.needTotal === 2);
-check('LIVE: Cắt chọn đủ 2 suất', r2.shortage === 0 && r2.covered === 2);
-check('LIVE: QC chưa bố trí ai → thiếu 1', rq.shortage === 1 && rq.assignedTotal === 0);
-check('KỸ NĂNG: Ép ván 3 người (bỏ NV đã nghỉ)', r1.skilled === 3 && r1.skilledSame === 2);
-check('KỸ NĂNG: 1 người 2 kỹ năng KHÔNG bị đếm thành 2 người ở 1 vị trí', r1.skilled === 3 && r2.skilled === 2);
-check('DỰ BỊ: Ép ván còn e4 (QC) chưa bố trí + rảnh', r1.reserveIds.join(',') === 'e4' && r1.reserveIdleIds.join(',') === 'e4');
-check('DÙNG CHUNG: e1 làm 2 vị trí', ctx.shared.has('e1') && r1.sharedEmpIds.includes('e1') && r2.sharedEmpIds.includes('e1'));
-check('TRÙNG GIỜ: a1 (07–19) và a2 (07–10) của e1 bị đánh dấu', ctx.conflict.has('a1') && ctx.conflict.has('a2') && r1.conflictIds.includes('e1'));
-check('NGOÀI KỸ NĂNG: e1 (chỉ có kỹ năng Ép ván) làm Cắt chọn', r2.unskilledIds.join(',') === 'e1' && r1.unskilledIds.length === 0);
-check('CHƯA KHAI KỸ NĂNG: không bị kết luận "ngoài kỹ năng"', !r1.unskilledIds.includes('e5'));
+check('LIVE: Ä‘á»c Ä‘Æ°á»£c 4 lÆ°á»£t bá»‘ trÃ­ cá»§a ngÃ y', ctx.assigns.length === 4 && ctx.hasData === true);
+check('LIVE: Ã‰p vÃ¡n cáº§n 3 â†’ chia 2+1', r1.needPerShift.join('+') === '2+1' && r1.needTotal === 3);
+check('LIVE: Ã‰p vÃ¡n cÃ³ 1 ngÆ°á»i ca 1 + 1 ngÆ°á»i ca 2', r1.counts.join('+') === '1+1' && r1.assignedTotal === 2);
+check('LIVE: Ã‰p vÃ¡n thiáº¿u 1 (theo ca, KHÃ”NG theo unique)', r1.shortage === 1 && r1.status === 'short');
+check('LIVE: Cáº¯t chá»n cáº§n 1 â†’ 1+1 = 2 suáº¥t', r2.needPerShift.join('+') === '1+1' && r2.needTotal === 2);
+check('LIVE: Cáº¯t chá»n Ä‘á»§ 2 suáº¥t', r2.shortage === 0 && r2.covered === 2);
+check('LIVE: QC chÆ°a bá»‘ trÃ­ ai â†’ thiáº¿u 1', rq.shortage === 1 && rq.assignedTotal === 0);
+check('Ká»¸ NÄ‚NG: Ã‰p vÃ¡n 3 ngÆ°á»i (bá» NV Ä‘Ã£ nghá»‰)', r1.skilled === 3 && r1.skilledSame === 2);
+check('Ká»¸ NÄ‚NG: 1 ngÆ°á»i 2 ká»¹ nÄƒng KHÃ”NG bá»‹ Ä‘áº¿m thÃ nh 2 ngÆ°á»i á»Ÿ 1 vá»‹ trÃ­', r1.skilled === 3 && r2.skilled === 2);
+check('Dá»° Bá»Š: Ã‰p vÃ¡n cÃ²n e4 (QC) chÆ°a bá»‘ trÃ­ + ráº£nh', r1.reserveIds.join(',') === 'e4' && r1.reserveIdleIds.join(',') === 'e4');
+check('DÃ™NG CHUNG: e1 lÃ m 2 vá»‹ trÃ­', ctx.shared.has('e1') && r1.sharedEmpIds.includes('e1') && r2.sharedEmpIds.includes('e1'));
+check('TRÃ™NG GIá»œ: a1 (07â€“19) vÃ  a2 (07â€“10) cá»§a e1 bá»‹ Ä‘Ã¡nh dáº¥u', ctx.conflict.has('a1') && ctx.conflict.has('a2') && r1.conflictIds.includes('e1'));
+check('NGOÃ€I Ká»¸ NÄ‚NG: e1 (chá»‰ cÃ³ ká»¹ nÄƒng Ã‰p vÃ¡n) lÃ m Cáº¯t chá»n', r2.unskilledIds.join(',') === 'e1' && r1.unskilledIds.length === 0);
+check('CHÆ¯A KHAI Ká»¸ NÄ‚NG: khÃ´ng bá»‹ káº¿t luáº­n "ngoÃ i ká»¹ nÄƒng"', !r1.unskilledIds.includes('e5'));
 
-// ─── C. TỔNG HỢP + BONG BÓNG BỘ PHẬN ────────────────────────────
-const t2 = hr.hrNeedTotalsOf(all.rows, 'Xưởng 2');
-check('TỔNG Xưởng 2: cần 5 suất (3 + 1+1)', t2.need === 5);
-check('TỔNG Xưởng 2: bố trí 4 · thiếu 1', t2.assigned === 4 && t2.shortage === 1);
-check('TỔNG: 1 người dùng chung · 1 người ngoài kỹ năng', t2.shared === 1 && t2.unskilled === 1);
+// â”€â”€â”€ C. Tá»”NG Há»¢P + BONG BÃ“NG Bá»˜ PHáº¬N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const t2 = hr.hrNeedTotalsOf(all.rows, 'XÆ°á»Ÿng 2');
+check('Tá»”NG XÆ°á»Ÿng 2: cáº§n 5 suáº¥t (3 + 1+1)', t2.need === 5);
+check('Tá»”NG XÆ°á»Ÿng 2: bá»‘ trÃ­ 4 Â· thiáº¿u 1', t2.assigned === 4 && t2.shortage === 1);
+check('Tá»”NG: 1 ngÆ°á»i dÃ¹ng chung Â· 1 ngÆ°á»i ngoÃ i ká»¹ nÄƒng', t2.shared === 1 && t2.unskilled === 1);
 const tAll = hr.hrNeedTotalsOf(all.rows);
-check('TỔNG toàn bộ: cần 6 · thiếu 2 (QC thiếu 1)', tAll.need === 6 && tAll.shortage === 2);
+check('Tá»”NG toÃ n bá»™: cáº§n 6 Â· thiáº¿u 2 (QC thiáº¿u 1)', tAll.need === 6 && tAll.shortage === 2);
 const sums = hr.hrNeedDeptSummaries(all.rows, ctx);
-check('BONG BÓNG: đúng 5 bộ phận (Lò Hơi đã gộp)', sums.length === 5 && hr.HR_DEPARTMENTS.length === 5);
-check('BONG BÓNG: Xưởng 2 = short, QC = short, Văn Phòng = empty', sums.find(s => s.dept === 'Xưởng 2').status === 'short' && sums.find(s => s.dept === 'QC').status === 'short' && sums.find(s => s.dept === 'Văn Phòng').status === 'empty');
+check('BONG BÃ“NG: Ä‘Ãºng 5 bá»™ pháº­n (LÃ² HÆ¡i Ä‘Ã£ gá»™p)', sums.length === 5 && hr.HR_DEPARTMENTS.length === 5);
+check('BONG BÃ“NG: XÆ°á»Ÿng 2 = short, QC = short, VÄƒn PhÃ²ng = empty', sums.find(s => s.dept === 'XÆ°á»Ÿng 2').status === 'short' && sums.find(s => s.dept === 'QC').status === 'short' && sums.find(s => s.dept === 'VÄƒn PhÃ²ng').status === 'empty');
 
-// ─── D. MARKUP 3 CẤP + BẢNG BỐ TRÍ CHIA CA ─────────────────────
+// â”€â”€â”€ D. MARKUP 3 Cáº¤P + Báº¢NG Bá» TRÃ CHIA CA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ui0 = hr.hrNeedReadUi();
 const bubHtml = hr.hnmBubblesHtml(all.rows, ctx, '');
-check('MARKUP: 5 bong bóng bộ phận (data-hnm-dept)', (bubHtml.match(/data-hnm-dept=/g) || []).length === 5);
-check('MARKUP: bong bóng có nước dâng --fill + tên bộ phận', bubHtml.includes('--fill:') && bubHtml.includes('Xưởng 2'));
+check('MARKUP: 5 bong bÃ³ng bá»™ pháº­n (data-hnm-dept)', (bubHtml.match(/data-hnm-dept=/g) || []).length === 5);
+check('MARKUP: bong bÃ³ng cÃ³ nÆ°á»›c dÃ¢ng --fill + tÃªn bá»™ pháº­n', bubHtml.includes('--fill:') && bubHtml.includes('XÆ°á»Ÿng 2'));
 const row1 = hr.hnmPosRowHtml(r1, ctx, ui0);
-check('MARKUP: pill Ép ván có chip chia ca 2+1', row1.includes('hnm-pos-pill') && row1.includes('>2+1<'));
-check('MARKUP: pill có ô sửa "Cần" + ô thiếu bấm được', row1.includes('data-hnm-need="n1"') && row1.includes('data-hnm-add="p1"'));
-check('MARKUP: cấp 3 hiện chip người (e1) + badge dùng chung', row1.includes('data-hnm-person="e1"') && row1.includes('is-shared'));
+check('MARKUP: pill Ã‰p vÃ¡n cÃ³ chip chia ca 2+1', row1.includes('hnm-pos-pill') && row1.includes('>2+1<'));
+check('MARKUP: pill cÃ³ Ã´ sá»­a "Cáº§n" + Ã´ thiáº¿u báº¥m Ä‘Æ°á»£c', row1.includes('data-hnm-need="n1"') && row1.includes('data-hnm-add="p1"'));
+check('MARKUP: cáº¥p 3 hiá»‡n chip ngÆ°á»i (e1) + badge dÃ¹ng chung', row1.includes('data-hnm-person="e1"') && row1.includes('is-shared'));
 const row2 = hr.hnmPosRowHtml(r2, ctx, ui0);
-check('MARKUP: chip e1 ở Cắt chọn có cờ dùng chung + trùng giờ + ngoài kỹ năng', row2.includes('is-shared') && row2.includes('is-conflict') && row2.includes('is-unskilled'));
-const sharedHtml = hr.hnmSharedColHtml(all.rows, ctx, 'Xưởng 2', ui0);
-check('MARKUP: cột phải liệt kê "Người làm nhiều vị trí"', sharedHtml.includes('Người làm nhiều vị trí') && sharedHtml.includes('data-hnm-node-pos="p1"'));
-const sharedSkill = hr.hnmSharedColHtml(all.rows, ctx, 'Xưởng 2', Object.assign({}, ui0, { showSkillLinks: true }));
-check('MARKUP: bật "Đường kỹ năng" -> node dự bị e4 + data vị trí', sharedSkill.includes('is-reserve') && sharedSkill.includes('data-hnm-reserve-pos="p1"'));
+check('MARKUP: chip e1 á»Ÿ Cáº¯t chá»n cÃ³ cá» dÃ¹ng chung + trÃ¹ng giá» + ngoÃ i ká»¹ nÄƒng', row2.includes('is-shared') && row2.includes('is-conflict') && row2.includes('is-unskilled'));
+const sharedHtml = hr.hnmSharedColHtml(all.rows, ctx, 'XÆ°á»Ÿng 2', ui0);
+check('MARKUP: cá»™t pháº£i liá»‡t kÃª "NgÆ°á»i lÃ m nhiá»u vá»‹ trÃ­"', sharedHtml.includes('NgÆ°á»i lÃ m nhiá»u vá»‹ trÃ­') && sharedHtml.includes('data-hnm-node-pos="p1"'));
+const sharedSkill = hr.hnmSharedColHtml(all.rows, ctx, 'XÆ°á»Ÿng 2', Object.assign({}, ui0, { showSkillLinks: true }));
+check('MARKUP: báº­t "ÄÆ°á»ng ká»¹ nÄƒng" -> node dá»± bá»‹ e4 + data vá»‹ trÃ­', sharedSkill.includes('is-reserve') && sharedSkill.includes('data-hnm-reserve-pos="p1"'));
 
 hr.renderHrBoard();
 const boardHtml = document.getElementById('hr-board').innerHTML;
-check('BOARD: Ép ván "cần 3 → 2+1"', boardHtml.includes('cần 3 → 2+1'));
-check('BOARD: Cắt chọn "cần 2 → 1+1"', boardHtml.includes('cần 2 → 1+1'));
-check('BOARD: chỉ còn 1 ô trống (Ép ván ca 1 thiếu 1)', (boardHtml.match(/slot empty/g) || []).length === 1);
+check('BOARD: Ã‰p vÃ¡n "cáº§n 3 â†’ 2+1"', boardHtml.includes('cáº§n 3 â†’ 2+1'));
+check('BOARD: Cáº¯t chá»n "cáº§n 2 â†’ 1+1"', boardHtml.includes('cáº§n 2 â†’ 1+1'));
+check('BOARD: chá»‰ cÃ²n 1 Ã´ trá»‘ng (Ã‰p vÃ¡n ca 1 thiáº¿u 1)', (boardHtml.match(/slot empty/g) || []).length === 1);
 state.hrPositionNeeds.find(r => r.id === 'n1').needMode = 'each';
 hr.renderHrBoard();
 const boardEach = document.getElementById('hr-board').innerHTML;
-check('BOARD: "mỗi ca đủ N" -> cần 6 → 3+3', boardEach.includes('cần 6 → 3+3'));
-check('BOARD: mỗi ca đủ N -> 4 ô trống', (boardEach.match(/slot empty/g) || []).length === 4);
+check('BOARD: "má»—i ca Ä‘á»§ N" -> cáº§n 6 â†’ 3+3', boardEach.includes('cáº§n 6 â†’ 3+3'));
+check('BOARD: má»—i ca Ä‘á»§ N -> 4 Ã´ trá»‘ng', (boardEach.match(/slot empty/g) || []).length === 4);
 state.hrPositionNeeds.find(r => r.id === 'n1').needMode = 'even';
 
-// ─── E. RENDER THẺ + NGÀY CHƯA CÓ BỐ TRÍ ──────────────────────
+// â”€â”€â”€ E. RENDER THáºº + NGÃ€Y CHÆ¯A CÃ“ Bá» TRÃ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 hr.renderHrNeedCard();
-check('RENDER: 5 bong bóng trong #hnm-dept-bubbles', (document.getElementById('hnm-dept-bubbles').innerHTML.match(/data-hnm-dept=/g) || []).length === 5);
-check('RENDER: KPI có "đang bố trí" + "còn thiếu"', document.getElementById('hnm-kpi').innerHTML.includes('đang bố trí') && document.getElementById('hnm-kpi').innerHTML.includes('còn thiếu'));
-check('RENDER: chip tổng "cần 6 suất · đang bố trí 4 · còn thiếu 2"', document.getElementById('hr-posneed-count').textContent.includes('cần 6 suất') && document.getElementById('hr-posneed-count').textContent.includes('đang bố trí 4') && document.getElementById('hr-posneed-count').textContent.includes('còn thiếu 2'));
-check('RENDER: bảng chi tiết có cột "Có Kỹ Năng" + "Dùng Chung"', document.getElementById('hr-posneed-body').innerHTML.includes('hnm-shared-tag'));
-hr.hnmSelectDept('Xưởng 2');
-check('RENDER: chọn bộ phận -> data-dept + 2 pill vị trí', document.getElementById('hr-need-map').dataset.dept === 'Xưởng 2' && (document.getElementById('hnm-pos-col').innerHTML.match(/hnm-pos-pill/g) || []).length === 2);
-check('RENDER: chọn bộ phận -> chip tổng theo bộ phận (cần 5 suất)', document.getElementById('hr-posneed-count').textContent.includes('cần 5 suất'));
+check('RENDER: 5 bong bÃ³ng trong #hnm-dept-bubbles', (document.getElementById('hnm-dept-bubbles').innerHTML.match(/data-hnm-dept=/g) || []).length === 5);
+check('RENDER: KPI cÃ³ "Ä‘ang bá»‘ trÃ­" + "cÃ²n thiáº¿u"', document.getElementById('hnm-kpi').innerHTML.includes('Ä‘ang bá»‘ trÃ­') && document.getElementById('hnm-kpi').innerHTML.includes('cÃ²n thiáº¿u'));
+check('RENDER: chip tá»•ng "cáº§n 6 suáº¥t Â· Ä‘ang bá»‘ trÃ­ 4 Â· cÃ²n thiáº¿u 2"', document.getElementById('hr-posneed-count').textContent.includes('cáº§n 6 suáº¥t') && document.getElementById('hr-posneed-count').textContent.includes('Ä‘ang bá»‘ trÃ­ 4') && document.getElementById('hr-posneed-count').textContent.includes('cÃ²n thiáº¿u 2'));
+check('RENDER: báº£ng chi tiáº¿t cÃ³ cá»™t "CÃ³ Ká»¹ NÄƒng" + "DÃ¹ng Chung"', document.getElementById('hr-posneed-body').innerHTML.includes('hnm-shared-tag'));
+hr.hnmSelectDept('XÆ°á»Ÿng 2');
+check('RENDER: chá»n bá»™ pháº­n -> data-dept + 2 pill vá»‹ trÃ­', document.getElementById('hr-need-map').dataset.dept === 'XÆ°á»Ÿng 2' && (document.getElementById('hnm-pos-col').innerHTML.match(/hnm-pos-pill/g) || []).length === 2);
+check('RENDER: chá»n bá»™ pháº­n -> chip tá»•ng theo bá»™ pháº­n (cáº§n 5 suáº¥t)', document.getElementById('hr-posneed-count').textContent.includes('cáº§n 5 suáº¥t'));
 hr.hnmSetDate(NO_DAY);
 const rowsNo = hr.hrNeedAllRows(NO_DAY).rows;
-check('NO-DATA: ngày chưa bố trí -> mọi vị trí "no-data", thiếu = 0', rowsNo.every(r => r.status === 'no-data' && r.shortage === 0 && r.covered === 0));
-check('NO-DATA: chip tổng ghi rõ chưa có dữ liệu bố trí', document.getElementById('hr-posneed-count').textContent.includes('chưa có dữ liệu bố trí'));
-check('NO-DATA: không báo thiếu trong bảng (ô "—")', document.getElementById('hr-posneed-body').innerHTML.includes('>—</strong>'));
+check('NO-DATA: ngÃ y chÆ°a bá»‘ trÃ­ -> má»i vá»‹ trÃ­ "no-data", thiáº¿u = 0', rowsNo.every(r => r.status === 'no-data' && r.shortage === 0 && r.covered === 0));
+check('NO-DATA: chip tá»•ng ghi rÃµ chÆ°a cÃ³ dá»¯ liá»‡u bá»‘ trÃ­', document.getElementById('hr-posneed-count').textContent.includes('chÆ°a cÃ³ dá»¯ liá»‡u bá»‘ trÃ­'));
+check('NO-DATA: khÃ´ng bÃ¡o thiáº¿u trong báº£ng (Ã´ "â€”")', document.getElementById('hr-posneed-body').innerHTML.includes('>â€”</strong>'));
 hr.hnmSetDate(DAY);
 hr.hnmBack();
 
-// ─── F. GỘP BỘ PHẬN "LÒ HƠI" → "CƠ ĐIỆN" ──────────────────────
-state.hrEmployees.push({ id: 'm1', name: 'Lò Hơi A', department: 'Lò Hơi', status: 'active', skills: [] });
-state.hrPositions.push({ id: 'mp', name: 'Đốt lò', department: 'Lò Hơi' });
-state.hrPositionNeeds.push({ id: 'mn', department: 'Lò Hơi', position: 'Đốt lò', positionId: 'mp', needQty: 1 });
-state.hrRecruitment = [{ id: 'mr', department: 'Lò Hơi', position: 'Đốt lò', needQty: 1 }];
-state.hrAssignments.push({ id: 'ma', date: DAY, department: 'Lò Hơi', positionId: 'mp', employeeId: 'm1', shiftIdx: 0, start: '07:00', end: '' });
-state.hrShifts.push({ id: 'Lò Hơi', type: 'hanhchinh', shifts: [{ name: 'Sáng', start: '07:00', end: '11:30' }] });
-state.hrBoardDept = 'Lò Hơi';
+// â”€â”€â”€ F. Gá»˜P Bá»˜ PHáº¬N "LÃ’ HÆ I" â†’ "CÆ  ÄIá»†N" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+state.hrEmployees.push({ id: 'm1', name: 'LÃ² HÆ¡i A', department: 'LÃ² HÆ¡i', status: 'active', skills: [] });
+state.hrPositions.push({ id: 'mp', name: 'Äá»‘t lÃ²', department: 'LÃ² HÆ¡i' });
+state.hrPositionNeeds.push({ id: 'mn', department: 'LÃ² HÆ¡i', position: 'Äá»‘t lÃ²', positionId: 'mp', needQty: 1 });
+state.hrRecruitment = [{ id: 'mr', department: 'LÃ² HÆ¡i', position: 'Äá»‘t lÃ²', needQty: 1 }];
+state.hrAssignments.push({ id: 'ma', date: DAY, department: 'LÃ² HÆ¡i', positionId: 'mp', employeeId: 'm1', shiftIdx: 0, start: '07:00', end: '' });
+state.hrShifts.push({ id: 'LÃ² HÆ¡i', type: 'hanhchinh', shifts: [{ name: 'SÃ¡ng', start: '07:00', end: '11:30' }] });
+state.hrBoardDept = 'LÃ² HÆ¡i';
 const moved = hr.migrateHrDeptMerge();
-check('GỘP BP: di trú 5 miền (nhân viên · vị trí · nhu cầu · tuyển · bố trí)', moved >= 5);
-check('GỘP BP: employees -> Cơ Điện', state.hrEmployees.find(e => e.id === 'm1').department === 'Cơ Điện');
-check('GỘP BP: positions -> Cơ Điện', state.hrPositions.find(p => p.id === 'mp').department === 'Cơ Điện');
-check('GỘP BP: nhu cầu -> Cơ Điện', state.hrPositionNeeds.find(r => r.id === 'mn').department === 'Cơ Điện');
-check('GỘP BP: tuyển dụng -> Cơ Điện', state.hrRecruitment[0].department === 'Cơ Điện');
-check('GỘP BP: bố trí -> Cơ Điện', state.hrAssignments.find(a => a.id === 'ma').department === 'Cơ Điện');
-check('GỘP BP: cấu hình ca "Lò Hơi" đổi id thành "Cơ Điện"', !!state.hrShifts.find(s => s.id === 'Cơ Điện') && !state.hrShifts.find(s => s.id === 'Lò Hơi'));
-check('GỘP BP: bảng bố trí đang xem -> Cơ Điện', state.hrBoardDept === 'Cơ Điện');
-check('GỘP BP: chạy lần 2 KHÔNG làm gì (idempotent)', hr.migrateHrDeptMerge() === 0);
-// Có CẢ 2 cấu hình ca -> giữ Cơ Điện, bỏ Lò Hơi
-state.hrShifts.push({ id: 'Lò Hơi', type: 'lamca', shifts: [{ name: 'Ca 1', start: '06:00', end: '18:00' }] });
-state.hrEmployees.push({ id: 'm2', name: 'Lò Hơi B', department: 'Lò Hơi', status: 'active', skills: [] });
+check('Gá»˜P BP: di trÃº 5 miá»n (nhÃ¢n viÃªn Â· vá»‹ trÃ­ Â· nhu cáº§u Â· tuyá»ƒn Â· bá»‘ trÃ­)', moved >= 5);
+check('Gá»˜P BP: employees -> CÆ¡ Äiá»‡n', state.hrEmployees.find(e => e.id === 'm1').department === 'CÆ¡ Äiá»‡n');
+check('Gá»˜P BP: positions -> CÆ¡ Äiá»‡n', state.hrPositions.find(p => p.id === 'mp').department === 'CÆ¡ Äiá»‡n');
+check('Gá»˜P BP: nhu cáº§u -> CÆ¡ Äiá»‡n', state.hrPositionNeeds.find(r => r.id === 'mn').department === 'CÆ¡ Äiá»‡n');
+check('Gá»˜P BP: tuyá»ƒn dá»¥ng -> CÆ¡ Äiá»‡n', state.hrRecruitment[0].department === 'CÆ¡ Äiá»‡n');
+check('Gá»˜P BP: bá»‘ trÃ­ -> CÆ¡ Äiá»‡n', state.hrAssignments.find(a => a.id === 'ma').department === 'CÆ¡ Äiá»‡n');
+check('Gá»˜P BP: cáº¥u hÃ¬nh ca "LÃ² HÆ¡i" Ä‘á»•i id thÃ nh "CÆ¡ Äiá»‡n"', !!state.hrShifts.find(s => s.id === 'CÆ¡ Äiá»‡n') && !state.hrShifts.find(s => s.id === 'LÃ² HÆ¡i'));
+check('Gá»˜P BP: báº£ng bá»‘ trÃ­ Ä‘ang xem -> CÆ¡ Äiá»‡n', state.hrBoardDept === 'CÆ¡ Äiá»‡n');
+check('Gá»˜P BP: cháº¡y láº§n 2 KHÃ”NG lÃ m gÃ¬ (idempotent)', hr.migrateHrDeptMerge() === 0);
+// CÃ³ Cáº¢ 2 cáº¥u hÃ¬nh ca -> giá»¯ CÆ¡ Äiá»‡n, bá» LÃ² HÆ¡i
+state.hrShifts.push({ id: 'LÃ² HÆ¡i', type: 'lamca', shifts: [{ name: 'Ca 1', start: '06:00', end: '18:00' }] });
+state.hrEmployees.push({ id: 'm2', name: 'LÃ² HÆ¡i B', department: 'LÃ² HÆ¡i', status: 'active', skills: [] });
 hr.migrateHrDeptMerge();
-check('GỘP BP: có cả 2 cấu hình -> chỉ còn Cơ Điện', !state.hrShifts.find(s => s.id === 'Lò Hơi') && state.hrEmployees.find(e => e.id === 'm2').department === 'Cơ Điện');
-check('ALIAS: "Lò Hơi" -> "Cơ Điện"', hr.hrDeptAliasOf('Lò Hơi') === 'Cơ Điện');
-check('ALIAS: nhập Excel "lo hoi" -> "Cơ Điện"', hr.hrNormDept('lo hoi') === 'Cơ Điện');
-check('ALIAS: "Xưởng 2" giữ nguyên', hr.hrDeptAliasOf('Xưởng 2') === 'Xưởng 2');
-check('KHÔNG ĐỤNG: vị trí nhập nguyên liệu "lo-hoi" giữ nguyên', hr.hrDeptAliasOf('lo-hoi') === 'lo-hoi');
-check('DANH MỤC: đúng 5 bộ phận, không còn Lò Hơi', hr.HR_DEPARTMENTS.length === 5 && !hr.HR_DEPARTMENTS.includes('Lò Hơi'));
+check('Gá»˜P BP: cÃ³ cáº£ 2 cáº¥u hÃ¬nh -> chá»‰ cÃ²n CÆ¡ Äiá»‡n', !state.hrShifts.find(s => s.id === 'LÃ² HÆ¡i') && state.hrEmployees.find(e => e.id === 'm2').department === 'CÆ¡ Äiá»‡n');
+check('ALIAS: "LÃ² HÆ¡i" -> "CÆ¡ Äiá»‡n"', hr.hrDeptAliasOf('LÃ² HÆ¡i') === 'CÆ¡ Äiá»‡n');
+check('ALIAS: nháº­p Excel "lo hoi" -> "CÆ¡ Äiá»‡n"', hr.hrNormDept('lo hoi') === 'CÆ¡ Äiá»‡n');
+check('ALIAS: "XÆ°á»Ÿng 2" giá»¯ nguyÃªn', hr.hrDeptAliasOf('XÆ°á»Ÿng 2') === 'XÆ°á»Ÿng 2');
+check('KHÃ”NG Äá»¤NG: vá»‹ trÃ­ nháº­p nguyÃªn liá»‡u "lo-hoi" giá»¯ nguyÃªn', hr.hrDeptAliasOf('lo-hoi') === 'lo-hoi');
+check('DANH Má»¤C: Ä‘Ãºng 5 bá»™ pháº­n, khÃ´ng cÃ²n LÃ² HÆ¡i', hr.HR_DEPARTMENTS.length === 5 && !hr.HR_DEPARTMENTS.includes('LÃ² HÆ¡i'));
 
-// ─── G. CẤU TRÚC (index / events / main / CSS / cache) ─────────
+// â”€â”€â”€ G. Cáº¤U TRÃšC (index / events / main / CSS / cache) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const idx = fs.readFileSync('index.html', 'utf8');
 const evSrc = fs.readFileSync('js/events.js', 'utf8');
 const mainSrc = fs.readFileSync('js/main.js', 'utf8');
@@ -224,34 +224,35 @@ const cssSrc = fs.readFileSync('styles.css', 'utf8');
 const swSrc = fs.readFileSync('sw.js', 'utf8');
 const stateSrc = fs.readFileSync('js/state.js', 'utf8');
 const expSrc = fs.readFileSync('js/export-xlsx.js', 'utf8');
-check('CẤU TRÚC: index có đủ khối sơ đồ 3 cấp', ['hr-need-map', 'hnm-toolbar', 'hnm-kpi', 'hnm-dept-bubbles', 'hnm-focus', 'hnm-pos-col', 'hnm-shared-col', 'hnm-links', 'hnm-legend'].every(id => idx.includes(`id="${id}"`)));
-check('CẤU TRÚC: đã bỏ select lọc bộ phận cũ', !idx.includes('hr-posneed-filter-dept'));
-check('CẤU TRÚC: bảng chi tiết thu gọn + cột mới', idx.includes('hnm-table-box') && idx.includes('Có Kỹ Năng') && idx.includes('Đang Bố Trí'));
-check('CẤU TRÚC: modal có chọn "Cách Chia Ca"', idx.includes('id="posneed-mode"') && idx.includes('Mỗi ca đủ N'));
-check('WIRING: events uỷ nhiệm bong bóng / ô Cần / vẽ lại đường', evSrc.includes('data-hnm-dept') && evSrc.includes('data-hnm-need') && evSrc.includes('hnmDrawLinks'));
-check('WIRING: main.js xuất hàm sơ đồ cho onclick', mainSrc.includes('hnmOpenAssign') && mainSrc.includes('hnmSelectDept'));
-check('EXCEL: báo cáo có cột Cần Ca 1 / Ngoài Kỹ Năng / Dùng Chung', expSrc.includes('Cần Ca 1') && expSrc.includes('Ngoài Kỹ Năng') && expSrc.includes('Dùng Chung'));
-check('CSS: khối .hnm-* ở cấp cao nhất (không lọt vào @media)', (() => {
+check('Cáº¤U TRÃšC: index cÃ³ Ä‘á»§ khá»‘i sÆ¡ Ä‘á»“ 3 cáº¥p', ['hr-need-map', 'hnm-toolbar', 'hnm-kpi', 'hnm-dept-bubbles', 'hnm-focus', 'hnm-pos-col', 'hnm-shared-col', 'hnm-links', 'hnm-legend'].every(id => idx.includes(`id="${id}"`)));
+check('Cáº¤U TRÃšC: Ä‘Ã£ bá» select lá»c bá»™ pháº­n cÅ©', !idx.includes('hr-posneed-filter-dept'));
+check('Cáº¤U TRÃšC: báº£ng chi tiáº¿t thu gá»n + cá»™t má»›i', idx.includes('hnm-table-box') && idx.includes('CÃ³ Ká»¹ NÄƒng') && idx.includes('Äang Bá»‘ TrÃ­'));
+check('Cáº¤U TRÃšC: modal cÃ³ chá»n "CÃ¡ch Chia Ca"', idx.includes('id="posneed-mode"') && idx.includes('Má»—i ca Ä‘á»§ N'));
+check('WIRING: events uá»· nhiá»‡m bong bÃ³ng / Ã´ Cáº§n / váº½ láº¡i Ä‘Æ°á»ng', evSrc.includes('data-hnm-dept') && evSrc.includes('data-hnm-need') && evSrc.includes('hnmDrawLinks'));
+check('WIRING: main.js xuáº¥t hÃ m sÆ¡ Ä‘á»“ cho onclick', mainSrc.includes('hnmOpenAssign') && mainSrc.includes('hnmSelectDept'));
+check('EXCEL: bÃ¡o cÃ¡o cÃ³ cá»™t Cáº§n Ca 1 / NgoÃ i Ká»¹ NÄƒng / DÃ¹ng Chung', expSrc.includes('Cáº§n Ca 1') && expSrc.includes('NgoÃ i Ká»¹ NÄƒng') && expSrc.includes('DÃ¹ng Chung'));
+check('CSS: khá»‘i .hnm-* á»Ÿ cáº¥p cao nháº¥t (khÃ´ng lá»t vÃ o @media)', (() => {
   const i = cssSrc.indexOf('.hnm-pos {');
   if (i < 0) return false;
   let d = 0;
   for (let k = 0; k < i; k++) { if (cssSrc[k] === '{') d++; else if (cssSrc[k] === '}') d--; }
   return d === 0;
 })());
-check('CSS: ngoặc { } cân bằng + có keyframes', (cssSrc.match(/{/g) || []).length === (cssSrc.match(/}/g) || []).length && cssSrc.includes('@keyframes hnmFloat'));
-check('CACHE: sw.js v456 khớp APP_VERSION', /nha-may-ngoc-son-v456/.test(swSrc) && /APP_VERSION = 'v456'/.test(stateSrc));
+check('CSS: ngoáº·c { } cÃ¢n báº±ng + cÃ³ keyframes', (cssSrc.match(/{/g) || []).length === (cssSrc.match(/}/g) || []).length && cssSrc.includes('@keyframes hnmFloat'));
+check('CACHE: sw.js v486 khá»›p APP_VERSION', /nha-may-ngoc-son-v486/.test(swSrc) && /APP_VERSION = 'v486'/.test(stateSrc));
 
-// ─── H. MỞ THẺ THẬT — CHỐNG LỖI "THẺ TRỐNG" (map thẻ ↔ phần vẽ) ─
-check('THẺ: map có đúng id thật "hr-posneed-card" -> posneeds', hr.hrCardRenderParts('hr-posneed-card').includes('posneeds'));
-check('THẺ: alias id cũ "hr-posneeds-card" vẫn chạy', hr.hrCardRenderParts('hr-posneeds-card').includes('posneeds'));
-check('THẺ: id lạ -> vẽ ĐỦ phần (không trả rỗng)', hr.hrCardRenderParts('thẻ-không-tồn-tại').length >= 5);
-check('THẺ: không có thẻ mở -> [] (giữ tối ưu chỉ vẽ bảng bố trí)', hr.hrCardRenderParts('').length === 0);
+// â”€â”€â”€ H. Má»ž THáºº THáº¬T â€” CHá»NG Lá»–I "THáºº TRá»NG" (map tháº» â†” pháº§n váº½) â”€
+check('THáºº: map cÃ³ Ä‘Ãºng id tháº­t "hr-posneed-card" -> posneeds', hr.hrCardRenderParts('hr-posneed-card').includes('posneeds'));
+check('THáºº: alias id cÅ© "hr-posneeds-card" váº«n cháº¡y', hr.hrCardRenderParts('hr-posneeds-card').includes('posneeds'));
+check('THáºº: id láº¡ -> váº½ Äá»¦ pháº§n (khÃ´ng tráº£ rá»—ng)', hr.hrCardRenderParts('tháº»-khÃ´ng-tá»“n-táº¡i').length >= 5);
+check('THáºº: khÃ´ng cÃ³ tháº» má»Ÿ -> [] (giá»¯ tá»‘i Æ°u chá»‰ váº½ báº£ng bá»‘ trÃ­)', hr.hrCardRenderParts('').length === 0);
 const cardIds = [...idx.matchAll(/data-hr-card="([^"]+)"/g)].map(m => m[1]);
-check('THẺ: 12 thẻ launcher đều có phần vẽ (không thẻ nào trống)', cardIds.length === 12 && cardIds.every(id => hr.hrCardRenderParts(id).length > 0));
+check('THáºº: 12 tháº» launcher Ä‘á»u cÃ³ pháº§n váº½ (khÃ´ng tháº» nÃ o trá»‘ng)', cardIds.length === 12 && cardIds.every(id => hr.hrCardRenderParts(id).length > 0));
 hr.hrOpenCard('hr-posneed-card');
-check('MỞ THẺ: toolbar + KPI có nội dung', document.getElementById('hnm-toolbar').innerHTML.length > 100 && document.getElementById('hnm-kpi').innerHTML.includes('đang bố trí'));
-check('MỞ THẺ: bong bóng bộ phận được vẽ', (document.getElementById('hnm-dept-bubbles').innerHTML.match(/data-hnm-dept=/g) || []).length === 5);
-check('MỞ THẺ: bảng chi tiết có dòng dữ liệu', document.getElementById('hr-posneed-body').innerHTML.includes('hnm-status'));
+check('Má»ž THáºº: toolbar + KPI cÃ³ ná»™i dung', document.getElementById('hnm-toolbar').innerHTML.length > 100 && document.getElementById('hnm-kpi').innerHTML.includes('Ä‘ang bá»‘ trÃ­'));
+check('Má»ž THáºº: bong bÃ³ng bá»™ pháº­n Ä‘Æ°á»£c váº½', (document.getElementById('hnm-dept-bubbles').innerHTML.match(/data-hnm-dept=/g) || []).length === 5);
+check('Má»ž THáºº: báº£ng chi tiáº¿t cÃ³ dÃ²ng dá»¯ liá»‡u', document.getElementById('hr-posneed-body').innerHTML.includes('hnm-status'));
 
 console.log(`\nWYNIK: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
+

@@ -16,10 +16,13 @@ import { state } from './state.js';
 const THEME_KEY = 'bamboo_tracker_ui_theme_v1';
 const THEME_USERS_KEY = 'bamboo_tracker_ui_theme_users_v1';
 const FX_KEY = 'bamboo_tracker_ui_fx_v1';
+const SLIM_FRAME_KEY = 'bamboo_tracker_ui_frame_v1';
 // KHÓA CỨNG: chỉ còn MỘT giao diện — mọi giá trị cũ (light/auto) không hợp lệ
 // nữa nên getThemeChoice() tự trả về giao diện hiện tại.
 const THEMES = ['night'];
 const THEME_DEFAULT = 'night';
+const SLIM_FRAMES = ['original', 'slim'];
+const SLIM_FRAME_DEFAULT = 'original';
 
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -30,6 +33,29 @@ export function getThemeChoice() {
   return THEMES.includes(v) ? v : THEME_DEFAULT;
 }
 export function getFxLow() { return lsGet(FX_KEY) === 'low'; }
+
+// Khung trang trí thử nghiệm, lưu riêng theo máy và độc lập với theme màu:
+// original = giao diện tre hiện tại, slim = bỏ khung tre trang trí.
+export function getSlimFrameChoice() {
+  const v = lsGet(SLIM_FRAME_KEY);
+  return SLIM_FRAMES.includes(v) ? v : SLIM_FRAME_DEFAULT;
+}
+export function setSlimFrameChoice(choice) {
+  const next = choice === 'slim' ? 'slim' : 'original';
+  lsSet(SLIM_FRAME_KEY, next);
+  applySlimFrame();
+  return next;
+}
+export function applySlimFrame() {
+  const choice = getSlimFrameChoice();
+  try {
+    document.body.setAttribute('data-frame', choice);
+  } catch (e) { /* DOM stub / môi trường hạn chế — bỏ qua */ }
+  return choice;
+}
+export function initSlimFrame() {
+  return applySlimFrame();
+}
 
 // Giao diện đã khóa cứng: mọi lựa chọn đều giải quyết ra giao diện hiện tại
 export function resolvedThemeOf() {
@@ -42,6 +68,7 @@ export function applyTheme() {
   try {
     document.body.setAttribute('data-theme', 'night');
     document.body.setAttribute('data-fx', getFxLow() ? 'low' : 'normal');
+    document.body.setAttribute('data-frame', getSlimFrameChoice());
   } catch (e) { /* DOM stub / môi trường hạn chế — bỏ qua */ }
   // Biểu đồ Chart.js: màu chữ trục + nét lưới theo nền kem sáng của "Tre Sáng"
   // (dataset giữ nguyên bộ màu chuẩn hóa của dự án — đã kiểm không vi phạm quy tắc green/blue)
@@ -81,6 +108,7 @@ export function initTheme() {
     const pref = map[u.username];
     if (pref && THEMES.includes(pref) && pref !== getThemeChoice()) lsSet(THEME_KEY, pref);
   }
+  initSlimFrame();
   return applyTheme();
 }
 // Công tắc "Giảm hiệu ứng" (máy yếu): tắt kính/animation, giữ nguyên giao diện

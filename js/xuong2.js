@@ -2976,12 +2976,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       // CÔNG SUẤT → HIỆU SUẤT của ngày.
       const hoursEff = stageEffHours('cut', date, hours);
       const incH = stageIncidentOf('cut', date);
-      // CÔNG SUẤT = Σ SỐ XE ÷ giờ hiệu dụng (xe/h) — đơn vị mới từ 21/10/2026
-      const cap = hoursEff > 0 ? (totalXe / hoursEff) : null;
-      const rate = capRateOf(date);                  // Định mức tháng (xe/h)
-      const eff = (cap != null && rate) ? (cap / rate) * 100 : null; // Hiệu suất (%)
-      // Quy đổi tương đương kg/h để đối chiếu với cách tính cũ (chỉ trong tooltip)
+      // Sản lượng/Công suất hiển thị bằng KG. Xe/h chỉ là chuyển đổi khi tính hiệu suất.
       const capKg = hoursEff > 0 ? (totalIn / hoursEff) : null;
+      const capXe = capKg != null ? capKg / X2_KG_PER_CART_DEFAULT : null;
+      const cap = capKg;
+      const rate = capRateOf(date);                  // Định mức tháng (xe/h)
+      const eff = (capXe != null && rate) ? (capXe / rate) * 100 : null; // Hiệu suất (%)
       const xeNote = totalXeEst > 0
         ? ` · trong đó ≈ ${fmtKg(totalXeEst)} xe quy đổi từ kg (lượt chưa ghi Số Xe)`
         : '';
@@ -2990,7 +2990,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong>`;
       const effTip = eff == null
         ? 'Chưa đủ dữ liệu (chưa có số xe / thiếu giờ cắt / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức cho tháng này)'
-        : `Hiệu suất = Công suất thực tế (${fmtKg(cap)} xe/h = ${fmtKg(totalXe)} xe ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}${xeNote}) ÷ Định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} xe/h)`;
+        : `Hiệu suất = ${fmtKg(capKg)} kg/h ≈ ${fmtKg(capXe)} xe/h (${fmtKg(totalIn)} kg ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}${xeNote}) ÷ Định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} xe/h) — quy đổi gốc 600 kg/xe`;
       const hcTxt = first.cutHoursHC != null ? fmtRatio(first.cutHoursHC) : '—';
       const tcTxt = first.cutHoursTC != null ? fmtRatio(first.cutHoursTC) : '—';
       const cutters = first.cutterRows.filter(x => x.name);
@@ -3006,11 +3006,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
             <span class="x2-day-date"><i data-lucide="calendar-days"></i> ${formatDateDDMMYY(date)}</span>
             <span class="x2-day-cutters" title="Người cắt/chọn tự động từ Bảng bố trí Nhân Sự (vị trí Cắt — Xưởng 2)"><i data-lucide="users"></i> ${cuttersMain || '<em style="color:var(--text-muted);">chưa bố trí người cắt</em>'}${cuttersMore}</span>
             <span class="x2-day-hours" title="Số giờ cắt = tổng giờ công vị trí Cắt trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ cắt: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = Tổng SỐ XE (${fmtKg(totalXe)} xe${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · tương đương ${fmtKg(capKg)} kg/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} xe/h` : '—'}</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = Tổng khối lượng (${fmtKg(totalIn)} kg${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · quy đổi ≈ ${fmtKg(capXe)} xe/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
             <span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('cut', date)}
           </div>
-          ${x2ShiftBlockOf(date, isCutSelectPos, 'Cắt chọn', { qty: totalXe, unit: 'xe/h', rate, incH })}
+          ${x2ShiftBlockOf(date, isCutSelectPos, 'Cắt chọn', { qty: totalIn, unit: 'kg/h', rate: rate ? rate * X2_KG_PER_CART_DEFAULT : null, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>
@@ -3761,12 +3761,12 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
       // CÔNG SUẤT → HIỆU SUẤT của ngày.
       const hoursEff = stageEffHours('boluong', date, hours);
       const incH = stageIncidentOf('boluong', date);
-      // CÔNG SUẤT = Σ SỐ XE ÷ giờ hiệu dụng (xe/h) — đơn vị mới từ 21/10/2026
-      const cap = hoursEff > 0 ? (totalXe / hoursEff) : null;
-      const rate = boluongRateOf(date);              // Định mức tháng (xe/h)
-      const eff = (cap != null && rate) ? (cap / rate) * 100 : null; // Hiệu suất (%)
-      // Quy đổi tương đương kg/h để đối chiếu với cách tính cũ (chỉ trong tooltip)
+      // Sản lượng/Công suất hiển thị bằng KG; xe/h chỉ dùng quy đổi hiệu suất.
       const capKg = hoursEff > 0 ? (totalQty / hoursEff) : null;
+      const capXe = capKg != null ? capKg / X2_KG_PER_CART_DEFAULT : null;
+      const cap = capKg;
+      const rate = boluongRateOf(date);              // Định mức tháng (xe/h)
+      const eff = (capXe != null && rate) ? (capXe / rate) * 100 : null; // Hiệu suất (%)
       const xeNote = totalXeEst > 0
         ? ` · trong đó ≈ ${fmtKg(totalXeEst)} xe quy đổi từ kg (lượt chưa ghi Số xe)`
         : '';
@@ -3775,7 +3775,7 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
         : `<strong style="color:${eff >= 100 ? '#16a34a' : eff >= 70 ? '#0f766e' : '#b45309'};">${fmtRatio(eff)}%</strong>`;
       const effTip = eff == null
         ? 'Chưa đủ dữ liệu (chưa có số xe / thiếu giờ bốc / giờ sự cố ≥ giờ làm, hoặc chưa đặt Định mức cho tháng này)'
-        : `Hiệu suất = Công suất thực tế (${fmtKg(cap)} xe/h = ${fmtKg(totalXe)} xe ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}${xeNote}) ÷ Định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} xe/h)`;
+        : `Hiệu suất = ${fmtKg(capKg)} kg/h ≈ ${fmtKg(capXe)} xe/h (${fmtKg(totalQty)} kg ÷ ${fmtRatio(hoursEff)} giờ${incH > 0 ? ` [đã trừ ${fmtGio(incH)}h sự cố]` : ''}${xeNote}) ÷ Định mức tháng ${Number(String(date).slice(5))} (${fmtKg(rate)} xe/h) — quy đổi gốc 600 kg/xe`;
       const hcTxt = first.workHoursHC != null ? fmtRatio(first.workHoursHC) : '—';
       const tcTxt = first.workHoursTC != null ? fmtRatio(first.workHoursTC) : '—';
       const workers = first.workerRows.filter(x => x.name);
@@ -3791,11 +3791,11 @@ import { renderX2PhuPhamCard, setX2PhuPhamStageDataReader, x2PhuPhamCardCount } 
             <span class="x2-day-date"><i data-lucide="calendar-days"></i> ${formatDateDDMMYY(date)}</span>
             <span class="x2-day-cutters" title="Người bốc tự động từ Bảng bố trí Nhân Sự (vị trí Bốc Luồng — Xưởng 2)"><i data-lucide="users"></i> ${workerMain || '<em style="color:var(--text-muted);">chưa bố trí người bốc</em>'}${workerMore}</span>
             <span class="x2-day-hours" title="Giờ bốc = tổng giờ công vị trí Bốc Luồng trong ngày (từ tab Nhân Sự), tách giờ hành chính (HC) / giờ tăng ca (TC)">Giờ bốc: <span class="x2-hours-hc">${hcTxt}h HC</span><span class="x2-hours-tc">${tcTxt}h TC</span></span>
-            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = Tổng SỐ XE (${fmtKg(totalXe)} xe${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · tương đương ${fmtKg(capKg)} kg/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} xe/h` : '—'}</strong></span>
+            <span class="x2-day-cap" data-flag-show="see.perf.cap" title="Công suất thực tế = Tổng khối lượng (${fmtKg(totalQty)} kg${xeNote}) ÷ giờ làm việc hiệu dụng (${fmtRatio(hoursEff)} h${incH > 0 ? ` — đã TRỪ ${fmtGio(incH)}h sự cố cho phép` : ''})${capKg != null ? ` · quy đổi ≈ ${fmtKg(capXe)} xe/h` : ''}">Công suất thực tế: <strong>${cap != null ? `${fmtKg(cap)} kg/h` : '—'}</strong></span>
             <span class="x2-day-eff" data-flag-show="see.perf.eff" title="${escapeHTML(effTip)}">Hiệu suất: <strong>${effTxt}</strong></span>
             ${stageIncidentInputHtml('boluong', date)}
           </div>
-          ${x2ShiftBlockOf(date, isBocLuongPos, 'Bốc luồng', { qty: totalXe, unit: 'xe/h', rate, incH })}
+          ${x2ShiftBlockOf(date, isBocLuongPos, 'Bốc luồng', { qty: totalQty, unit: 'kg/h', rate: rate ? rate * X2_KG_PER_CART_DEFAULT : null, incH })}
           <table class="data-table x2-day-table">
             <thead>
               <tr>

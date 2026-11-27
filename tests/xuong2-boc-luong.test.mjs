@@ -1,12 +1,12 @@
-// tests/xuong2-boc-luong.test.mjs — Kiểm thử THẺ "BỐC LUỒNG" (tab Công Đoạn, Xưởng 2):
-// chọn lô "Luồng cây..." làm Đầu vào (lô bốc HẾT khối lượng tự ẩn), Khối lượng thực
-// tế (kg), popup Định mức kg/h, thẻ ngày lấy NGƯỜI + GIỜ vị trí "Bốc Luồng" từ tab
-// Nhân Sự → Công suất + Hiệu suất, lưu/sửa/xóa (tombstone), nối state/storage/cloud/
+﻿// tests/xuong2-boc-luong.test.mjs â€” Kiá»ƒm thá»­ THáºº "Bá»C LUá»’NG" (tab CÃ´ng Äoáº¡n, XÆ°á»Ÿng 2):
+// chá»n lÃ´ "Luá»“ng cÃ¢y..." lÃ m Äáº§u vÃ o (lÃ´ bá»‘c Háº¾T khá»‘i lÆ°á»£ng tá»± áº©n), Khá»‘i lÆ°á»£ng thá»±c
+// táº¿ (kg), popup Äá»‹nh má»©c kg/h, tháº» ngÃ y láº¥y NGÆ¯á»œI + GIá»œ vá»‹ trÃ­ "Bá»‘c Luá»“ng" tá»« tab
+// NhÃ¢n Sá»± â†’ CÃ´ng suáº¥t + Hiá»‡u suáº¥t, lÆ°u/sá»­a/xÃ³a (tombstone), ná»‘i state/storage/cloud/
 // history/main/capacity/export.
 'use strict';
 import fs from 'node:fs';
 
-// ─── Stubs môi trường (giống xuong2-cut.test.mjs) ────────────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng xuong2-cut.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -78,285 +78,286 @@ const { state, STORAGE_KEY_XUONG2_BOLUONG, STORAGE_KEY_X2_BOLUONG_RATE } = await
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.activeView = 'kanban-view';
 
-// ─── Dữ liệu nguyên liệu mẫu (tab Nguyên Liệu) ───────────────────
+// â”€â”€â”€ Dá»¯ liá»‡u nguyÃªn liá»‡u máº«u (tab NguyÃªn Liá»‡u) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.materialRecords = [
-  { id: 'mat-a', type: 'Luồng cây xô',  supplier: 'Tế',   location: 'xuong-2', code: 'MNL01', weight: 1000, date: '2026-09-10', createdAt: '2026-09-10T02:00:00.000Z' },
-  { id: 'mat-d', type: 'luong cây tre', supplier: 'Trung', location: 'xuong-2', weight: 500,  date: '2026-09-12', createdAt: '2026-09-12T02:00:00.000Z' },
-  { id: 'mat-b', type: 'Luồng ống',     supplier: 'Trung', location: 'xuong-2', weight: 800,  date: '2026-09-11', createdAt: '2026-09-11T02:00:00.000Z' },
-  { id: 'mat-c', type: 'Thanh tre thô', supplier: 'Khác',  location: 'xuong-1', weight: 500,  date: '2026-09-12', createdAt: '2026-09-12T02:00:00.000Z' }
+  { id: 'mat-a', type: 'Luá»“ng cÃ¢y xÃ´',  supplier: 'Táº¿',   location: 'xuong-2', code: 'MNL01', weight: 1000, date: '2026-09-10', createdAt: '2026-09-10T02:00:00.000Z' },
+  { id: 'mat-d', type: 'luong cÃ¢y tre', supplier: 'Trung', location: 'xuong-2', weight: 500,  date: '2026-09-12', createdAt: '2026-09-12T02:00:00.000Z' },
+  { id: 'mat-b', type: 'Luá»“ng á»‘ng',     supplier: 'Trung', location: 'xuong-2', weight: 800,  date: '2026-09-11', createdAt: '2026-09-11T02:00:00.000Z' },
+  { id: 'mat-c', type: 'Thanh tre thÃ´', supplier: 'KhÃ¡c',  location: 'xuong-1', weight: 500,  date: '2026-09-12', createdAt: '2026-09-12T02:00:00.000Z' }
 ];
 state.xuong2BoluongRecords = [];
 state.x2BoluongEditId = null;
 state.x2BoluongRates = {};
-state.suppliers = [{ id: 'sup-te', name: 'Nhà Tế', code: 'NCC01', createdAt: '2026-09-01T00:00:00.000Z' }];
-// Nhân Sự: NGƯỜI BỐC + GIỜ BỐC tự động từ Bảng bố trí (vị trí tên chứa "bốc luồng")
+state.suppliers = [{ id: 'sup-te', name: 'NhÃ  Táº¿', code: 'NCC01', createdAt: '2026-09-01T00:00:00.000Z' }];
+// NhÃ¢n Sá»±: NGÆ¯á»œI Bá»C + GIá»œ Bá»C tá»± Ä‘á»™ng tá»« Báº£ng bá»‘ trÃ­ (vá»‹ trÃ­ tÃªn chá»©a "bá»‘c luá»“ng")
 state.hrEmployees = [
-  { id: 'empA', name: 'Nguyễn Văn A', quitDate: '' },
-  { id: 'empB', name: 'Nguyễn Văn B', quitDate: '' },
-  { id: 'empC', name: 'Trần Văn C', quitDate: '' }
+  { id: 'empA', name: 'Nguyá»…n VÄƒn A', quitDate: '' },
+  { id: 'empB', name: 'Nguyá»…n VÄƒn B', quitDate: '' },
+  { id: 'empC', name: 'Tráº§n VÄƒn C', quitDate: '' }
 ];
 state.hrPositions = [
-  { id: 'pbl', name: 'Bốc Luồng', department: 'Xưởng 2' },
-  { id: 'pcat', name: 'Cắt Chọn', department: 'Xưởng 2' }
+  { id: 'pbl', name: 'Bá»‘c Luá»“ng', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pcat', name: 'Cáº¯t Chá»n', department: 'XÆ°á»Ÿng 2' }
 ];
 state.hrAssignments = [
-  { id: 'asg-1', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pbl', employeeId: 'empA', start: '07:00', end: '12:00' },
-  { id: 'asg-2', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pbl', employeeId: 'empB', start: '13:00', end: '' },
-  { id: 'asg-3', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pcat', employeeId: 'empC', start: '07:00', end: '' }
+  { id: 'asg-1', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'pbl', employeeId: 'empA', start: '07:00', end: '12:00' },
+  { id: 'asg-2', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'pbl', employeeId: 'empB', start: '13:00', end: '' },
+  { id: 'asg-3', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'pcat', employeeId: 'empC', start: '07:00', end: '' }
 ];
 
 const x2 = await import('../js/xuong2.js');
 
-// ─── A. THẺ LAUNCHER + MỞ/ĐÓNG POP-UP ────────────────────────────
+// â”€â”€â”€ A. THáºº LAUNCHER + Má»ž/ÄÃ“NG POP-UP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.renderXuong2Cards();
-check('THẺ: mini card hiện TỒN LUỒNG CÂY CHƯA BỐC = "Tồn 1.500 kg" (1000 + 500)',
-  document.getElementById('x2-mini-count-bo-luong').textContent === 'Tồn 1.500 kg');
-check('THẺ: KHÔNG còn cờ "soon" (chức năng đã bật)',
+check('THáºº: mini card hiá»‡n Tá»’N LUá»’NG CÃ‚Y CHÆ¯A Bá»C = "Tá»“n 1.500 kg" (1000 + 500)',
+  document.getElementById('x2-mini-count-bo-luong').textContent === 'Tá»“n 1.500 kg');
+check('THáºº: KHÃ”NG cÃ²n cá» "soon" (chá»©c nÄƒng Ä‘Ã£ báº­t)',
   !x2.X2_CARD_DEFS['x2-bo-luong-card'].soon);
-check('THẺ: x2OpenCard trả về true lần đầu', x2.x2OpenCard('x2-bo-luong-card') === true);
-check('THẺ: pop-up bật + thẻ hiện (không còn x2-card-hidden)',
+check('THáºº: x2OpenCard tráº£ vá» true láº§n Ä‘áº§u', x2.x2OpenCard('x2-bo-luong-card') === true);
+check('THáºº: pop-up báº­t + tháº» hiá»‡n (khÃ´ng cÃ²n x2-card-hidden)',
   document.getElementById('x2-detail-overlay').classList.contains('show') &&
   !document.getElementById('x2-bo-luong-card').classList.contains('x2-card-hidden'));
-check('THẺ: bấm lại thẻ đang mở → false (đóng) + overlay tắt',
+check('THáºº: báº¥m láº¡i tháº» Ä‘ang má»Ÿ â†’ false (Ä‘Ã³ng) + overlay táº¯t',
   x2.x2OpenCard('x2-bo-luong-card') === false &&
   !document.getElementById('x2-detail-overlay').classList.contains('show'));
 x2.x2OpenCard('x2-bo-luong-card');
 
-// ─── B. Ô CHỌN ĐẦU VÀO — CHỈ LÔ "LUỒNG CÂY" ──────────────────────
+// â”€â”€â”€ B. Ã” CHá»ŒN Äáº¦U VÃ€O â€” CHá»ˆ LÃ” "LUá»’NG CÃ‚Y" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const sel = document.getElementById('x2-blg-material');
 const optHtml = sel.innerHTML;
-check('Ô CHỌN: có lô "Luồng cây xô"', optHtml.includes('Luồng cây xô'));
-check('Ô CHỌN: khớp MỀM chữ "luồng cây" không dấu + hoa/thường ("luong cây tre")',
-  optHtml.includes('luong cây tre'));
-check('Ô CHỌN: KHÔNG chứa "Luồng ống" (không phải Luồng cây)', !optHtml.includes('Luồng ống'));
-check('Ô CHỌN: KHÔNG chứa lô Xưởng 1 "Thanh tre thô"', !optHtml.includes('Thanh tre thô'));
-check('Ô CHỌN: nhãn kèm PHẦN CÒN LẠI "còn 1.000 / 1.000 kg"',
-  optHtml.includes('còn 1.000 / 1.000 kg'));
+check('Ã” CHá»ŒN: cÃ³ lÃ´ "Luá»“ng cÃ¢y xÃ´"', optHtml.includes('Luá»“ng cÃ¢y xÃ´'));
+check('Ã” CHá»ŒN: khá»›p Má»€M chá»¯ "luá»“ng cÃ¢y" khÃ´ng dáº¥u + hoa/thÆ°á»ng ("luong cÃ¢y tre")',
+  optHtml.includes('luong cÃ¢y tre'));
+check('Ã” CHá»ŒN: KHÃ”NG chá»©a "Luá»“ng á»‘ng" (khÃ´ng pháº£i Luá»“ng cÃ¢y)', !optHtml.includes('Luá»“ng á»‘ng'));
+check('Ã” CHá»ŒN: KHÃ”NG chá»©a lÃ´ XÆ°á»Ÿng 1 "Thanh tre thÃ´"', !optHtml.includes('Thanh tre thÃ´'));
+check('Ã” CHá»ŒN: nhÃ£n kÃ¨m PHáº¦N CÃ’N Láº I "cÃ²n 1.000 / 1.000 kg"',
+  optHtml.includes('cÃ²n 1.000 / 1.000 kg'));
 
-// ─── C. LINK NGÀY + THANH TỒN + BANNER GHI MỚI ───────────────────
+// â”€â”€â”€ C. LINK NGÃ€Y + THANH Tá»’N + BANNER GHI Má»šI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 sel.value = 'mat-a';
 x2.updateXuong2BoluongLinked();
-check('LINK: Ngày bốc mặc định theo ngày nhập NL = 2026-09-10',
+check('LINK: NgÃ y bá»‘c máº·c Ä‘á»‹nh theo ngÃ y nháº­p NL = 2026-09-10',
   document.getElementById('x2-blg-date').value === '2026-09-10');
-check('TỒN: thanh trên cùng = "2 lô · 1.500 kg" chờ bốc',
-  document.getElementById('x2-blg-stock-bar').innerHTML.includes('2 lô · 1.500 kg'));
-check('BANNER: đang ghi mới → ẩn', document.getElementById('x2-blg-edit-banner').style.display === 'none');
+check('Tá»’N: thanh trÃªn cÃ¹ng = "2 lÃ´ Â· 1.500 kg" chá» bá»‘c',
+  document.getElementById('x2-blg-stock-bar').innerHTML.includes('2 lÃ´ Â· 1.500 kg'));
+check('BANNER: Ä‘ang ghi má»›i â†’ áº©n', document.getElementById('x2-blg-edit-banner').style.display === 'none');
 
-// ─── D. CẤU TRÚC index.html + popup ĐỊNH MỨC ─────────────────────
+// â”€â”€â”€ D. Cáº¤U TRÃšC index.html + popup Äá»ŠNH Má»¨C â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-check('HTML: form có 3 ô Ngày · Đầu vào · Khối lượng thực tế + nút Định mức',
+check('HTML: form cÃ³ 3 Ã´ NgÃ y Â· Äáº§u vÃ o Â· Khá»‘i lÆ°á»£ng thá»±c táº¿ + nÃºt Äá»‹nh má»©c',
   idxHtml.includes('id="x2-blg-date"') && idxHtml.includes('id="x2-blg-material"') &&
   idxHtml.includes('id="x2-blg-qty"') && idxHtml.includes('id="btn-x2-blg-rate"'));
-check('HTML: có vùng THẺ NGÀY (x2-blg-day-cards) + nút thu gọn',
+check('HTML: cÃ³ vÃ¹ng THáºº NGÃ€Y (x2-blg-day-cards) + nÃºt thu gá»n',
   idxHtml.includes('id="x2-blg-day-cards"') && idxHtml.includes('id="btn-toggle-x2blg-table"'));
-check('HTML: popup định mức cấp trang modal-x2-blg-rate + ô tháng/số/nút Lưu/chip',
+check('HTML: popup Ä‘á»‹nh má»©c cáº¥p trang modal-x2-blg-rate + Ã´ thÃ¡ng/sá»‘/nÃºt LÆ°u/chip',
   idxHtml.includes('id="modal-x2-blg-rate"') && idxHtml.includes('id="x2-blg-rate-month"') &&
   idxHtml.includes('id="x2-blg-rate-value"') && idxHtml.includes('id="btn-x2-blg-rate-save"') &&
   idxHtml.includes('id="x2-blg-rate-chips"'));
-check('HTML: KHÔNG còn ghi chú placeholder .x2-soon-note trong thẻ Bốc Luồng',
+check('HTML: KHÃ”NG cÃ²n ghi chÃº placeholder .x2-soon-note trong tháº» Bá»‘c Luá»“ng',
   !/<div class="planning-card x2-card-hidden" id="x2-bo-luong-card">[\s\S]{0,900}x2-soon-note/.test(idxHtml));
-check('HTML: thanh tồn + khối thống kê + bảng lịch sử có sẵn',
+check('HTML: thanh tá»“n + khá»‘i thá»‘ng kÃª + báº£ng lá»‹ch sá»­ cÃ³ sáºµn',
   idxHtml.includes('id="x2-blg-stock-bar"') && idxHtml.includes('id="x2-blg-stats"') &&
   idxHtml.includes('id="x2-blg-table-wrap"'));
 
-// ĐỊNH MỨC (21/10/2026): ĐƠN VỊ MỚI = SỐ XE/GIỜ
+// Äá»ŠNH Má»¨C (21/10/2026): ÄÆ N Vá»Š Má»šI = Sá» XE/GIá»œ
 document.getElementById('x2-blg-rate-month').value = '2026-09';
 document.getElementById('x2-blg-rate-value').value = '0.8';
 x2.handleX2BoluongRateSave();
-check('ĐỊNH MỨC: state.x2BoluongRates["2026-09"] = 0,8 xe/h', state.x2BoluongRates['2026-09'] === 0.8);
-check('ĐỊNH MỨC: localStorage đã ghi key riêng',
+check('Äá»ŠNH Má»¨C: state.x2BoluongRates["2026-09"] = 0,8 xe/h', state.x2BoluongRates['2026-09'] === 0.8);
+check('Äá»ŠNH Má»¨C: localStorage Ä‘Ã£ ghi key riÃªng',
   JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BOLUONG_RATE) || '{}')['2026-09'] === 0.8);
-check('ĐỊNH MỨC: boluongRateOf(2026-09-10) = 0,8 xe/h · tháng khác = null',
+check('Äá»ŠNH Má»¨C: boluongRateOf(2026-09-10) = 0,8 xe/h Â· thÃ¡ng khÃ¡c = null',
   x2.boluongRateOf('2026-09-10') === 0.8 && x2.boluongRateOf('2026-10-10') === null);
-check('ĐỊNH MỨC: chip tháng đã đặt hiển thị "T9 = 0,8 xe/h"',
+check('Äá»ŠNH Má»¨C: chip thÃ¡ng Ä‘Ã£ Ä‘áº·t hiá»ƒn thá»‹ "T9 = 0,8 xe/h"',
   document.getElementById('x2-blg-rate-chips').innerHTML.includes('T9 = 0,8 xe/h'));
-check('ĐỊNH MỨC: số CŨ khai theo kg/h (500) tự quy đổi ÷ 600 → 0,833 xe/h',
+check('Äá»ŠNH Má»¨C: sá»‘ CÅ¨ khai theo kg/h (500) tá»± quy Ä‘á»•i Ã· 600 â†’ 0,833 xe/h',
   x2.xeRateOf(500) === 0.833 && x2.xeRateOf(0.8) === 0.8);
 
-// ─── E. LƯU LƯỢT BỐC LUỒNG ───────────────────────────────────────
+// â”€â”€â”€ E. LÆ¯U LÆ¯á»¢T Bá»C LUá»’NG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-blg-qty').value = '400';
 x2.handleXuong2BoluongSubmit({ preventDefault(){} });
-check('LƯU: state có đúng 1 lượt bốc luồng', (state.xuong2BoluongRecords || []).length === 1);
+check('LÆ¯U: state cÃ³ Ä‘Ãºng 1 lÆ°á»£t bá»‘c luá»“ng', (state.xuong2BoluongRecords || []).length === 1);
 const rec = state.xuong2BoluongRecords[0];
-check('LƯU: materialId link đúng lô + snapshot KL lô = 1000',
+check('LÆ¯U: materialId link Ä‘Ãºng lÃ´ + snapshot KL lÃ´ = 1000',
   rec.materialId === 'mat-a' && rec.inputWeight === 1000);
-check('LƯU: Khối lượng thực tế = 400 kg', rec.qty === 400);
-check('LƯU: snapshot NCC ("Tế") + mã số lô ("MNL01") + Mã NCC hiển thị "NCC01" (khớp mềm "Tế" ≡ "Nhà Tế")',
-  rec.supplier === 'Tế' && rec.code === 'MNL01' && x2.boluongDisplay(rec).supplierCode === 'NCC01');
-check('LƯU: NGƯỜI BỐC tự động từ Bảng bố trí (vị trí Bốc Luồng, KHÔNG nhầm Cắt Chọn)',
-  rec.worker === 'Nguyễn Văn A, Nguyễn Văn B' && !String(rec.worker).includes('Trần Văn C'));
-check('LƯU: GIỜ BỐC = "07:00–12:00, 13:00 → hết ca" · 9h HC / 0h TC',
-  rec.workTime === '07:00–12:00, 13:00 → hết ca' && rec.workHours === 9 &&
+check('LÆ¯U: Khá»‘i lÆ°á»£ng thá»±c táº¿ = 400 kg', rec.qty === 400);
+check('LÆ¯U: snapshot NCC ("Táº¿") + mÃ£ sá»‘ lÃ´ ("MNL01") + MÃ£ NCC hiá»ƒn thá»‹ "NCC01" (khá»›p má»m "Táº¿" â‰¡ "NhÃ  Táº¿")',
+  rec.supplier === 'Táº¿' && rec.code === 'MNL01' && x2.boluongDisplay(rec).supplierCode === 'NCC01');
+check('LÆ¯U: NGÆ¯á»œI Bá»C tá»± Ä‘á»™ng tá»« Báº£ng bá»‘ trÃ­ (vá»‹ trÃ­ Bá»‘c Luá»“ng, KHÃ”NG nháº§m Cáº¯t Chá»n)',
+  rec.worker === 'Nguyá»…n VÄƒn A, Nguyá»…n VÄƒn B' && !String(rec.worker).includes('Tráº§n VÄƒn C'));
+check('LÆ¯U: GIá»œ Bá»C = "07:00â€“12:00, 13:00 â†’ háº¿t ca" Â· 9h HC / 0h TC',
+  rec.workTime === '07:00â€“12:00, 13:00 â†’ háº¿t ca' && rec.workHours === 9 &&
   rec.workHoursHC === 9 && rec.workHoursTC === 0);
-check('LƯU: tuần tự tạo theo ngày (2026-W…)', String(rec.week || '').startsWith('2026-W'));
-check('LƯU: localStorage đã ghi danh sách',
+check('LÆ¯U: tuáº§n tá»± táº¡o theo ngÃ y (2026-Wâ€¦)', String(rec.week || '').startsWith('2026-W'));
+check('LÆ¯U: localStorage Ä‘Ã£ ghi danh sÃ¡ch',
   JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_BOLUONG) || '[]').length === 1);
-check('LƯU: form reset về ghi mới', state.x2BoluongEditId === null);
-check('LỌC: lô còn 600 kg → VẪN hiện + nhãn "còn 600 / 1.000 kg"',
-  sel.innerHTML.includes('Luồng cây xô') && sel.innerHTML.includes('còn 600 / 1.000 kg'));
+check('LÆ¯U: form reset vá» ghi má»›i', state.x2BoluongEditId === null);
+check('Lá»ŒC: lÃ´ cÃ²n 600 kg â†’ VáºªN hiá»‡n + nhÃ£n "cÃ²n 600 / 1.000 kg"',
+  sel.innerHTML.includes('Luá»“ng cÃ¢y xÃ´') && sel.innerHTML.includes('cÃ²n 600 / 1.000 kg'));
 
-// ─── F. THẺ NGÀY: NGƯỜI · GIỜ · CÔNG SUẤT · HIỆU SUẤT ────────────
+// â”€â”€â”€ F. THáºº NGÃ€Y: NGÆ¯á»œI Â· GIá»œ Â· CÃ”NG SUáº¤T Â· HIá»†U SUáº¤T â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const day = document.getElementById('x2-blg-day-cards').innerHTML;
-check('THẺ NGÀY: có ngày 10/09/26 + người bốc chính + "+1 người khác"',
-  day.includes('10/09/26') && day.includes('Nguyễn Văn A') && day.includes('+1 người khác'));
-check('THẺ NGÀY: giờ bốc badge "9h HC" / "0h TC"', day.includes('9h HC') && day.includes('0h TC'));
-check('THẺ NGÀY: CÔNG SUẤT = (400 kg ≈ 0,67 xe) ÷ 9h = "0,07 xe/h"', day.includes('0,07 xe/h'));
-check('THẺ NGÀY: ô Số xe hiện "≈ 0,67" (xe tương đương quy đổi từ kg)', day.includes('≈ 0,67'));
-check('THẺ NGÀY: HIỆU SUẤT = 0,074 xe/h ÷ 0,8 xe/h = "9,3%"', day.includes('9,3%'));
-check('THẺ NGÀY: tooltip vẫn ghi tương đương kg/h cũ ("44,44 kg/h")', day.includes('44,44 kg/h'));
-check('THẺ NGÀY: có ô nhập GIỜ SỰ CỐ (data-x2-incident=boluong)',
+check('THáºº NGÃ€Y: cÃ³ ngÃ y 10/09/26 + ngÆ°á»i bá»‘c chÃ­nh + "+1 ngÆ°á»i khÃ¡c"',
+  day.includes('10/09/26') && day.includes('Nguyá»…n VÄƒn A') && day.includes('+1 ngÆ°á»i khÃ¡c'));
+check('THáºº NGÃ€Y: giá» bá»‘c badge "9h HC" / "0h TC"', day.includes('9h HC') && day.includes('0h TC'));
+check('THáºº NGÃ€Y: CÃ”NG SUáº¤T = (400 kg â‰ˆ 0,67 xe) Ã· 9h = "0,07 xe/h"', day.includes('0,07 xe/h'));
+check('THáºº NGÃ€Y: Ã´ Sá»‘ xe hiá»‡n "â‰ˆ 0,67" (xe tÆ°Æ¡ng Ä‘Æ°Æ¡ng quy Ä‘á»•i tá»« kg)', day.includes('â‰ˆ 0,67'));
+check('THáºº NGÃ€Y: HIá»†U SUáº¤T = 0,074 xe/h Ã· 0,8 xe/h = "9,3%"', day.includes('9,3%'));
+check('THáºº NGÃ€Y: tooltip váº«n ghi tÆ°Æ¡ng Ä‘Æ°Æ¡ng kg/h cÅ© ("44,44 kg/h")', day.includes('44,44 kg/h'));
+check('THáºº NGÃ€Y: cÃ³ Ã´ nháº­p GIá»œ Sá»° Cá» (data-x2-incident=boluong)',
   day.includes('data-x2-incident="boluong"'));
-check('BẢNG: đếm "1 lượt đã bốc luồng"',
-  document.getElementById('x2-blg-table-count').textContent === '1 lượt đã bốc luồng');
-check('THỐNG KÊ: khối stats có "Lượt bốc luồng" + "Tồn chờ bốc (kg)"',
-  document.getElementById('x2-blg-stats').innerHTML.includes('Lượt bốc luồng') &&
-  document.getElementById('x2-blg-stats').innerHTML.includes('Tồn chờ bốc (kg)'));
-// Bố trí bị xóa → bảng dùng SNAPSHOT đã lưu
+check('Báº¢NG: Ä‘áº¿m "1 lÆ°á»£t Ä‘Ã£ bá»‘c luá»“ng"',
+  document.getElementById('x2-blg-table-count').textContent === '1 lÆ°á»£t Ä‘Ã£ bá»‘c luá»“ng');
+check('THá»NG KÃŠ: khá»‘i stats cÃ³ "LÆ°á»£t bá»‘c luá»“ng" + "Tá»“n chá» bá»‘c (kg)"',
+  document.getElementById('x2-blg-stats').innerHTML.includes('LÆ°á»£t bá»‘c luá»“ng') &&
+  document.getElementById('x2-blg-stats').innerHTML.includes('Tá»“n chá» bá»‘c (kg)'));
+// Bá»‘ trÃ­ bá»‹ xÃ³a â†’ báº£ng dÃ¹ng SNAPSHOT Ä‘Ã£ lÆ°u
 const hrBackup = state.hrAssignments;
 state.hrAssignments = [];
 x2.renderXuong2BoluongTable();
-check('THẺ NGÀY (SNAPSHOT): mất bố trí vẫn hiện người bốc đã lưu',
-  document.getElementById('x2-blg-day-cards').innerHTML.includes('Nguyễn Văn A'));
+check('THáºº NGÃ€Y (SNAPSHOT): máº¥t bá»‘ trÃ­ váº«n hiá»‡n ngÆ°á»i bá»‘c Ä‘Ã£ lÆ°u',
+  document.getElementById('x2-blg-day-cards').innerHTML.includes('Nguyá»…n VÄƒn A'));
 state.hrAssignments = hrBackup;
 x2.renderXuong2BoluongTable();
 
-// ─── G. BỐC HẾT KHỐI LƯỢNG → LÔ TỰ ẨN ───────────────────────────
+// â”€â”€â”€ G. Bá»C Háº¾T KHá»I LÆ¯á»¢NG â†’ LÃ” Tá»° áº¨N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-blg-material').value = 'mat-a';
 document.getElementById('x2-blg-date').value = '2026-09-10';
 document.getElementById('x2-blg-qty').value = '600';
 x2.handleXuong2BoluongSubmit({ preventDefault(){} });
-check('BỐC HẾT: 2 lượt = 1.000 kg = toàn bộ lô', (state.xuong2BoluongRecords || []).length === 2);
-check('ẨN LÔ: lô đã bốc HẾT tự ẩn khỏi ô chọn (không còn "Luồng cây xô")',
-  !document.getElementById('x2-blg-material').innerHTML.includes('Luồng cây xô'));
-check('TỒN: thanh trên cùng chỉ còn lô thứ 2 = "1 lô · 500 kg"',
-  document.getElementById('x2-blg-stock-bar').innerHTML.includes('1 lô · 500 kg'));
-check('MINI CARD: tồn chờ bốc = "Tồn 500 kg"',
-  document.getElementById('x2-mini-count-bo-luong').textContent === 'Tồn 500 kg');
+check('Bá»C Háº¾T: 2 lÆ°á»£t = 1.000 kg = toÃ n bá»™ lÃ´', (state.xuong2BoluongRecords || []).length === 2);
+check('áº¨N LÃ”: lÃ´ Ä‘Ã£ bá»‘c Háº¾T tá»± áº©n khá»i Ã´ chá»n (khÃ´ng cÃ²n "Luá»“ng cÃ¢y xÃ´")',
+  !document.getElementById('x2-blg-material').innerHTML.includes('Luá»“ng cÃ¢y xÃ´'));
+check('Tá»’N: thanh trÃªn cÃ¹ng chá»‰ cÃ²n lÃ´ thá»© 2 = "1 lÃ´ Â· 500 kg"',
+  document.getElementById('x2-blg-stock-bar').innerHTML.includes('1 lÃ´ Â· 500 kg'));
+check('MINI CARD: tá»“n chá» bá»‘c = "Tá»“n 500 kg"',
+  document.getElementById('x2-mini-count-bo-luong').textContent === 'Tá»“n 500 kg');
 
-// ─── H. CHẶN NHẬP VƯỢT PHẦN CÒN LẠI ──────────────────────────────
+// â”€â”€â”€ H. CHáº¶N NHáº¬P VÆ¯á»¢T PHáº¦N CÃ’N Láº I â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-blg-material').value = 'mat-d';
 document.getElementById('x2-blg-date').value = '2026-09-12';
 document.getElementById('x2-blg-qty').value = '400';
 x2.handleXuong2BoluongSubmit({ preventDefault(){} });
 const recD = (state.xuong2BoluongRecords || []).find(r => r.materialId === 'mat-d');
-check('LƯU (lô thứ 2): 400/500 kg thành công', !!recD && recD.qty === 400);
+check('LÆ¯U (lÃ´ thá»© 2): 400/500 kg thÃ nh cÃ´ng', !!recD && recD.qty === 400);
 document.getElementById('x2-blg-material').value = 'mat-d';
 document.getElementById('x2-blg-date').value = '2026-09-12';
-document.getElementById('x2-blg-qty').value = '300'; // còn lại chỉ 100 kg
+document.getElementById('x2-blg-qty').value = '300'; // cÃ²n láº¡i chá»‰ 100 kg
 x2.handleXuong2BoluongSubmit({ preventDefault(){} });
-check('CHẶN: vượt phần còn lại (300 > 100) → KHÔNG thêm lượt mới',
+check('CHáº¶N: vÆ°á»£t pháº§n cÃ²n láº¡i (300 > 100) â†’ KHÃ”NG thÃªm lÆ°á»£t má»›i',
   (state.xuong2BoluongRecords || []).length === 3);
 
-// ─── I. SỬA LƯỢT BỐC LUỒNG (phần của lượt được trả lại) ──────────
+// â”€â”€â”€ I. Sá»¬A LÆ¯á»¢T Bá»C LUá»’NG (pháº§n cá»§a lÆ°á»£t Ä‘Æ°á»£c tráº£ láº¡i) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.editXuong2Boluong(recD.id);
-check('SỬA: vào chế độ sửa + banner hiện', state.x2BoluongEditId === recD.id &&
+check('Sá»¬A: vÃ o cháº¿ Ä‘á»™ sá»­a + banner hiá»‡n', state.x2BoluongEditId === recD.id &&
   document.getElementById('x2-blg-edit-banner').style.display === '');
-check('SỬA: ô Khối lượng nạp lại 400 + ô chọn trỏ đúng lô',
+check('Sá»¬A: Ã´ Khá»‘i lÆ°á»£ng náº¡p láº¡i 400 + Ã´ chá»n trá» Ä‘Ãºng lÃ´',
   document.getElementById('x2-blg-qty').value === '400' &&
   document.getElementById('x2-blg-material').value === 'mat-d');
 document.getElementById('x2-blg-qty').value = '100';
 x2.handleXuong2BoluongSubmit({ preventDefault(){} });
-check('SỬA: qty cập nhật 100 → tồn lô còn lại 400 kg',
+check('Sá»¬A: qty cáº­p nháº­t 100 â†’ tá»“n lÃ´ cÃ²n láº¡i 400 kg',
   recD.qty === 100 && Math.round(x2.boluongRemainingOf(state.materialRecords.find(m => m.id === 'mat-d'))) === 400);
-check('SỬA: sau lưu về ghi mới', state.x2BoluongEditId === null);
-// Sửa lại đúng bằng toàn bộ lô (500) → hợp lệ vì phần lượt đang sửa được TRẢ LẠI
+check('Sá»¬A: sau lÆ°u vá» ghi má»›i', state.x2BoluongEditId === null);
+// Sá»­a láº¡i Ä‘Ãºng báº±ng toÃ n bá»™ lÃ´ (500) â†’ há»£p lá»‡ vÃ¬ pháº§n lÆ°á»£t Ä‘ang sá»­a Ä‘Æ°á»£c TRáº¢ Láº I
 x2.editXuong2Boluong(recD.id);
 document.getElementById('x2-blg-qty').value = '500';
 x2.handleXuong2BoluongSubmit({ preventDefault(){} });
-check('SỬA: phần lượt đang sửa được TRẢ LẠI → 500 kg (hết lô) vẫn hợp lệ',
+check('Sá»¬A: pháº§n lÆ°á»£t Ä‘ang sá»­a Ä‘Æ°á»£c TRáº¢ Láº I â†’ 500 kg (háº¿t lÃ´) váº«n há»£p lá»‡',
   recD.qty === 500);
-// Vượt mức → bị chặn
+// VÆ°á»£t má»©c â†’ bá»‹ cháº·n
 x2.editXuong2Boluong(recD.id);
 document.getElementById('x2-blg-qty').value = '501';
 x2.handleXuong2BoluongSubmit({ preventDefault(){} });
-check('SỬA: vượt 500 kg (hết lô) → giữ nguyên 500', recD.qty === 500);
+check('Sá»¬A: vÆ°á»£t 500 kg (háº¿t lÃ´) â†’ giá»¯ nguyÃªn 500', recD.qty === 500);
 x2.resetXuong2BoluongForm();
 
-// ─── J. XÓA LƯỢT (+ TOMBSTONE) → LÔ QUAY LẠI DANH SÁCH ──────────
+// â”€â”€â”€ J. XÃ“A LÆ¯á»¢T (+ TOMBSTONE) â†’ LÃ” QUAY Láº I DANH SÃCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.deleteXuong2Boluong(recD.id);
-check('XÓA: danh sách giảm 1 lượt (còn 2 lượt của lô mat-a)',
+check('XÃ“A: danh sÃ¡ch giáº£m 1 lÆ°á»£t (cÃ²n 2 lÆ°á»£t cá»§a lÃ´ mat-a)',
   (state.xuong2BoluongRecords || []).length === 2);
-check('XÓA: ghi tombstone (xuong2BoluongRecords)',
+check('XÃ“A: ghi tombstone (xuong2BoluongRecords)',
   !!(state.deletedIds && state.deletedIds.xuong2BoluongRecords && state.deletedIds.xuong2BoluongRecords[recD.id]));
-check('XÓA: lô "luong cây tre" hiện lại ô chọn + tồn quay lại 500 kg',
-  document.getElementById('x2-blg-material').innerHTML.includes('luong cây tre') &&
-  document.getElementById('x2-mini-count-bo-luong').textContent === 'Tồn 500 kg');
-// Bốc nốt lô thứ 2 hết → mọi lô đều hết → placeholder báo hết
+check('XÃ“A: lÃ´ "luong cÃ¢y tre" hiá»‡n láº¡i Ã´ chá»n + tá»“n quay láº¡i 500 kg',
+  document.getElementById('x2-blg-material').innerHTML.includes('luong cÃ¢y tre') &&
+  document.getElementById('x2-mini-count-bo-luong').textContent === 'Tá»“n 500 kg');
+// Bá»‘c ná»‘t lÃ´ thá»© 2 háº¿t â†’ má»i lÃ´ Ä‘á»u háº¿t â†’ placeholder bÃ¡o háº¿t
 document.getElementById('x2-blg-material').value = 'mat-d';
 document.getElementById('x2-blg-date').value = '2026-09-12';
 document.getElementById('x2-blg-qty').value = '500';
 x2.handleXuong2BoluongSubmit({ preventDefault(){} });
-check('HẾT LÔ: option placeholder "Hết lô Luồng cây chờ bốc"',
-  document.getElementById('x2-blg-material').innerHTML.includes('Hết lô "Luồng cây" chờ bốc'));
-check('HẾT LÔ: thanh tồn + mini card = "Hết tồn"',
-  document.getElementById('x2-blg-stock-bar').innerHTML.includes('Hết tồn') &&
-  document.getElementById('x2-mini-count-bo-luong').textContent === 'Hết tồn');
+check('Háº¾T LÃ”: option placeholder "Háº¿t lÃ´ Luá»“ng cÃ¢y chá» bá»‘c"',
+  document.getElementById('x2-blg-material').innerHTML.includes('Háº¿t lÃ´ "Luá»“ng cÃ¢y" chá» bá»‘c'));
+check('Háº¾T LÃ”: thanh tá»“n + mini card = "Háº¿t tá»“n"',
+  document.getElementById('x2-blg-stock-bar').innerHTML.includes('Háº¿t tá»“n') &&
+  document.getElementById('x2-mini-count-bo-luong').textContent === 'Háº¿t tá»“n');
 
-// ─── K. THU GỌN BẢNG + POPUP ĐỊNH MỨC MỞ/ĐÓNG ───────────────────
+// â”€â”€â”€ K. THU Gá»ŒN Báº¢NG + POPUP Äá»ŠNH Má»¨C Má»ž/ÄÃ“NG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.toggleX2BoluongTable();
-check('BẢNG: thu gọn hoạt động (x2-cut-collapsed)', document.getElementById('x2-blg-table-wrap').classList.contains('x2-cut-collapsed'));
+check('Báº¢NG: thu gá»n hoáº¡t Ä‘á»™ng (x2-cut-collapsed)', document.getElementById('x2-blg-table-wrap').classList.contains('x2-cut-collapsed'));
 x2.toggleX2BoluongTable();
-check('BẢNG: mở rộng lại', !document.getElementById('x2-blg-table-wrap').classList.contains('x2-cut-collapsed'));
-check('POPUP ĐM: mở/đóng popup định mức của thẻ Bốc Luồng',
+check('Báº¢NG: má»Ÿ rá»™ng láº¡i', !document.getElementById('x2-blg-table-wrap').classList.contains('x2-cut-collapsed'));
+check('POPUP ÄM: má»Ÿ/Ä‘Ã³ng popup Ä‘á»‹nh má»©c cá»§a tháº» Bá»‘c Luá»“ng',
   x2.openX2RatePopup('modal-x2-blg-rate') === true &&
   document.getElementById('modal-x2-blg-rate').classList.contains('show') &&
   x2.closeX2RatePopup('modal-x2-blg-rate') === true);
-check('POPUP ĐM: ánh xạ X2_RATE_POPUPS có cặp btn-x2-blg-rate → modal-x2-blg-rate',
+check('POPUP ÄM: Ã¡nh xáº¡ X2_RATE_POPUPS cÃ³ cáº·p btn-x2-blg-rate â†’ modal-x2-blg-rate',
   x2.X2_RATE_POPUPS['btn-x2-blg-rate'] === 'modal-x2-blg-rate');
 
-// ─── L. NỐI ĐỦ CÁC MODULE KHÁC ───────────────────────────────────
+// â”€â”€â”€ L. Ná»I Äá»¦ CÃC MODULE KHÃC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const rd = f => fs.readFileSync(new URL('../js/' + f, import.meta.url), 'utf8');
 const jsState = rd('state.js'), jsStorage = rd('storage.js'), jsCloud = rd('cloud.js');
 const jsHist = rd('history.js'), jsMain = rd('main.js'), jsEvents = rd('events.js');
 const jsCap = rd('capacity.js'), jsXlsx = rd('export-xlsx.js');
-check('NỐI (state): key riêng của 2 trường',
+check('Ná»I (state): key riÃªng cá»§a 2 trÆ°á»ng',
   jsState.includes('bamboo_tracker_xuong2_boc_luong_v1') &&
   jsState.includes('bamboo_tracker_x2_boc_luong_rate_v1'));
-check('NỐI (storage): restore + 2 đường nạp file + snapshot + import',
+check('Ná»I (storage): restore + 2 Ä‘Æ°á»ng náº¡p file + snapshot + import',
   jsStorage.includes('function restoreXuong2Boluong') && jsStorage.includes('function restoreX2BoluongRates') &&
   (jsStorage.match(/restoreXuong2Boluong\(/g) || []).length >= 4);
-check('NỐI (cloud): snapshot + core + merge + persistAllLocal',
+check('Ná»I (cloud): snapshot + core + merge + persistAllLocal',
   jsCloud.includes('xuong2BoluongRecords: state.xuong2BoluongRecords') &&
   jsCloud.includes('xuong2BoluongRecords: obj.xuong2BoluongRecords') &&
   jsCloud.includes('remote.xuong2BoluongRecords') &&
   jsCloud.includes('STORAGE_KEY_XUONG2_BOLUONG'));
-check('NỐI (history): 2 vùng dữ liệu tab kanban',
+check('Ná»I (history): 2 vÃ¹ng dá»¯ liá»‡u tab kanban',
   jsHist.includes('xuong2BoluongRecords') && jsHist.includes('x2BoluongRates'));
-check('NỐI (main): nạp lúc boot', jsMain.includes('loadXuong2Boluong()') && jsMain.includes('loadX2BoluongRates()'));
-check('NỐI (events): wire submit + hủy + thu gọn + lưu định mức + sửa/xóa ủy quyền',
+check('Ná»I (main): náº¡p lÃºc boot', jsMain.includes('loadXuong2Boluong()') && jsMain.includes('loadX2BoluongRates()'));
+check('Ná»I (events): wire submit + há»§y + thu gá»n + lÆ°u Ä‘á»‹nh má»©c + sá»­a/xÃ³a á»§y quyá»n',
   jsEvents.includes("safeOn('x2-blg-form', 'submit'") &&
   jsEvents.includes("safeOn('btn-cancel-x2-blg'") &&
   jsEvents.includes("safeOn('btn-toggle-x2blg-table'") &&
   jsEvents.includes("safeOn('btn-x2-blg-rate-save'") &&
   jsEvents.includes("closest('[data-x2-blg-edit]')") &&
   jsEvents.includes("closest('[data-x2-blg-delete]')"));
-check('NỐI (capacity): dòng công đoạn boluong + khóa giờ sự cố + sparkline',
+check('Ná»I (capacity): dÃ²ng cÃ´ng Ä‘oáº¡n boluong + khÃ³a giá» sá»± cá»‘ + sparkline',
   jsCap.includes("id: 'boluong'") && jsCap.includes("boluong: 'boluong'") &&
   jsCap.includes('x2-mini-spark-bo-luong'));
-check('NỐI (export): nguồn "boluong" + cột + nhánh dựng bảng',
+check('Ná»I (export): nguá»“n "boluong" + cá»™t + nhÃ¡nh dá»±ng báº£ng',
   jsXlsx.includes("id: 'boluong'") && jsXlsx.includes("source === 'boluong'") &&
   jsXlsx.includes('boluongDisplay'));
 const swSrc = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (sw.js): CACHE_NAME đã tăng v456', /nha-may-ngoc-son-v456/.test(swSrc));
+check('Cáº¤U TRÃšC (sw.js): CACHE_NAME Ä‘Ã£ tÄƒng v486', /nha-may-ngoc-son-v486/.test(swSrc));
 
-// ─── M. BẢNG TỔNG HỢP CÔNG SUẤT ĐỌC ĐÚC DỮ LIỆU THẺ ────────────
+// â”€â”€â”€ M. Báº¢NG Tá»”NG Há»¢P CÃ”NG SUáº¤T Äá»ŒC ÄÃšC Dá»® LIá»†U THáºº â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const cap = await import('../js/capacity.js');
 const blgSt = cap.CAP_STAGES.find(s => s.id === 'boluong');
-check('CAPACITY: dòng boluong đơn vị xe/h + cardId đúng thẻ',
+check('CAPACITY: dÃ²ng boluong Ä‘Æ¡n vá»‹ xe/h + cardId Ä‘Ãºng tháº»',
   !!blgSt && blgSt.unit === 'xe/h' && blgSt.unitQty === 'xe' && blgSt.cardId === 'x2-bo-luong-card');
 state.xuong2BoluongRecords = [{
-  id: 'x2blg-test', materialId: 'mat-a', materialType: 'Luồng cây xô', supplier: 'Tế',
+  id: 'x2blg-test', materialId: 'mat-a', materialType: 'Luá»“ng cÃ¢y xÃ´', supplier: 'Táº¿',
   inputWeight: 1000, qty: 300, date: '2026-09-10', week: '2026-W37',
   workHours: 9, workHoursHC: 9, workHoursTC: 0,
   createdAt: '2026-09-10T03:00:00.000Z'
 }];
 const blgRows = blgSt.rows();
-check('CAPACITY: rows() trả qty = 0,5 xe (300 kg ÷ 600) + giờ 9h (đúng nguồn thẻ Bốc Luồng)',
+check('CAPACITY: rows() tráº£ qty = 0,5 xe (300 kg Ã· 600) + giá» 9h (Ä‘Ãºng nguá»“n tháº» Bá»‘c Luá»“ng)',
   blgRows.length === 1 && Math.abs(blgRows[0].qty - 0.5) < 1e-9 && blgRows[0].hours === 9);
 state.xuong2BoluongRecords = [];
 
-console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
+console.log(`\nKáº¾T QUáº¢: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
+
 
 
 

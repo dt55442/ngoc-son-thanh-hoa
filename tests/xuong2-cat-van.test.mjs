@@ -1,13 +1,13 @@
-// tests/xuong2-cat-van.test.mjs — Kiểm thử THẺ "CẮT VÁN" (Xưởng 2) — 2 công đoạn
-// nhỏ trong 1 thẻ: CẮT VÁN (đầu vào = ván ở Ép Ván → số tấm cắt) + XẺ THANH (đầu vào
-// = ván Ép Ván → kích thước đầu ra → số thanh) + nút "Thêm" cho TƯƠNG LAI.
-// TỒN ĐẦU VÀO TRỪ THEO KỲ: nút 1 tuần / 2 tuần (cặp lẻ–chẵn VD 41–42) — mỗi lượt
-// lưu kèm periodKey, kỳ CHỒNG NHAU vẫn trừ (không cắt trùng khi đổi chế độ).
-// Định mức RIÊNG: Cắt ván = tấm/h · Xẻ thanh = thanh/h → 2 dòng Bảng Tổng Hợp.
+﻿// tests/xuong2-cat-van.test.mjs â€” Kiá»ƒm thá»­ THáºº "Cáº®T VÃN" (XÆ°á»Ÿng 2) â€” 2 cÃ´ng Ä‘oáº¡n
+// nhá» trong 1 tháº»: Cáº®T VÃN (Ä‘áº§u vÃ o = vÃ¡n á»Ÿ Ã‰p VÃ¡n â†’ sá»‘ táº¥m cáº¯t) + Xáºº THANH (Ä‘áº§u vÃ o
+// = vÃ¡n Ã‰p VÃ¡n â†’ kÃ­ch thÆ°á»›c Ä‘áº§u ra â†’ sá»‘ thanh) + nÃºt "ThÃªm" cho TÆ¯Æ NG LAI.
+// Tá»’N Äáº¦U VÃ€O TRá»ª THEO Ká»²: nÃºt 1 tuáº§n / 2 tuáº§n (cáº·p láº»â€“cháºµn VD 41â€“42) â€” má»—i lÆ°á»£t
+// lÆ°u kÃ¨m periodKey, ká»³ CHá»’NG NHAU váº«n trá»« (khÃ´ng cáº¯t trÃ¹ng khi Ä‘á»•i cháº¿ Ä‘á»™).
+// Äá»‹nh má»©c RIÃŠNG: Cáº¯t vÃ¡n = táº¥m/h Â· Xáº» thanh = thanh/h â†’ 2 dÃ²ng Báº£ng Tá»•ng Há»£p.
 'use strict';
 import fs from 'node:fs';
 
-// ─── Stubs môi trường (giống xuong2-bullig.test.mjs) ────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng xuong2-bullig.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -75,23 +75,23 @@ function check(label, cond) {
   else { fail++; console.log('FAIL ' + label); }
 }
 
-// ─── Dữ liệu mẫu: LƯỢT ÉP VÁN (nguồn ĐẦU VÀO của Cắt Ván) ─────────────
-// Tuần ISO 2026: 05–11/10 = tuần 41 · 12–18/10 = tuần 42 · 30/09 = tuần 40.
+// â”€â”€â”€ Dá»¯ liá»‡u máº«u: LÆ¯á»¢T Ã‰P VÃN (nguá»“n Äáº¦U VÃ€O cá»§a Cáº¯t VÃ¡n) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Tuáº§n ISO 2026: 05â€“11/10 = tuáº§n 41 Â· 12â€“18/10 = tuáº§n 42 Â· 30/09 = tuáº§n 40.
 const { state, STORAGE_KEY_XUONG2_CAT_VAN, STORAGE_KEY_X2_CAT_VAN_RATE, STORAGE_KEY_X2_CAT_VAN_SPAN } =
   await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.pressRecords = [
-  // p1 — tuần 41: ván thô 1220×2440×9 × 20 tấm
-  { id: 'p1', date: '2026-10-06', week: 'Tuần 41', year: 2026, finishedQty: 0, productName: '', fpDim: '',
+  // p1 â€” tuáº§n 41: vÃ¡n thÃ´ 1220Ã—2440Ã—9 Ã— 20 táº¥m
+  { id: 'p1', date: '2026-10-06', week: 'Tuáº§n 41', year: 2026, finishedQty: 0, productName: '', fpDim: '',
     vanTho: [{ vtDim: '1220x2440x9', vtQty: 20 }], sticks: [] },
-  // p2 — tuần 42: ván thô cùng cỡ × 30 tấm (CHỈ NẰM TRONG CẶP 41–42)
-  { id: 'p2', date: '2026-10-13', week: 'Tuần 42', year: 2026, finishedQty: 0, productName: '', fpDim: '',
+  // p2 â€” tuáº§n 42: vÃ¡n thÃ´ cÃ¹ng cá»¡ Ã— 30 táº¥m (CHá»ˆ Náº°M TRONG Cáº¶P 41â€“42)
+  { id: 'p2', date: '2026-10-13', week: 'Tuáº§n 42', year: 2026, finishedQty: 0, productName: '', fpDim: '',
     vanTho: [{ vtDim: '1220x2440x9', vtQty: 30 }], sticks: [] },
-  // p3 — tuần 42: THÀNH PHẨM 1200×382×12 × 50 tấm
-  { id: 'p3', date: '2026-10-13', week: 'Tuần 42', year: 2026, finishedQty: 50,
-    productName: 'Ván 1200x382x12', fpDim: '1200×382×12', vanTho: [], sticks: [] },
-  // p4 — tuần 40 (NGOÀI kỳ 41 và cặp 41–42) → KHÔNG được vào pool
-  { id: 'p4', date: '2026-09-30', week: 'Tuần 40', year: 2026, finishedQty: 0, productName: '', fpDim: '',
+  // p3 â€” tuáº§n 42: THÃ€NH PHáº¨M 1200Ã—382Ã—12 Ã— 50 táº¥m
+  { id: 'p3', date: '2026-10-13', week: 'Tuáº§n 42', year: 2026, finishedQty: 50,
+    productName: 'VÃ¡n 1200x382x12', fpDim: '1200Ã—382Ã—12', vanTho: [], sticks: [] },
+  // p4 â€” tuáº§n 40 (NGOÃ€I ká»³ 41 vÃ  cáº·p 41â€“42) â†’ KHÃ”NG Ä‘Æ°á»£c vÃ o pool
+  { id: 'p4', date: '2026-09-30', week: 'Tuáº§n 40', year: 2026, finishedQty: 0, productName: '', fpDim: '',
     vanTho: [{ vtDim: '1220x2440x9', vtQty: 999 }], sticks: [] }
 ];
 state.xuong2CatVanRecords = [];
@@ -99,167 +99,167 @@ state.x2CatVanRates = { cat: {}, xe: {} };
 state.x2CatVanEditId = null;
 state.x2CatVanSpan = 1;
 
-// ─── Nhân Sự: phân vị "Cắt Ván" + "Xẻ Thanh" (Xưởng 2) ────────────────
+// â”€â”€â”€ NhÃ¢n Sá»±: phÃ¢n vá»‹ "Cáº¯t VÃ¡n" + "Xáº» Thanh" (XÆ°á»Ÿng 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.hrEmployees = [
-  { id: 'empCat', name: 'Phạm Văn Cắt', quitDate: '' },
-  { id: 'empXe', name: 'Đỗ Thị Xẻ', quitDate: '' },
-  { id: 'empOther', name: 'Lê Văn Khác', quitDate: '' }
+  { id: 'empCat', name: 'Pháº¡m VÄƒn Cáº¯t', quitDate: '' },
+  { id: 'empXe', name: 'Äá»— Thá»‹ Xáº»', quitDate: '' },
+  { id: 'empOther', name: 'LÃª VÄƒn KhÃ¡c', quitDate: '' }
 ];
 state.hrPositions = [
-  { id: 'pcv', name: 'Cắt Ván', department: 'Xưởng 2' },
-  { id: 'pxe', name: 'Xẻ Thanh', department: 'Xưởng 2' },
-  { id: 'pkhac', name: 'Bào Tinh', department: 'Xưởng 2' }
+  { id: 'pcv', name: 'Cáº¯t VÃ¡n', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pxe', name: 'Xáº» Thanh', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pkhac', name: 'BÃ o Tinh', department: 'XÆ°á»Ÿng 2' }
 ];
 state.hrAssignments = [
-  { id: 'a-cat', date: '2026-10-06', department: 'Xưởng 2', positionId: 'pcv', employeeId: 'empCat', start: '07:00', end: '12:00' },
-  { id: 'a-xe', date: '2026-10-06', department: 'Xưởng 2', positionId: 'pxe', employeeId: 'empXe', start: '13:00', end: '17:30' },
-  { id: 'a-khac', date: '2026-10-06', department: 'Xưởng 2', positionId: 'pkhac', employeeId: 'empOther', start: '07:00', end: '12:00' }
+  { id: 'a-cat', date: '2026-10-06', department: 'XÆ°á»Ÿng 2', positionId: 'pcv', employeeId: 'empCat', start: '07:00', end: '12:00' },
+  { id: 'a-xe', date: '2026-10-06', department: 'XÆ°á»Ÿng 2', positionId: 'pxe', employeeId: 'empXe', start: '13:00', end: '17:30' },
+  { id: 'a-khac', date: '2026-10-06', department: 'XÆ°á»Ÿng 2', positionId: 'pkhac', employeeId: 'empOther', start: '07:00', end: '12:00' }
 ];
 
 const x2 = await import('../js/xuong2.js');
-// ─── A. KỲ TỒN: 1 TUẦN / 2 TUẦN (CẶP LẺ–CHẴN) ───────────────────────
-check('KỲ: 1 tuần 06/10 → tuần 41 (không có tuần kết)',
+// â”€â”€â”€ A. Ká»² Tá»’N: 1 TUáº¦N / 2 TUáº¦N (Cáº¶P Láººâ€“CHáº´N) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('Ká»²: 1 tuáº§n 06/10 â†’ tuáº§n 41 (khÃ´ng cÃ³ tuáº§n káº¿t)',
   x2.catVanPeriodOf('2026-10-06', 1).start === 41 && x2.catVanPeriodOf('2026-10-06', 1).end == null);
-check('KỲ: 2 tuần 06/10 → CẶP 41–42 (tuần lẻ = đầu cặp)',
+check('Ká»²: 2 tuáº§n 06/10 â†’ Cáº¶P 41â€“42 (tuáº§n láº» = Ä‘áº§u cáº·p)',
   (() => { const p = x2.catVanPeriodOf('2026-10-06', 2); return p.start === 41 && p.end === 42; })());
-check('KỲ: 2 tuần 13/10 (tuần 42 CHẶN) → VẪN CẶP 41–42 (không chồng lấn)',
+check('Ká»²: 2 tuáº§n 13/10 (tuáº§n 42 CHáº¶N) â†’ VáºªN Cáº¶P 41â€“42 (khÃ´ng chá»“ng láº¥n)',
   (() => { const p = x2.catVanPeriodOf('2026-10-13', 2); return p.start === 41 && p.end === 42; })());
-check('KỲ: periodKey 1 tuần = 2026-W41 · 2 tuần = 2026-W41-42',
+check('Ká»²: periodKey 1 tuáº§n = 2026-W41 Â· 2 tuáº§n = 2026-W41-42',
   x2.catVanPeriodKeyOf('2026-10-06', 1) === '2026-W41' &&
   x2.catVanPeriodKeyOf('2026-10-06', 2) === '2026-W41-42');
-check('KỲ: nhãn 2 tuần 13/10 = "Tuần 41–42"',
-  x2.catVanPeriodLabel('2026-10-13', 2) === 'Tuần 41–42');
+check('Ká»²: nhÃ£n 2 tuáº§n 13/10 = "Tuáº§n 41â€“42"',
+  x2.catVanPeriodLabel('2026-10-13', 2) === 'Tuáº§n 41â€“42');
 
-// ─── B. THẺ LAUNCHER + MỞ POP-UP ──────────────────────────────────────
+// â”€â”€â”€ B. THáºº LAUNCHER + Má»ž POP-UP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.renderXuong2Cards();
-check('THẺ: mini card Cắt Ván chưa có lượt → "Chưa ghi"',
-  document.getElementById('x2-mini-count-cat-van').textContent === 'Chưa ghi');
-check('THẺ: KHÔNG còn cờ "soon" (đã bật chức năng)',
+check('THáºº: mini card Cáº¯t VÃ¡n chÆ°a cÃ³ lÆ°á»£t â†’ "ChÆ°a ghi"',
+  document.getElementById('x2-mini-count-cat-van').textContent === 'ChÆ°a ghi');
+check('THáºº: KHÃ”NG cÃ²n cá» "soon" (Ä‘Ã£ báº­t chá»©c nÄƒng)',
   !x2.X2_CARD_DEFS['x2-cat-van-card'].soon);
-check('THẺ: mở thẻ Cắt Ván trả về true (render không ném lỗi)',
+check('THáºº: má»Ÿ tháº» Cáº¯t VÃ¡n tráº£ vá» true (render khÃ´ng nÃ©m lá»—i)',
   x2.x2OpenCard('x2-cat-van-card') === true);
-check('THẺ: pop-up bật + thẻ hiện (không còn x2-card-hidden)',
+check('THáºº: pop-up báº­t + tháº» hiá»‡n (khÃ´ng cÃ²n x2-card-hidden)',
   document.getElementById('x2-detail-overlay').classList.contains('show') &&
   !document.getElementById('x2-cat-van-card').classList.contains('x2-card-hidden'));
-check('THẺ: thẻ đang mở ghi vào state + vùng dữ liệu/Xuất Excel',
+check('THáºº: tháº» Ä‘ang má»Ÿ ghi vÃ o state + vÃ¹ng dá»¯ liá»‡u/Xuáº¥t Excel',
   state.x2OpenCardId === 'x2-cat-van-card' &&
   x2.x2OpenCardHistoryDomain() === 'xuong2CatVanRecords' &&
   x2.x2OpenCardExportSource() === 'catvan');
 
-// ─── C. POOL NGUỒN ĐẦU VÀO THEO KỲ (1 TUẦN) ─────────────────────────
+// â”€â”€â”€ C. POOL NGUá»’N Äáº¦U VÃ€O THEO Ká»² (1 TUáº¦N) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-cv-date').value = '2026-10-06';
 x2.renderX2CatVanCard();
-check('NGUỒN (1 tuần): chỉ ván thô tuần 41 — 20 tấm (tuần 40 + tuần 42 KHÔNG lọt)',
-  (() => { const it = x2.catVanInputPool('2026-10-06'); return it.length === 1 && it[0].sizeKey === '1220×2440×9' && it[0].total === 20 && it[0].group === 'vantho'; })());
-check('NGUỒN (1 tuần): ô Đầu vào có optgroup "Ván thô (Ép Ván)" + còn 20/20 tấm',
-  document.getElementById('x2-cv-source').innerHTML.includes('optgroup label="Ván thô (Ép Ván)"') &&
-  document.getElementById('x2-cv-source').innerHTML.includes('1220×2440×9 — còn 20 / 20 tấm'));
-check('TỒN (1 tuần): thanh tồn ghi "Ván thô: 20 tấm" + kỳ "Tuần 41"',
-  document.getElementById('x2-cv-stock-bar').innerHTML.includes('Ván thô: <strong>20 tấm</strong>') &&
-  document.getElementById('x2-cv-stock-bar').innerHTML.includes('Tuần 41'));
+check('NGUá»’N (1 tuáº§n): chá»‰ vÃ¡n thÃ´ tuáº§n 41 â€” 20 táº¥m (tuáº§n 40 + tuáº§n 42 KHÃ”NG lá»t)',
+  (() => { const it = x2.catVanInputPool('2026-10-06'); return it.length === 1 && it[0].sizeKey === '1220Ã—2440Ã—9' && it[0].total === 20 && it[0].group === 'vantho'; })());
+check('NGUá»’N (1 tuáº§n): Ã´ Äáº§u vÃ o cÃ³ optgroup "VÃ¡n thÃ´ (Ã‰p VÃ¡n)" + cÃ²n 20/20 táº¥m',
+  document.getElementById('x2-cv-source').innerHTML.includes('optgroup label="VÃ¡n thÃ´ (Ã‰p VÃ¡n)"') &&
+  document.getElementById('x2-cv-source').innerHTML.includes('1220Ã—2440Ã—9 â€” cÃ²n 20 / 20 táº¥m'));
+check('Tá»’N (1 tuáº§n): thanh tá»“n ghi "VÃ¡n thÃ´: 20 táº¥m" + ká»³ "Tuáº§n 41"',
+  document.getElementById('x2-cv-stock-bar').innerHTML.includes('VÃ¡n thÃ´: <strong>20 táº¥m</strong>') &&
+  document.getElementById('x2-cv-stock-bar').innerHTML.includes('Tuáº§n 41'));
 
-// ─── D. ĐỔI SANG 2 TUẦN (CẶP 41–42) ──────────────────────────────────
+// â”€â”€â”€ D. Äá»”I SANG 2 TUáº¦N (Cáº¶P 41â€“42) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.setX2CatVanSpan(2);
-check('KỲ 2 TUẦN: pool có CẢ ván thô (20+30=50) + thành phẩm (50) — tuần 40 vẫn loại',
+check('Ká»² 2 TUáº¦N: pool cÃ³ Cáº¢ vÃ¡n thÃ´ (20+30=50) + thÃ nh pháº©m (50) â€” tuáº§n 40 váº«n loáº¡i',
   (() => {
     const it = x2.catVanInputPool('2026-10-06');
-    const vt = it.find(x => x.group === 'vantho' && x.sizeKey === '1220×2440×9');
-    const fp = it.find(x => x.group === 'thanhpham' && x.sizeKey === '1200×382×12');
+    const vt = it.find(x => x.group === 'vantho' && x.sizeKey === '1220Ã—2440Ã—9');
+    const fp = it.find(x => x.group === 'thanhpham' && x.sizeKey === '1200Ã—382Ã—12');
     return !!vt && vt.total === 50 && !!fp && fp.total === 50;
   })());
-check('KỲ 2 TUẦN: thanh tồn ghi nhãn "Tuần 41–42"',
-  document.getElementById('x2-cv-stock-bar').innerHTML.includes('Tuần 41–42'));
-check('KỲ 2 TUẦN: remembered theo MÁY (localStorage)',
+check('Ká»² 2 TUáº¦N: thanh tá»“n ghi nhÃ£n "Tuáº§n 41â€“42"',
+  document.getElementById('x2-cv-stock-bar').innerHTML.includes('Tuáº§n 41â€“42'));
+check('Ká»² 2 TUáº¦N: remembered theo MÃY (localStorage)',
   localStorage.getItem(STORAGE_KEY_X2_CAT_VAN_SPAN) === '2');
-check('KỲ 2 TUẦN: 2 optgroup trong ô Đầu vào (Ván thô + Thành phẩm)',
-  document.getElementById('x2-cv-source').innerHTML.includes('optgroup label="Ván thô (Ép Ván)"') &&
-  document.getElementById('x2-cv-source').innerHTML.includes('optgroup label="Thành phẩm (Ép Ván)"'));
-// ─── E. LƯU LƯỢT CẮT VÁN (trừ tồn theo kỳ 2 tuần) ────────────────────
+check('Ká»² 2 TUáº¦N: 2 optgroup trong Ã´ Äáº§u vÃ o (VÃ¡n thÃ´ + ThÃ nh pháº©m)',
+  document.getElementById('x2-cv-source').innerHTML.includes('optgroup label="VÃ¡n thÃ´ (Ã‰p VÃ¡n)"') &&
+  document.getElementById('x2-cv-source').innerHTML.includes('optgroup label="ThÃ nh pháº©m (Ã‰p VÃ¡n)"'));
+// â”€â”€â”€ E. LÆ¯U LÆ¯á»¢T Cáº®T VÃN (trá»« tá»“n theo ká»³ 2 tuáº§n) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-cv-kind').value = 'cat';
 document.getElementById('x2-cv-date').value = '2026-10-06';
 x2.renderX2CatVanSource();
-document.getElementById('x2-cv-source').value = 'vantho|1220×2440×9';
+document.getElementById('x2-cv-source').value = 'vantho|1220Ã—2440Ã—9';
 document.getElementById('x2-cv-qty').value = '12';
 await x2.handleXuong2CatVanSubmit({ preventDefault(){} });
 const recCat = (state.xuong2CatVanRecords || [])[0];
-check('LƯU CẮT: ghi 1 lượt kind=cat · qtyIn 12 · quantity 12 (tấm)',
+check('LÆ¯U Cáº®T: ghi 1 lÆ°á»£t kind=cat Â· qtyIn 12 Â· quantity 12 (táº¥m)',
   state.xuong2CatVanRecords.length === 1 && recCat.kind === 'cat' &&
   recCat.qtyIn === 12 && recCat.quantity === 12);
-check('LƯU CẮT: periodKey = cặp 2026-W41-42 + span 2 + kích thước nguồn',
+check('LÆ¯U Cáº®T: periodKey = cáº·p 2026-W41-42 + span 2 + kÃ­ch thÆ°á»›c nguá»“n',
   recCat.periodKey === '2026-W41-42' && recCat.span === 2 &&
-  recCat.inGroup === 'vantho' && recCat.inSizeKey === '1220×2440×9' &&
+  recCat.inGroup === 'vantho' && recCat.inSizeKey === '1220Ã—2440Ã—9' &&
   recCat.inDims[0] === 1220);
-check('LƯU CẮT: đã ghi localStorage (key riêng của Cắt Ván)',
+check('LÆ¯U Cáº®T: Ä‘Ã£ ghi localStorage (key riÃªng cá»§a Cáº¯t VÃ¡n)',
   JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_CAT_VAN) || '[]').length === 1);
-check('LƯU CẮT: TỒN CỘT NGAY — ván thô còn 38 / 50 tấm',
-  document.getElementById('x2-cv-source').innerHTML.includes('1220×2440×9 — còn 38 / 50 tấm'));
-check('LƯU CẮT: chip mini card = "1 lượt · 12 tấm"',
-  document.getElementById('x2-mini-count-cat-van').textContent === '1 lượt · 12 tấm');
+check('LÆ¯U Cáº®T: Tá»’N Cá»˜T NGAY â€” vÃ¡n thÃ´ cÃ²n 38 / 50 táº¥m',
+  document.getElementById('x2-cv-source').innerHTML.includes('1220Ã—2440Ã—9 â€” cÃ²n 38 / 50 táº¥m'));
+check('LÆ¯U Cáº®T: chip mini card = "1 lÆ°á»£t Â· 12 táº¥m"',
+  document.getElementById('x2-mini-count-cat-van').textContent === '1 lÆ°á»£t Â· 12 táº¥m');
 
-// ─── F. CHẶN VƯỢT TỒN KỲ ─────────────────────────────────────────────
+// â”€â”€â”€ F. CHáº¶N VÆ¯á»¢T Tá»’N Ká»² â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 {
   const before = state.xuong2CatVanRecords.length;
-  document.getElementById('x2-cv-source').value = 'vantho|1220×2440×9';
-  document.getElementById('x2-cv-qty').value = '40';   // 40 > 38 còn lại
+  document.getElementById('x2-cv-source').value = 'vantho|1220Ã—2440Ã—9';
+  document.getElementById('x2-cv-qty').value = '40';   // 40 > 38 cÃ²n láº¡i
   await x2.handleXuong2CatVanSubmit({ preventDefault(){} });
-  check('CHẶN VƯỢT: nhập 40 tấm (còn 38) → KHÔNG ghi lượt mới',
+  check('CHáº¶N VÆ¯á»¢T: nháº­p 40 táº¥m (cÃ²n 38) â†’ KHÃ”NG ghi lÆ°á»£t má»›i',
     state.xuong2CatVanRecords.length === before);
-  document.getElementById('x2-cv-qty').value = '30';   // 30 ≤ 38
+  document.getElementById('x2-cv-qty').value = '30';   // 30 â‰¤ 38
   await x2.handleXuong2CatVanSubmit({ preventDefault(){} });
-  check('LƯU TIẾP: nhập 30 tấm → được (còn 8 tấm)',
+  check('LÆ¯U TIáº¾P: nháº­p 30 táº¥m â†’ Ä‘Æ°á»£c (cÃ²n 8 táº¥m)',
     state.xuong2CatVanRecords.length === before + 1 &&
-    document.getElementById('x2-cv-source').innerHTML.includes('còn 8 / 50 tấm'));
+    document.getElementById('x2-cv-source').innerHTML.includes('cÃ²n 8 / 50 táº¥m'));
 }
-// ─── G. LƯỢT XẺ THANH (thêm ô Đầu ra + Số thanh ra) ───────────────────
+// â”€â”€â”€ G. LÆ¯á»¢T Xáºº THANH (thÃªm Ã´ Äáº§u ra + Sá»‘ thanh ra) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-cv-kind').value = 'xe';
 x2.syncX2CatVanKindRows();
-document.getElementById('x2-cv-source').value = 'vantho|1220×2440×9';
+document.getElementById('x2-cv-source').value = 'vantho|1220Ã—2440Ã—9';
 document.getElementById('x2-cv-qty').value = '5';
 document.getElementById('x2-cv-out').value = '1200x18x15';
 document.getElementById('x2-cv-out-qty').value = '600';
 await x2.handleXuong2CatVanSubmit({ preventDefault(){} });
 const recXe = (state.xuong2CatVanRecords || []).find(r => r.kind === 'xe');
-check('LƯU XẺ: ghi lượt kind=xe · ván vào 5 tấm · THANH RA 600',
+check('LÆ¯U Xáºº: ghi lÆ°á»£t kind=xe Â· vÃ¡n vÃ o 5 táº¥m Â· THANH RA 600',
   !!recXe && recXe.qtyIn === 5 && recXe.quantity === 600);
-check('LƯU XẺ: kích thước đầu ra chuẩn hoá 1200×18×15 + unitVol 0,000324 m³',
-  !!recXe && recXe.outSizeKey === '1200×18×15' && Math.abs(recXe.unitVol - 0.000324) < 1e-9);
-check('LƯU XẺ: TỒN TRỪ — ván thô còn 3 / 50 tấm',
-  document.getElementById('x2-cv-source').innerHTML.includes('còn 3 / 50 tấm'));
+check('LÆ¯U Xáºº: kÃ­ch thÆ°á»›c Ä‘áº§u ra chuáº©n hoÃ¡ 1200Ã—18Ã—15 + unitVol 0,000324 mÂ³',
+  !!recXe && recXe.outSizeKey === '1200Ã—18Ã—15' && Math.abs(recXe.unitVol - 0.000324) < 1e-9);
+check('LÆ¯U Xáºº: Tá»’N TRá»ª â€” vÃ¡n thÃ´ cÃ²n 3 / 50 táº¥m',
+  document.getElementById('x2-cv-source').innerHTML.includes('cÃ²n 3 / 50 táº¥m'));
 {
   const before = state.xuong2CatVanRecords.length;
   document.getElementById('x2-cv-qty').value = '1';
-  document.getElementById('x2-cv-out').value = '';     // thiếu Đầu ra
+  document.getElementById('x2-cv-out').value = '';     // thiáº¿u Äáº§u ra
   document.getElementById('x2-cv-out-qty').value = '100';
   await x2.handleXuong2CatVanSubmit({ preventDefault(){} });
-  check('XẺ: thiếu KÍCH THƯỚC ĐẦU RA → chặn (không ghi lượt)',
+  check('Xáºº: thiáº¿u KÃCH THÆ¯á»šC Äáº¦U RA â†’ cháº·n (khÃ´ng ghi lÆ°á»£t)',
     state.xuong2CatVanRecords.length === before);
 }
 
-// ─── H. SỬA LƯỢT — TRẢ LẠI PHẦN CỦA NÓ (excludeId) ──────────────────
+// â”€â”€â”€ H. Sá»¬A LÆ¯á»¢T â€” TRáº¢ Láº I PHáº¦N Cá»¦A NÃ“ (excludeId) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.editXuong2CatVan(recCat.id);
-check('SỬA: nạp lại lượt (kỳ vẫn 2 tuần · ô đầu ra trống vì lượt CẮT không có đầu ra)',
+check('Sá»¬A: náº¡p láº¡i lÆ°á»£t (ká»³ váº«n 2 tuáº§n Â· Ã´ Ä‘áº§u ra trá»‘ng vÃ¬ lÆ°á»£t Cáº®T khÃ´ng cÃ³ Ä‘áº§u ra)',
   state.x2CatVanEditId === recCat.id &&
   document.getElementById('x2-cv-qty').value == 12 &&
   document.getElementById('x2-cv-out').value === '');
 {
-  // Pool LOẠI lượt đang sửa → còn 50 − 30 − 5 = 15 tấm → nhập 20 bị chặn
+  // Pool LOáº I lÆ°á»£t Ä‘ang sá»­a â†’ cÃ²n 50 âˆ’ 30 âˆ’ 5 = 15 táº¥m â†’ nháº­p 20 bá»‹ cháº·n
   document.getElementById('x2-cv-qty').value = '20';
   await x2.handleXuong2CatVanSubmit({ preventDefault(){} });
-  check('SỬA: nhập 20 tấm (chỉ còn 15 khi loại lượt này) → bị chặn',
+  check('Sá»¬A: nháº­p 20 táº¥m (chá»‰ cÃ²n 15 khi loáº¡i lÆ°á»£t nÃ y) â†’ bá»‹ cháº·n',
     state.x2CatVanEditId === recCat.id && recCat.qtyIn === 12);
   document.getElementById('x2-cv-qty').value = '15';
   await x2.handleXuong2CatVanSubmit({ preventDefault(){} });
-  // Lưu xong form tự xoá ô Ngày ⇒ tồn được tính theo tuần HIỆN TẠI của máy,
-  // nên test sẽ sai khi chạy vào tuần khác. Chọn lại ngày cố định rồi vẽ lại tồn.
+  // LÆ°u xong form tá»± xoÃ¡ Ã´ NgÃ y â‡’ tá»“n Ä‘Æ°á»£c tÃ­nh theo tuáº§n HIá»†N Táº I cá»§a mÃ¡y,
+  // nÃªn test sáº½ sai khi cháº¡y vÃ o tuáº§n khÃ¡c. Chá»n láº¡i ngÃ y cá»‘ Ä‘á»‹nh rá»“i váº½ láº¡i tá»“n.
   document.getElementById('x2-cv-date').value = '2026-10-06';
   x2.renderX2CatVanSource();
-  check('SỬA: 15 tấm → cập nhật + thoát chế độ sửa (dùng hết ván thô kỳ này)',
+  check('Sá»¬A: 15 táº¥m â†’ cáº­p nháº­t + thoÃ¡t cháº¿ Ä‘á»™ sá»­a (dÃ¹ng háº¿t vÃ¡n thÃ´ ká»³ nÃ y)',
     recCat.qtyIn === 15 && state.x2CatVanEditId === null &&
-    document.getElementById('x2-cv-source').innerHTML.includes('1200×382×12 — còn 50 / 50 tấm') &&
-    !document.getElementById('x2-cv-source').innerHTML.includes('1220×2440×9 — còn'));
+    document.getElementById('x2-cv-source').innerHTML.includes('1200Ã—382Ã—12 â€” cÃ²n 50 / 50 táº¥m') &&
+    !document.getElementById('x2-cv-source').innerHTML.includes('1220Ã—2440Ã—9 â€” cÃ²n'));
 }
 
-// ─── I. ĐỊNH MỨC 2 ĐƠN VỊ (tấm/h · thanh/h) ──────────────────────────
+// â”€â”€â”€ I. Äá»ŠNH Má»¨C 2 ÄÆ N Vá»Š (táº¥m/h Â· thanh/h) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-cv-rate-kind').value = 'cat';
 document.getElementById('x2-cv-rate-month').value = '2026-10';
 document.getElementById('x2-cv-rate-value').value = '60';
@@ -268,36 +268,36 @@ document.getElementById('x2-cv-rate-kind').value = 'xe';
 document.getElementById('x2-cv-rate-month').value = '2026-10';
 document.getElementById('x2-cv-rate-value').value = '200';
 x2.handleX2CatVanRateSave();
-check('ĐỊNH MỨC: cat = 60 tấm/h · xe = 200 thanh/h (state + localStorage)',
+check('Äá»ŠNH Má»¨C: cat = 60 táº¥m/h Â· xe = 200 thanh/h (state + localStorage)',
   state.x2CatVanRates.cat['2026-10'] === 60 && state.x2CatVanRates.xe['2026-10'] === 200 &&
   JSON.parse(localStorage.getItem(STORAGE_KEY_X2_CAT_VAN_RATE)).cat['2026-10'] === 60 &&
   JSON.parse(localStorage.getItem(STORAGE_KEY_X2_CAT_VAN_RATE)).xe['2026-10'] === 200);
-check('ĐỊNH MỨC: catVanRateOf đọc đúng từng công đoạn + đơn vị',
+check('Äá»ŠNH Má»¨C: catVanRateOf Ä‘á»c Ä‘Ãºng tá»«ng cÃ´ng Ä‘oáº¡n + Ä‘Æ¡n vá»‹',
   x2.catVanRateOf('2026-10-06', 'cat') === 60 && x2.catVanRateOf('2026-10-06', 'xe') === 200);
-// ─── J. THẺ NGÀY CHIA 2 VÙNG + CÔNG SUẤT 2 ĐƠN VỊ ───────────────────
+// â”€â”€â”€ J. THáºº NGÃ€Y CHIA 2 VÃ™NG + CÃ”NG SUáº¤T 2 ÄÆ N Vá»Š â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-cv-date').value = '2026-10-06';
 x2.renderX2CatVanCard();
 const dayHtml = document.getElementById('x2-cv-day-cards').innerHTML;
-check('THẺ NGÀY: có VÙNG "Cắt ván" + VÙNG "Xẻ thanh" (2 bảng riêng)',
-  dayHtml.includes('Cắt ván — đầu vào từ Ép Ván') && dayHtml.includes('Xẻ thanh — ván Ép Ván → kích thước thanh'));
-check('THẺ NGÀY: đầu thẻ có CS Cắt (tấm/h) + CS Xẻ (thanh/h) + chip kỳ',
-  dayHtml.includes('CS Cắt:') && dayHtml.includes('tấm/h') &&
-  dayHtml.includes('CS Xẻ:') && dayHtml.includes('thanh/h') &&
-  dayHtml.includes('Tuần 41–42'));
-check('THẺ NGÀY: người CẮT / người XẺ từ Bảng bố trí + ô giờ sự cố catvan',
-  dayHtml.includes('Phạm Văn Cắt') && dayHtml.includes('Đỗ Thị Xẻ') &&
+check('THáºº NGÃ€Y: cÃ³ VÃ™NG "Cáº¯t vÃ¡n" + VÃ™NG "Xáº» thanh" (2 báº£ng riÃªng)',
+  dayHtml.includes('Cáº¯t vÃ¡n â€” Ä‘áº§u vÃ o tá»« Ã‰p VÃ¡n') && dayHtml.includes('Xáº» thanh â€” vÃ¡n Ã‰p VÃ¡n â†’ kÃ­ch thÆ°á»›c thanh'));
+check('THáºº NGÃ€Y: Ä‘áº§u tháº» cÃ³ CS Cáº¯t (táº¥m/h) + CS Xáº» (thanh/h) + chip ká»³',
+  dayHtml.includes('CS Cáº¯t:') && dayHtml.includes('táº¥m/h') &&
+  dayHtml.includes('CS Xáº»:') && dayHtml.includes('thanh/h') &&
+  dayHtml.includes('Tuáº§n 41â€“42'));
+check('THáºº NGÃ€Y: ngÆ°á»i Cáº®T / ngÆ°á»i Xáºº tá»« Báº£ng bá»‘ trÃ­ + Ã´ giá» sá»± cá»‘ catvan',
+  dayHtml.includes('Pháº¡m VÄƒn Cáº¯t') && dayHtml.includes('Äá»— Thá»‹ Xáº»') &&
   dayHtml.includes('data-x2-incident'));
-check('THẺ NGÀY: dòng TỔNG 2 vùng (tấm cắt · ván vào/thanh ra)',
-  dayHtml.includes('tấm ván đã cắt') && dayHtml.includes('xẻ ra'));
-check('THẺ NGÀY: nút Sửa/Xóa uỷ nhiệm data-x2-cv-edit / data-x2-cv-delete',
+check('THáºº NGÃ€Y: dÃ²ng Tá»”NG 2 vÃ¹ng (táº¥m cáº¯t Â· vÃ¡n vÃ o/thanh ra)',
+  dayHtml.includes('táº¥m vÃ¡n Ä‘Ã£ cáº¯t') && dayHtml.includes('xáº» ra'));
+check('THáºº NGÃ€Y: nÃºt Sá»­a/XÃ³a uá»· nhiá»‡m data-x2-cv-edit / data-x2-cv-delete',
   dayHtml.includes('data-x2-cv-edit=') && dayHtml.includes('data-x2-cv-delete='));
 
-// ─── K. BẢNG TỔNG HỢP CÔNG SUẤT — 2 DÒNG RIÊNG ──────────────────────
+// â”€â”€â”€ K. Báº¢NG Tá»”NG Há»¢P CÃ”NG SUáº¤T â€” 2 DÃ’NG RIÃŠNG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const cap = await import('../js/capacity.js');
 const capSrc = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
-check('CAPACITY: Cắt Ván và Xẻ thanh không còn dòng công suất Dashboard',
+check('CAPACITY: Cáº¯t VÃ¡n vÃ  Xáº» thanh khÃ´ng cÃ²n dÃ²ng cÃ´ng suáº¥t Dashboard',
   !cap.CAP_STAGES.some(s => s.id === 'catvan_cat' || s.id === 'catvan_xe'));
-// ─── L. CẤU TRÚC NỐI ĐỦ (index · styles · events · 6 chỗ dữ liệu) ─────
+// â”€â”€â”€ L. Cáº¤U TRÃšC Ná»I Äá»¦ (index Â· styles Â· events Â· 6 chá»— dá»¯ liá»‡u) â”€â”€â”€â”€â”€
 const rd = (f) => fs.readFileSync(new URL('../js/' + f, import.meta.url), 'utf8');
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const stylesCss = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
@@ -305,62 +305,63 @@ const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const jsStorage = rd('storage.js'), jsCloud = rd('cloud.js'), jsHistory = rd('history.js');
 const jsMain = rd('main.js'), jsEvents = rd('events.js'), jsExport = rd('export-xlsx.js');
 
-check('CẤU TRÚC (index.html): thẻ đủ 3 vùng — tồn · form (Kỳ 1/2 tuần + nút Thêm) · thống kê · lịch sử',
+check('Cáº¤U TRÃšC (index.html): tháº» Ä‘á»§ 3 vÃ¹ng â€” tá»“n Â· form (Ká»³ 1/2 tuáº§n + nÃºt ThÃªm) Â· thá»‘ng kÃª Â· lá»‹ch sá»­',
   ['id="x2-cv-stock-bar"', 'id="x2-cv-form"', 'id="x2-cv-kind"', 'id="x2-cv-source"',
    'id="x2-cv-qty"', 'id="x2-cv-out"', 'id="x2-cv-out-qty"', 'id="x2-cv-span-btns"',
    'id="x2-cv-period-label"', 'id="btn-x2-cv-add"', 'id="x2-cv-calc"', 'id="x2-cv-stats"',
    'id="x2-cv-day-cards"', 'id="btn-toggle-x2cv-table"', 'id="btn-x2-cv-rate"']
     .every(s => idxHtml.includes(s)) &&
   idxHtml.includes('data-x2-cv-span="1"') && idxHtml.includes('data-x2-cv-span="2"'));
-check('CẤU TRÚC (index.html): popup định mức + launcher mô tả 2 công đoạn',
+check('Cáº¤U TRÃšC (index.html): popup Ä‘á»‹nh má»©c + launcher mÃ´ táº£ 2 cÃ´ng Ä‘oáº¡n',
   idxHtml.includes('id="modal-x2-cv-rate"') && idxHtml.includes('id="btn-x2-cv-rate-save"') &&
-  idxHtml.includes('Cắt ván + Xẻ thanh'));
-check('CẤU TRÚC (styles.css): khối nút kỳ 1/2 tuần + chip kỳ trên thẻ ngày',
+  idxHtml.includes('Cáº¯t vÃ¡n + Xáº» thanh'));
+check('Cáº¤U TRÃšC (styles.css): khá»‘i nÃºt ká»³ 1/2 tuáº§n + chip ká»³ trÃªn tháº» ngÃ y',
   stylesCss.includes('.x2-cv-span-btns') && stylesCss.includes('.x2-cv-span-btn.active') &&
   stylesCss.includes('.x2-day-period'));
-check('CẤU TRÚC (events.js): nối form + kỳ + input + định mức + sửa/xóa uỷ nhiệm',
+check('Cáº¤U TRÃšC (events.js): ná»‘i form + ká»³ + input + Ä‘á»‹nh má»©c + sá»­a/xÃ³a uá»· nhiá»‡m',
   jsEvents.includes("safeOn('x2-cv-form', 'submit', handleXuong2CatVanSubmit)") &&
   jsEvents.includes("safeOn('x2-cv-span-btns'") &&
   jsEvents.includes("safeOn('x2-cv-date', 'change'") &&
   jsEvents.includes("safeOn('btn-x2-cv-rate-save', 'click', handleX2CatVanRateSave)") &&
   jsEvents.includes("closest('[data-x2-cv-edit]')") &&
   jsEvents.includes("closest('[data-x2-cv-delete]')"));
-check('NỐI (state): 3 key + trường state',
+check('Ná»I (state): 3 key + trÆ°á»ng state',
   fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8')
     .includes('bamboo_tracker_xuong2_cat_van_v1'));
-check('NỐI (storage): restore + 3 đường nạp file/backup + 2 snapshot + export',
+check('Ná»I (storage): restore + 3 Ä‘Æ°á»ng náº¡p file/backup + 2 snapshot + export',
   jsStorage.includes('restoreXuong2CatVan') && jsStorage.includes('restoreX2CatVanRates') &&
   jsStorage.includes('xuong2CatVanRecords: state.xuong2CatVanRecords') &&
   jsStorage.includes('x2CatVanRates: state.x2CatVanRates'));
-check('NỐI (cloud): snapshot · cloudCore · merge · persist · apply · RATE_DOMAINS',
+check('Ná»I (cloud): snapshot Â· cloudCore Â· merge Â· persist Â· apply Â· RATE_DOMAINS',
   jsCloud.includes('xuong2CatVanRecords: state.xuong2CatVanRecords') &&
   jsCloud.includes('xuong2CatVanRecords: obj.xuong2CatVanRecords') &&
   jsCloud.includes("clean('xuong2CatVanRecords'") &&
   jsCloud.includes('STORAGE_KEY_X2_CAT_VAN_RATE') &&
   jsCloud.includes("'x2CatVanRates'"));
-check('NỐI (history): 2 vùng dữ liệu tab kanban',
+check('Ná»I (history): 2 vÃ¹ng dá»¯ liá»‡u tab kanban',
   jsHistory.includes('xuong2CatVanRecords') && jsHistory.includes('x2CatVanRates'));
-check('NỐI (main): load 3 khoá lúc boot',
+check('Ná»I (main): load 3 khoÃ¡ lÃºc boot',
   jsMain.includes('loadXuong2CatVan()') && jsMain.includes('loadX2CatVanRates()') &&
   jsMain.includes('loadX2CatVanSpan()'));
-check('NỐI (export-xlsx): nguồn xuất "catvan" + cột 2 công đoạn',
+check('Ná»I (export-xlsx): nguá»“n xuáº¥t "catvan" + cá»™t 2 cÃ´ng Ä‘oáº¡n',
   jsExport.includes("id: 'catvan'") && jsExport.includes('source === \'catvan\''));
-check('CẤU TRÚC (sw.js): CACHE_NAME v456 (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v456/.test(swJs));
+check('Cáº¤U TRÃšC (sw.js): CACHE_NAME v486 (PWA khÃ´ng dÃ¹ng cache cÅ©)',
+  /nha-may-ngoc-son-v486/.test(swJs));
 
-// ─── M. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
+// â”€â”€â”€ M. XOÃ LÆ¯á»¢T (tombstone) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 {
   const before = state.xuong2CatVanRecords.length;
   x2.deleteXuong2CatVan(recXe.id);
-  check('XÓA: giảm 1 lượt + có tombstone (đồng bộ xóa đa máy)',
+  check('XÃ“A: giáº£m 1 lÆ°á»£t + cÃ³ tombstone (Ä‘á»“ng bá»™ xÃ³a Ä‘a mÃ¡y)',
     state.xuong2CatVanRecords.length === before - 1 &&
     !!(state.deletedIds && state.deletedIds.xuong2CatVanRecords && state.deletedIds.xuong2CatVanRecords[recXe.id]));
-  check('XÓA: ván thô của lượt xẻ ĐƯỢC TRẢ LẠI kỳ (còn 5 tấm = 15+30)',
-    document.getElementById('x2-cv-source').innerHTML.includes('1220×2440×9 — còn 5 / 50 tấm'));
+  check('XÃ“A: vÃ¡n thÃ´ cá»§a lÆ°á»£t xáº» ÄÆ¯á»¢C TRáº¢ Láº I ká»³ (cÃ²n 5 táº¥m = 15+30)',
+    document.getElementById('x2-cv-source').innerHTML.includes('1220Ã—2440Ã—9 â€” cÃ²n 5 / 50 táº¥m'));
 }
 
-console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
+console.log('Káº¾T QUáº¢: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
+
 
 
 

@@ -60,7 +60,7 @@
   <!-- CSS Style -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body data-theme="night" data-fx="normal">
+<body data-theme="night" data-fx="normal" data-frame="original">
   <!-- Áp GIAO DIỆN TRƯỚC PAINT ĐẦU TIÊN — hết chớp giao diện sáng cũ khi reload:
        theme đã khóa cứng 'night' (js/theme.js đặt lại sau này cũng chẳng đổi gì),
        inline script chỉ khôi phục công tắc "Giảm Hiệu Ứng" theo máy từ localStorage
@@ -69,6 +69,8 @@
     try {
       var __bfx = localStorage.getItem('bamboo_tracker_ui_fx_v1');
       document.body.setAttribute('data-fx', __bfx === 'low' ? 'low' : 'normal');
+      var __bframe = localStorage.getItem('bamboo_tracker_ui_frame_v1');
+      document.body.setAttribute('data-frame', __bframe === 'slim' ? 'slim' : 'original');
     } catch (e) { /* bỏ qua — môi trường hạn chế */ }
   </script>
 
@@ -126,44 +128,49 @@
       </div>
 
       <!-- Navigation Tabs (Desktop & Tablet) — Dashboard là màn hình mặc định -->
-      <nav class="main-nav">
-        <button class="nav-btn active" data-target="dashboard-view" id="nav-dashboard" title="Tổng Quan (Dashboard)" aria-label="Tổng Quan (Dashboard)">
-          <i data-lucide="bar-chart-3"></i>
-          <span>Tổng quan</span>
-        </button>
-        <button class="nav-btn" data-target="leadership-view" id="nav-leadership" style="display:none;" title="Lãnh Đạo" aria-label="Lãnh Đạo">
-          <i data-lucide="briefcase-business"></i>
-          <span>Lãnh đạo</span>
-        </button>
-        <button class="nav-btn" data-target="kanban-view" id="nav-kanban" title="Công Đoạn SX" aria-label="Công Đoạn SX">
-          <i data-lucide="layout-grid"></i>
-          <span>Công đoạn</span>
-        </button>
-        <button class="nav-btn" data-target="planning-view" id="nav-planning" title="Kế Hoạch Sản Xuất" aria-label="Kế Hoạch Sản Xuất">
-          <i data-lucide="clipboard-list"></i>
-          <span>Kế hoạch</span>
-        </button>
-        <button class="nav-btn" data-target="materials-view" id="nav-materials" title="Nguyên Liệu" aria-label="Nguyên Liệu">
-          <i data-lucide="package-plus"></i>
-          <span>Nguyên liệu</span>
-        </button>
-        <button class="nav-btn" data-target="qc-view" id="nav-qc" title="QC + Cơ điện" aria-label="QC + Cơ điện">
-          <i data-lucide="clipboard-check"></i>
-          <span>QC + Cơ điện</span>
-        </button>
-        <button class="nav-btn" data-target="hr-view" id="nav-hr" title="Nhân Sự" aria-label="Nhân Sự">
-          <i data-lucide="users"></i>
-          <span>Nhân sự</span>
-        </button>
+      <nav class="main-nav" aria-label="Điều hướng chính">
+        <div class="nav-group" role="group" aria-labelledby="nav-group-overview">
+          <span class="nav-group-label" id="nav-group-overview">Điều hành</span>
+          <button type="button" class="nav-btn active" data-target="dashboard-view" id="nav-dashboard" data-tooltip="Tổng quan" title="Tổng Quan (Dashboard)" aria-label="Tổng Quan (Dashboard)" aria-controls="dashboard-view" aria-current="page">
+            <i data-lucide="bar-chart-3"></i>
+            <span>Tổng quan</span>
+          </button>
+          <button type="button" class="nav-btn" data-target="leadership-view" id="nav-leadership" data-tooltip="Lãnh đạo" style="display:none;" title="Lãnh Đạo" aria-label="Lãnh Đạo" aria-controls="leadership-view">
+            <i data-lucide="briefcase-business"></i>
+            <span>Lãnh đạo</span>
+          </button>
+        </div>
+        <div class="nav-group" role="group" aria-labelledby="nav-group-production">
+          <span class="nav-group-label" id="nav-group-production">Sản xuất</span>
+          <button type="button" class="nav-btn" data-target="kanban-view" id="nav-kanban" data-tooltip="Công đoạn" title="Công Đoạn SX" aria-label="Công Đoạn SX" aria-controls="kanban-view">
+            <i data-lucide="layout-grid"></i>
+            <span>Công đoạn</span>
+          </button>
+          <button type="button" class="nav-btn" data-target="planning-view" id="nav-planning" data-tooltip="Kế hoạch" title="Kế Hoạch Sản Xuất" aria-label="Kế Hoạch Sản Xuất" aria-controls="planning-view">
+            <i data-lucide="clipboard-list"></i>
+            <span>Kế hoạch</span>
+          </button>
+          <button type="button" class="nav-btn" data-target="materials-view" id="nav-materials" data-tooltip="Nguyên liệu" title="Nguyên Liệu" aria-label="Nguyên Liệu" aria-controls="materials-view">
+            <i data-lucide="package-plus"></i>
+            <span>Nguyên liệu</span>
+          </button>
+        </div>
+        <div class="nav-group" role="group" aria-labelledby="nav-group-control">
+          <span class="nav-group-label" id="nav-group-control">Kiểm soát</span>
+          <button type="button" class="nav-btn" data-target="qc-view" id="nav-qc" data-tooltip="QC + Cơ điện" title="QC + Cơ điện" aria-label="QC + Cơ điện" aria-controls="qc-view">
+            <i data-lucide="clipboard-check"></i>
+            <span>QC + Cơ điện</span>
+          </button>
+          <button type="button" class="nav-btn" data-target="hr-view" id="nav-hr" data-tooltip="Nhân sự" title="Nhân Sự" aria-label="Nhân Sự" aria-controls="hr-view">
+            <i data-lucide="users"></i>
+            <span>Nhân sự</span>
+          </button>
+        </div>
       </nav>
+      <div id="nav-rail-tooltip" role="tooltip" hidden></div>
 
       <!-- Action Tools & User Profile -->
       <div class="header-actions">
-        <!-- Undo Button -->
-        <button class="btn btn-outline btn-icon" id="btn-undo" title="Hoàn tác thao tác (Ctrl+Z)" disabled>
-          <i data-lucide="undo-2"></i>
-        </button>
-
         <!-- File Storage Status -->
         <div class="file-storage-status" id="file-storage-status" role="status" aria-label="File: Chưa kết nối" title="Trạng thái lưu dữ liệu vào file (cùng thư mục với ứng dụng)">
           <i data-lucide="hard-drive" aria-hidden="true" style="width:12px;height:12px;"></i>
@@ -172,15 +179,10 @@
 
         <!-- Badge trạng thái đồng bộ mây (tự động 2 chiều — js/cloud.js updateSyncBadge) -->
         <div class="sync-status-badge off" id="sync-status-badge" title="Trạng thái đồng bộ dữ liệu mây (tự động 2 chiều)">
+          <i data-lucide="cloud" aria-hidden="true"></i>
           <span class="sync-dot"></span>
           <span id="sync-status-text">Máy cục bộ (offline)</span>
         </div>
-
-        <!-- Nút Đăng Nhập (hiện khi CHƯA đăng nhập - chế độ xem công khai) -->
-        <button class="btn btn-primary" id="btn-open-login" style="display:none;">
-          <i data-lucide="log-in"></i>
-          <span class="hide-mobile">Đăng Nhập</span>
-        </button>
 
         <!-- User Profile Pill -->
         <div class="user-profile-pill" id="user-profile-badge" title="Tài khoản hiện tại">
@@ -199,6 +201,12 @@
           <div class="dropdown-menu" id="header-dropdown">
             <!-- NHÓM 1: THƯỜNG DÙNG -->
             <div class="dropdown-label">Thường dùng</div>
+            <button class="dropdown-item" id="btn-open-login" style="display:none;">
+              <i data-lucide="log-in" style="color:#0f766e;"></i> Đăng Nhập
+            </button>
+            <button class="dropdown-item" id="btn-menu-undo" title="Hoàn tác thao tác gần nhất (Ctrl+Z)">
+              <i data-lucide="undo-2" style="color:#64748b;"></i> Hoàn Tác
+            </button>
             <button class="dropdown-item" id="btn-sync-now" title="Kiểm tra dữ liệu trên mây ngay (ứng dụng tự nhận thay đổi theo thời gian thực)">
               <i data-lucide="refresh-cw" style="color:#0f766e;"></i> Đồng Bộ Ngay
             </button>
@@ -266,6 +274,9 @@
             <button class="dropdown-item" id="btn-fx-low" title="Tắt kính mờ + animation để máy yếu chạy mượt (giữ nguyên màu theme)">
               <i data-lucide="gauge" style="color:#64748b;"></i> Giảm Hiệu Ứng (Máy Yếu)
             </button>
+            <button class="dropdown-item" id="btn-slim-frame" title="Bấm để chuyển khung giao diện gọn; bấm lại để khôi phục khung tre">
+              <i data-lucide="panels-top-left" style="color:#64748b;"></i> Giao diện gọn
+            </button>
             <div class="dropdown-item dropdown-static" id="app-version-row" title="Phiên bản giao diện đang chạy TRÊN MÁY NÀY — so với máy khác để biết máy nào cũ">
               <i data-lucide="info" style="color:#64748b;"></i> Phiên bản: <strong id="app-version-label">—</strong>
             </div>
@@ -283,31 +294,31 @@
 
   <!-- Mobile Bottom Tab Navigation — Dashboard là màn hình mặc định -->
   <div class="mobile-bottom-nav">
-    <button class="mobile-nav-item active" data-target="dashboard-view">
+    <button type="button" class="mobile-nav-item active" data-target="dashboard-view" aria-label="Tổng quan" aria-controls="dashboard-view" aria-current="page">
       <i data-lucide="pie-chart"></i>
       <span>Tổng quan</span>
     </button>
-    <button class="mobile-nav-item" data-target="leadership-view" id="mobile-nav-leadership" style="display:none;">
+    <button type="button" class="mobile-nav-item" data-target="leadership-view" id="mobile-nav-leadership" style="display:none;" aria-label="Lãnh đạo" aria-controls="leadership-view">
       <i data-lucide="briefcase-business"></i>
       <span>Lãnh đạo</span>
     </button>
-    <button class="mobile-nav-item" data-target="kanban-view">
+    <button type="button" class="mobile-nav-item" data-target="kanban-view" aria-label="Công đoạn" aria-controls="kanban-view">
       <i data-lucide="layout-grid"></i>
       <span>Công đoạn</span>
     </button>
-    <button class="mobile-nav-item" data-target="planning-view">
+    <button type="button" class="mobile-nav-item" data-target="planning-view" aria-label="Kế hoạch" aria-controls="planning-view">
       <i data-lucide="clipboard-list"></i>
       <span>Kế hoạch</span>
     </button>
-    <button class="mobile-nav-item" data-target="materials-view">
+    <button type="button" class="mobile-nav-item" data-target="materials-view" aria-label="Nguyên liệu" aria-controls="materials-view">
       <i data-lucide="package-plus"></i>
       <span>Nguyên liệu</span>
     </button>
-    <button class="mobile-nav-item" data-target="qc-view">
+    <button type="button" class="mobile-nav-item" data-target="qc-view" aria-label="QC và Cơ điện" aria-controls="qc-view">
       <i data-lucide="clipboard-check"></i>
       <span>QC + Cơ điện</span>
     </button>
-    <button class="mobile-nav-item" data-target="hr-view">
+    <button type="button" class="mobile-nav-item" data-target="hr-view" aria-label="Nhân sự" aria-controls="hr-view">
       <i data-lucide="users"></i>
       <span>Nhân sự</span>
     </button>
@@ -1922,7 +1933,9 @@
                 <button type="button" class="btn btn-primary btn-icon btn-sm" id="btn-add-press-2" data-perm="press" title="Thêm Lượt Ép — mở form nhập lượt ép ván (ván thô · thanh · keo · phụ gia · thành phẩm)"><i data-lucide="plus"></i></button>
                 <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-add-press-note-2" data-perm="press" title="Ghi Chú Giải Trình — tạo/sửa ghi chú giải trình cho ngày sản lượng không đạt"><i data-lucide="pencil"></i><i data-lucide="alert-triangle" class="x2-epv-note-warn"></i></button>
                 <button type="button" class="btn btn-outline btn-icon btn-sm" id="btn-x2-epv-rate" hidden data-perm="press" data-admin-only title="Định mức — mở bảng ĐỊNH MỨC công suất Ép Ván theo tháng (m³/h), nguồn cho cột Hiệu suất của thẻ ngày — CHỈ Quản Trị sửa"><i data-lucide="target"></i></button>
-                <button type="button" class="btn-dash-help" id="btn-epv-help" aria-haspopup="dialog" title="Hướng dẫn điền thông tin & cách tính thể tích, công suất, hiệu suất (kèm ví dụ minh hoạ)">?</button>
+                <button type="button" class="btn-dash-help" id="btn-epv-help"
+                        aria-label="Giải thích ép van" aria-haspopup="dialog"
+                        title="Hướng dẫn điền thông tin & cách tính thể tích, công suất, hiệu suất (kèm ví dụ minh hoạ)">?</button>
               </div>
             </div>
           </div>
@@ -3318,17 +3331,23 @@
       <div class="planning-card capacity-card" id="capacity-card" data-cap-ws="x2">
         <div class="planning-card-header">
           <h4 class="cap-mode-head">
-            <button type="button" class="cap-mode-btn" id="capacity-mode-toggle" aria-pressed="false"
-                    title="Bấm để đổi xưởng: Xưởng 2 ⇄ Xưởng 1 (Xưởng 1 chưa có công đoạn nào có dữ liệu)">
-              <i data-lucide="factory" class="cap-mode-ico cap-mode-ico-x2"></i>
-              <i data-lucide="building-2" class="cap-mode-ico cap-mode-ico-x1"></i>
-              <span class="cap-mode-label" id="capacity-mode-label">Xưởng 2</span>
-              <i data-lucide="repeat-2" class="cap-mode-ico cap-mode-swap" title="Đổi xưởng"></i>
-            </button>
+            <div class="cap-workshop-switch" role="group" aria-label="Chọn bộ phận công suất">
+              <button type="button" class="cap-workshop-btn active" id="capacity-mode-toggle" data-cap-workshop="x2" aria-pressed="true">
+                <i data-lucide="factory"></i><span>Xưởng 2</span>
+              </button>
+              <button type="button" class="cap-workshop-btn" id="capacity-mode-toggle-x1" data-cap-workshop="x1" aria-pressed="false">
+                <i data-lucide="building-2"></i><span>Xưởng 1</span>
+              </button>
+              <button type="button" class="cap-workshop-btn" id="capacity-mode-toggle-qc" data-cap-workshop="qc" aria-pressed="false">
+                <i data-lucide="clipboard-check"></i><span>QC</span>
+              </button>
+              <span class="cap-mode-label" id="capacity-mode-label" hidden>Xưởng 2</span>
+            </div>
             <!-- Nút "?" TRỢ GIÚP — đoạn p.cap-note cách đọc bảng đã ẨN (khối CSS
                  TRỢ GIÚP DASHBOARD ở cuối styles.css); hover nút hiện tooltip,
                  bấm mở modal giải thích nhanh #modal-dash-help (js/dashboard.js) -->
             <button type="button" class="btn-dash-help" id="btn-help-capacity"
+                    aria-label="Giải thích tổng hợp công suất" aria-haspopup="dialog"
                     title="Cách đọc bảng: Giờ HC · Giờ TC · Công suất = sản lượng ÷ giờ · Hiệu suất = công suất ÷ định mức · 3 tầng Tuần → Công Đoạn → Ngày (bấm dòng để xổ). Rê chuột vào tiêu đề từng cột cũng thấy giải thích.">?</button>
           </h4>
           <div class="cap-toolbar">
@@ -3364,7 +3383,7 @@
           </div>
         </div>
         <div class="cap-body" id="capacity-body">
-          <div class="cap-summary-strip" id="cap-summary-strip"></div>
+          <div class="cap-summary-strip" id="cap-summary-strip" hidden></div>
           <!-- CẢNH BÁO DỮ LIỆU QUÁ HẠN (js/capacity.js renderCapStale):
                banner nêu xưởng + công đoạn + số ngày chưa cập nhật, bấm mở
                panel chi tiết (bảng + ảnh hưởng + nút Mở thẻ). Ẩn khi không có. -->
@@ -3418,6 +3437,7 @@
             <!-- Nút "?" TRỢ GIÚP — nội dung đổi theo biểu đồ đang xem (data-pv-mode):
                  'plan' → Kế Hoạch vs Đã Ép · 'cap' → Khả Năng Đáp Ứng (events.js) -->
             <button type="button" class="btn-dash-help" id="btn-help-pv"
+                    aria-label="Giải thích biểu đồ kế hoạch" aria-haspopup="dialog"
                     title="Giải thích nhanh biểu đồ đang xem (Kế Hoạch vs Đã Ép / Khả Năng Đáp Ứng): ý nghĩa màu cột, đơn vị, cách đọc.">?</button>
           </h4>
           <!-- Thanh công cụ của Kế Hoạch vs Đã Ép -->
@@ -3497,6 +3517,7 @@
             </button>
             <!-- Nút "?" TRỢ GIÚP — nội dung đổi theo chế độ đang xem (events.js) -->
             <button type="button" class="btn-dash-help" id="btn-help-material"
+                    aria-label="Giải thích biểu đồ nguyên liệu" aria-haspopup="dialog"
                     title="Giải thích nhanh cách đọc biểu đồ / tổng nhập mua (chia theo vị trí nhập).">?</button>
           </h4>
           <div class="pv-toolbar">
@@ -3622,6 +3643,7 @@
           <div style="display:flex; align-items:center; gap:8px;">
             <!-- Nút "?" TRỢ GIÚP vùng Nâng Cao — mô tả vùng đã ẨN; hover hiện mô tả, bấm mở modal -->
             <button type="button" class="btn-dash-help" id="btn-help-zone-advanced"
+                    aria-label="Giải thích vùng nâng cao" aria-haspopup="dialog"
                     title="Chỉ dành cho Admin &amp; Ban Quản Lý — chứa các chỉ số nội bộ, định mức, năng suất nhân viên... Bấm để xem giải thích nhanh.">?</button>
           </div>
         </div>
@@ -3639,6 +3661,7 @@
             <h4><i data-lucide="git-merge"></i> Truy Xuất Đầu Vào → Đầu Ra
               <!-- Nút "?" TRỢ GIÚP: toàn bộ giải thích/công thức CHỈ nằm ở đây (tooltip) -->
               <button type="button" class="btn-dash-help" id="trace-help-btn"
+                      aria-label="Giải thích truy xuất" aria-haspopup="dialog"
                       title="Công thức: Thể tích 1 đơn vị = Dài × Rộng × Dày ÷ 1.000.000.000 (mm → m³) · Kg tươi / 1 thanh nan = (kg ống bổ đạt ÷ thanh bào thô) ÷ tỷ lệ ống/tươi — lấy theo CHÍNH CHUỖI của kỳ, KHÔNG lấy kg tươi nhập kỳ (vì phần chưa qua cắt còn tồn, sẽ làm số vống lên nhiều lần). Kg tươi / 1 m³ = Σ(thanh nan của mã × kg tươi/1 thanh) ÷ Σ m³ sản phẩm · Kg tươi của mã = thanh nan của mã × kg tươi/1 thanh. KỲ THIẾU DỮ LIỆU ĐẦU VÀO (tháng 8–9/2026 chưa nhập luồng tươi): mượn hệ số kg tươi/1 thanh của CỬA SỔ THAM CHIẾU (các tháng đầy đủ) — có chip ⚠ báo rõ. Thanh nan của mã: ván = thanh nan vào lượt ép (lượt ép thành phẩm ghi tấm ván thô → quy ra thanh nan theo cỡ ván thô, tự chuẩn hóa ký tự phân cách x/×/*) · Bullig = thanh thô đã gia công · thanh = thanh đưa vào Kiểm thanh (tab QC). Lượt nan MUA NGOÀI (ngoài công đoạn) KHÔNG tính vào chuỗi — có ô riêng quy đổi tương đương. Tấm ván thô ghi SAI CỠ sẽ hiện cảnh báo đỏ và bị loại khỏi phép chia (không im lặng bỏ qua).">?</button>
             </h4>
             <div class="trace-toolbar">
@@ -4173,7 +4196,7 @@
             </section>
 
             <div class="modal-footer" style="padding-left:0; padding-right:0; margin-top:16px;">
-              <button type="button" class="btn btn-outline" id="btn-press-help" title="Hướng dẫn điền form & cách tính thể tích, công suất, hiệu suất"><i data-lucide="help-circle"></i> Hướng Dẫn</button>
+              <button type="button" class="btn btn-outline" id="btn-press-help" aria-label="Hướng dẫn ép ván" title="Hướng dẫn điền form & cách tính thể tích, công suất, hiệu suất"><i data-lucide="help-circle"></i> Hướng Dẫn</button>
               <button type="button" class="btn btn-outline" id="btn-cancel-press">Hủy Bỏ</button>
               <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Lưu Lượt Ép</button>
             </div>
@@ -7408,8 +7431,7 @@
           <i data-lucide="log-in"></i> Đăng Nhập
         </button>
 
-        <p class="login-help-row">Chưa có tài khoản? Vui lòng liên hệ Quản trị viên
-          <strong id="login-owner-email">Quản trị viên</strong> để được cấp tài khoản.</p>
+        <p class="login-help-row">Chưa có tài khoản? Liên hệ <strong id="login-owner-email">Quản trị viên</strong> để được cấp tài khoản.</p>
 
         <!-- BẮT BUỘC ĐĂNG NHẬP (11/2026): hướng dẫn đăng nhập khi mất mạng -->
         <p class="login-offline-hint">💡 Mất mạng? Đăng nhập bằng <strong>TÊN ĐĂNG NHẬP</strong> do Quản trị
@@ -8065,11 +8087,11 @@
        Nội dung chuyển sang 2 lớp: TOOLOLTIP (title) khi rê chuột + MODAL này khi
        bấm nút "?" cạnh tiêu đề thẻ/vùng. Mở bởi openDashHelp(key, id) —
        js/dashboard.js · wiring js/events.js · nút "?" thẻ biểu đồ = app.openDashHelp ═══ -->
-  <div class="modal-overlay" id="modal-dash-help">
+  <div class="modal-overlay" id="modal-dash-help" role="dialog" aria-modal="true" aria-labelledby="dash-help-title">
     <div class="modal-card dash-help-card">
       <div class="modal-header">
         <h3><i data-lucide="info"></i> <span id="dash-help-title">Trợ Giúp Dashboard</span></h3>
-        <button class="modal-close-btn" id="btn-close-dash-help" title="Đóng"><i data-lucide="x"></i></button>
+        <button class="modal-close-btn" id="btn-close-dash-help" aria-label="Đóng trợ giúp dashboard" title="Đóng"><i data-lucide="x"></i></button>
       </div>
       <div class="modal-body dash-help-body" id="dash-help-body"><!-- Nội dung dựng động bởi js/dashboard.js --></div>
       <div class="modal-footer">

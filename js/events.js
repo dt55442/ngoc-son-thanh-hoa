@@ -18,6 +18,7 @@ import { openLeadershipReportPreview, printLeadershipReport, setLeadershipPeriod
 import { closeRateCenter, onRateCenterClick, openRateCenter } from './rate-center.js';
 import { closeColumnFilters, toggleKanbanDensity } from './kanban.js';
 import { renderAll, setActiveMobileStage, switchView } from './main.js';
+import { preloadModulesForView } from './module-loader.js';
 import { showMoreX2ChonNan } from './xuong2.js';
 import { closeMaterialRateModal, closeMatrixTraceModal, closePlanningEditModal, closePlanningItemModal, dimUseKey, getUniqueNanTypes, handleMaterialRateSubmit, handlePlanningEditSubmit, handlePlanningItemSubmit, openMaterialRateModal, openMatrixTraceModal, openPlanningItemModal, planHistOnHideDone, planHistOnMonth, planHistOnQuarter, planHistOnRowClick, planHistOnSearch, renderPlanningMatrix, savePlanningForecast, savePlanningStock, toggleRateTableCollapse } from './planning.js';
 import { addPressLine, addPressStick, closePressModal, closePressNoteModal, closePressWorkersModal, handlePressInventoryAdjustment, filterPressInventoryProducts, handlePressNoteDelete, handlePressNoteSubmit, handlePressRecordSubmit, hidePressNotePopover, handleX2EpVanRateSave, openPressModal, openPressNoteModal, openPressWorkersModal, populatePressWeekFilter, pressToggleSec, recalcPressQuantities, refreshPressProductSelect, refreshPressSecChecks, refreshPressStickHints, refreshPressWorkersPreview, renderPlanCapacityChart, renderPlanVsPressChart, renderPressChart, renderX2EpVanDayCards, renderX2EpVanRateBar, showPressNotePopover, setPlanVsPressSpan, setPlanVsPressTotal, setPlanVsPressUnit, setPvChartMode, shiftPlanCapacityWindow, shiftPlanVsPressWeek, suggestPressMaterialFields, shiftPressWeekFilter, switchX2EpVanFrame, togglePlanVsPressMode, togglePressNotesExpanded, openEpvHelp, closeEpvHelp } from './press.js';
@@ -71,7 +72,7 @@ import { hnmSelectDept, hnmBack, hnmTogglePos, hnmSetNeed, hnmToggleMode, hnmOpe
 import { hrRefreshShiftEffectiveNote, hrRefreshShiftPreviews, hrSyncShiftBreakCells } from './hr.js'; // CÀI ĐẶT CA — mốc hiệu lực + giờ nghỉ + xem trước (11/2026)
 import { hrDeleteShiftVersion } from './hr.js'; // Xoá bản lịch sử cấu hình ca (lưu nhầm mốc hiệu lực)
 import { state } from './state.js';
-import { getFxLow, setFxLow, applyThemeForUser } from './theme.js';
+import { getFxLow, setFxLow, applyThemeForUser, getSlimFrameChoice, setSlimFrameChoice } from './theme.js';
 import { captureAutoBackup, closeAutoBackupModal, closeCloudBackupModal, openAutoBackupModal, openCloudBackupModal, renderCloudBackupList } from './autobackup.js';
 import { closeSaveLocalModal, disconnectDataFolder, exportToJSON, handleImportJSON, loadDataFromLocalFile, openSaveLocalModal, saveData, saveDataToLocalFile, selectDataFolder } from './storage.js';
 import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from './utils.js';
@@ -149,7 +150,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
   }
 
   function updateUndoButton() {
-    const btn = document.getElementById('btn-undo');
+    const btn = document.getElementById('btn-undo') || document.getElementById('btn-menu-undo');
     if (btn) {
       btn.disabled = state.undoStack.length === 0;
       btn.title = state.undoStack.length > 0
@@ -237,6 +238,14 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
       btn.addEventListener('click', () => {
         const target = btn.getAttribute('data-target');
         if (target) switchView(target);
+      });
+      btn.addEventListener('pointerenter', () => {
+        const target = btn.getAttribute('data-target');
+        if (target) preloadModulesForView(target);
+      });
+      btn.addEventListener('focus', () => {
+        const target = btn.getAttribute('data-target');
+        if (target) preloadModulesForView(target);
       });
     });
 
@@ -529,6 +538,7 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
 
     // Undo / Hoàn tác khi nhập sai
     safeOn('btn-undo', 'click', undoLastAction);
+    safeOn('btn-menu-undo', 'click', undoLastAction);
     // Phím tắt Ctrl+Z để hoàn tác
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' &&
@@ -822,6 +832,18 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     });
     syncThemeMenuUi();
 
+    // ── Khung giao diện: 'original' (khung tre) ⇄ 'slim' (gọn) ──
+    function syncSlimFrameUi() {
+      const btn = document.getElementById('btn-slim-frame');
+      if (btn) btn.classList.toggle('theme-active', getSlimFrameChoice() === 'slim');
+    }
+    safeOn('btn-slim-frame', 'click', () => {
+      const next = setSlimFrameChoice(getSlimFrameChoice() === 'slim' ? 'original' : 'slim');
+      syncSlimFrameUi();
+      showToast(next === 'slim' ? 'Đã chuyển sang giao diện gọn.' : 'Đã khôi phục khung tre.', 'info');
+    });
+    syncSlimFrameUi();
+
     // ── Xem trước & chỉnh sửa báo cáo trước khi xuất/in ──
     safeOn('btn-preview-custom',    'click', openCustomExportPreview);
     safeOn('btn-preview-planning',  'click', openPlanningExportPreview);
@@ -899,13 +921,20 @@ import { generateBatchCodeYYMMDD, getISOWeekString, escapeHTML, showToast } from
     safeOn('btn-help-zone-advanced', 'click', () => openDashHelp('zone-advanced'));
     safeOn('btn-close-dash-help',    'click', closeDashHelp);
     safeOn('btn-dash-help-ok',       'click', closeDashHelp);
-    // Bấm nền mờ / phím Esc → đóng modal trợ giúp
+    // Bấm nền mờ / phím Esc → đóng modal trợ giúp; Tab giữ focus trong modal
     const dashHelpOv = document.getElementById('modal-dash-help');
     if (dashHelpOv) dashHelpOv.addEventListener('click', (e) => { if (e.target === dashHelpOv) closeDashHelp(); });
     document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return;
       const m = document.getElementById('modal-dash-help');
-      if (m && m.classList.contains('show')) closeDashHelp();
+      if (!m || !m.classList.contains('show')) return;
+      if (e.key === 'Escape') { closeDashHelp(); return; }
+      if (e.key !== 'Tab') return;
+      const focusables = m.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
 
     // Custom Chart Builder Listeners

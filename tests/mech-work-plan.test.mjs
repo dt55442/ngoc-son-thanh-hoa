@@ -1,4 +1,4 @@
-// tests/mech-work-plan.test.mjs — Kế hoạch công việc Cơ điện và liên kết HR/sự cố.
+﻿// tests/mech-work-plan.test.mjs â€” Káº¿ hoáº¡ch cÃ´ng viá»‡c CÆ¡ Ä‘iá»‡n vÃ  liÃªn káº¿t HR/sá»± cá»‘.
 'use strict';
 import fs from 'node:fs';
 
@@ -84,8 +84,8 @@ if (!global.URL.revokeObjectURL) global.URL.revokeObjectURL = () => {};
 let passed = 0;
 let failed = 0;
 function check(name, condition) {
-  if (condition) { passed++; console.log(`PASS — ${name}`); }
-  else { failed++; console.log(`FAIL — ${name}`); }
+  if (condition) { passed++; console.log(`PASS â€” ${name}`); }
+  else { failed++; console.log(`FAIL â€” ${name}`); }
 }
 function isoDay(offset = 0) {
   const date = new Date();
@@ -101,13 +101,13 @@ const mech = await import('../js/mech-work.js');
 
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.activeView = 'qc-view';
-state.hrEmployees = [{ id: 'mech-1', name: 'Thợ Cơ điện', department: 'Cơ Điện', status: 'active' }];
+state.hrEmployees = [{ id: 'mech-1', name: 'Thá»£ CÆ¡ Ä‘iá»‡n', department: 'CÆ¡ Äiá»‡n', status: 'active' }];
 const workDate = isoDay();
 state.hrAssignments = [{
   id: 'assignment-mech-1',
   date: workDate,
   employeeId: 'mech-1',
-  department: 'Xưởng 1',
+  department: 'XÆ°á»Ÿng 1',
   positionId: 'maintenance',
   start: '07:00',
   end: '19:00',
@@ -118,38 +118,38 @@ state.mechWorkPlans = [];
 state.x2IncidentReports = [];
 
 const actual = hr.hrAssignmentWorktimeOf('mech-1', workDate);
-check('HR: tổng hợp vị trí và giờ TC từ phân bố vị trí', actual.assignments.length === 1 && actual.overtimeMin > 0);
+check('HR: tá»•ng há»£p vá»‹ trÃ­ vÃ  giá» TC tá»« phÃ¢n bá»‘ vá»‹ trÃ­', actual.assignments.length === 1 && actual.overtimeMin > 0);
 const noForm = mech.taskOvertimeInfo('mech-1', workDate);
-check('TC: cảnh báo khi có giờ thực tế nhưng chưa có phiếu', noForm.missingForm === true);
+check('TC: cáº£nh bÃ¡o khi cÃ³ giá» thá»±c táº¿ nhÆ°ng chÆ°a cÃ³ phiáº¿u', noForm.missingForm === true);
 state.hrOvertimes = [{ id: 'ot-1', employeeId: 'mech-1', date: workDate, status: 'pending' }];
 const hasPendingForm = mech.taskOvertimeInfo('mech-1', workDate);
-check('TC: phiếu chờ duyệt được phân biệt, không báo thiếu phiếu', hasPendingForm.missingForm === false && hasPendingForm.formStatus === 'Chờ duyệt');
+check('TC: phiáº¿u chá» duyá»‡t Ä‘Æ°á»£c phÃ¢n biá»‡t, khÃ´ng bÃ¡o thiáº¿u phiáº¿u', hasPendingForm.missingForm === false && hasPendingForm.formStatus === 'Chá» duyá»‡t');
 state.hrOvertimes[0].status = 'rejected';
-check('TC: phiếu từ chối vẫn được hiển thị đúng trạng thái', mech.taskOvertimeInfo('mech-1', workDate).formStatus === 'Từ chối');
+check('TC: phiáº¿u tá»« chá»‘i váº«n Ä‘Æ°á»£c hiá»ƒn thá»‹ Ä‘Ãºng tráº¡ng thÃ¡i', mech.taskOvertimeInfo('mech-1', workDate).formStatus === 'Tá»« chá»‘i');
 state.hrOvertimes = [];
 
-document.getElementById('mech-work-title').value = 'Kiểm tra máy bào';
-document.getElementById('mech-work-description').value = 'Kiểm tra dây curoa';
+document.getElementById('mech-work-title').value = 'Kiá»ƒm tra mÃ¡y bÃ o';
+document.getElementById('mech-work-description').value = 'Kiá»ƒm tra dÃ¢y curoa';
 document.getElementById('mech-work-date').value = workDate;
 document.getElementById('mech-work-assignees').selectedOptions = [{ value: 'mech-1' }];
 document.getElementById('mech-work-priority').value = 'high';
 document.getElementById('mech-work-status').value = 'in_progress';
 document.getElementById('mech-work-due-date').value = isoDay(-1);
 document.getElementById('mech-work-outcome').value = '';
-check('Kế hoạch: tạo việc hợp lệ và lưu localStorage', mech.handleMechWorkPlanSubmit({ preventDefault() {} }) &&
+check('Káº¿ hoáº¡ch: táº¡o viá»‡c há»£p lá»‡ vÃ  lÆ°u localStorage', mech.handleMechWorkPlanSubmit({ preventDefault() {} }) &&
   state.mechWorkPlans.length === 1 && JSON.parse(store.get(STORAGE_KEY_MECH_WORK_PLANS)).length === 1);
-check('Đồng bộ: snapshot và cloudCore mang danh sách kế hoạch', cloud.collectCloudSnapshot().mechWorkPlans.length === 1 &&
+check('Äá»“ng bá»™: snapshot vÃ  cloudCore mang danh sÃ¡ch káº¿ hoáº¡ch', cloud.collectCloudSnapshot().mechWorkPlans.length === 1 &&
   cloud.cloudCore(cloud.collectCloudSnapshot()).includes('"mechWorkPlans"'));
-const cloudPlan = { ...state.mechWorkPlans[0], title: 'Việc nhận từ mây' };
+const cloudPlan = { ...state.mechWorkPlans[0], title: 'Viá»‡c nháº­n tá»« mÃ¢y' };
 cloud.applyFireSnapshot({ mechWorkPlans: [cloudPlan] });
-check('Đồng bộ: nhận kế hoạch từ snapshot mây và lưu localStorage', state.mechWorkPlans[0]?.title === 'Việc nhận từ mây' &&
-  JSON.parse(store.get(STORAGE_KEY_MECH_WORK_PLANS))[0]?.title === 'Việc nhận từ mây');
-state.mechWorkPlans[0] = { ...state.mechWorkPlans[0], title: 'Kiểm tra máy bào' };
+check('Äá»“ng bá»™: nháº­n káº¿ hoáº¡ch tá»« snapshot mÃ¢y vÃ  lÆ°u localStorage', state.mechWorkPlans[0]?.title === 'Viá»‡c nháº­n tá»« mÃ¢y' &&
+  JSON.parse(store.get(STORAGE_KEY_MECH_WORK_PLANS))[0]?.title === 'Viá»‡c nháº­n tá»« mÃ¢y');
+state.mechWorkPlans[0] = { ...state.mechWorkPlans[0], title: 'Kiá»ƒm tra mÃ¡y bÃ o' };
 store.set(STORAGE_KEY_MECH_WORK_PLANS, JSON.stringify(state.mechWorkPlans));
-check('Backup/khôi phục cục bộ: nạp lại danh sách đã lưu', mech.loadMechWorkPlans().length === 1);
+check('Backup/khÃ´i phá»¥c cá»¥c bá»™: náº¡p láº¡i danh sÃ¡ch Ä‘Ã£ lÆ°u', mech.loadMechWorkPlans().length === 1);
 const planMetrics = mech.workPlanMetrics();
-check('Kế hoạch: đếm việc mở và việc quá hạn', planMetrics.openCount === 1 && planMetrics.overdueCount === 1);
-check('Kế hoạch: không chấm điểm cá nhân', !JSON.stringify(state.mechWorkPlans[0]).includes('score'));
+check('Káº¿ hoáº¡ch: Ä‘áº¿m viá»‡c má»Ÿ vÃ  viá»‡c quÃ¡ háº¡n', planMetrics.openCount === 1 && planMetrics.overdueCount === 1);
+check('Káº¿ hoáº¡ch: khÃ´ng cháº¥m Ä‘iá»ƒm cÃ¡ nhÃ¢n', !JSON.stringify(state.mechWorkPlans[0]).includes('score'));
 
 state.x2IncidentReports = [
   { id: 'inc-open', status: 'cho_duyet', repairAssigneeIds: ['mech-1'], repairStatus: 'in_progress', repairDueAt: `${isoDay(-1)}T10:00` },
@@ -157,11 +157,11 @@ state.x2IncidentReports = [
   { id: 'inc-no-task', status: 'da_duyet', repairStatus: 'not_started' }
 ];
 const incidentMetrics = mech.incidentMechMetrics(Date.now());
-check('Sự cố: đếm phiếu chờ duyệt và việc Cơ điện chưa nghiệm thu/quá hạn',
+check('Sá»± cá»‘: Ä‘áº¿m phiáº¿u chá» duyá»‡t vÃ  viá»‡c CÆ¡ Ä‘iá»‡n chÆ°a nghiá»‡m thu/quÃ¡ háº¡n',
   incidentMetrics.pendingApproval === 1 && incidentMetrics.repairOpen === 1 && incidentMetrics.repairOverdue === 1);
 mech.renderMechCards();
-check('Thẻ: hiện cảnh báo thiếu phiếu tăng ca và tình trạng sự cố', document.getElementById('mech-work-plan-count').textContent.includes('cảnh báo') &&
-  document.getElementById('mech-incident-count').textContent.includes('chờ duyệt'));
+check('Tháº»: hiá»‡n cáº£nh bÃ¡o thiáº¿u phiáº¿u tÄƒng ca vÃ  tÃ¬nh tráº¡ng sá»± cá»‘', document.getElementById('mech-work-plan-count').textContent.includes('cáº£nh bÃ¡o') &&
+  document.getElementById('mech-incident-count').textContent.includes('chá» duyá»‡t'));
 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
@@ -169,29 +169,30 @@ const events = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf
 const incidentSource = fs.readFileSync(new URL('../js/x2-incidents.js', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const stateSource = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8');
-check('UI: tên tab và hai thẻ Cơ điện được khai báo', html.includes('<span>QC + Cơ điện</span>') &&
+check('UI: tÃªn tab vÃ  hai tháº» CÆ¡ Ä‘iá»‡n Ä‘Æ°á»£c khai bÃ¡o', html.includes('<span>QC + CÆ¡ Ä‘iá»‡n</span>') &&
   html.includes('id="btn-open-mech-work-plan"') && html.includes('id="btn-open-mech-incidents"'));
-check('UI: thẻ QC nằm 5 cột desktop và sự cố mở danh sách phiếu hiện có', css.includes('grid-template-columns: repeat(5, minmax(0, 1fr))') &&
+check('UI: tháº» QC náº±m 5 cá»™t desktop vÃ  sá»± cá»‘ má»Ÿ danh sÃ¡ch phiáº¿u hiá»‡n cÃ³', css.includes('grid-template-columns: repeat(5, minmax(0, 1fr))') &&
   events.includes("safeOn('btn-open-mech-incidents', 'click', openMechanicalIncidentCenter)"));
-state.mechWorkPlans.push({ ...state.mechWorkPlans[0], id: 'mech-next-day', title: 'Việc ngày kế tiếp', date: isoDay(1), status: 'completed' });
+state.mechWorkPlans.push({ ...state.mechWorkPlans[0], id: 'mech-next-day', title: 'Viá»‡c ngÃ y káº¿ tiáº¿p', date: isoDay(1), status: 'completed' });
 document.getElementById('mech-work-date-filter').value = '';
 document.getElementById('mech-work-status-filter').value = 'all';
 mech.renderMechWorkPlanList();
 const groupedPlans = document.getElementById('mech-work-plan-list').innerHTML;
-check('Agenda: kế hoạch được gom thành nhóm ngày riêng', (groupedPlans.match(/mech-work-day-card/g) || []).length === 2 &&
-  groupedPlans.includes('Việc ngày kế tiếp') && groupedPlans.includes('Kiểm tra máy bào'));
+check('Agenda: káº¿ hoáº¡ch Ä‘Æ°á»£c gom thÃ nh nhÃ³m ngÃ y riÃªng', (groupedPlans.match(/mech-work-day-card/g) || []).length === 2 &&
+  groupedPlans.includes('Viá»‡c ngÃ y káº¿ tiáº¿p') && groupedPlans.includes('Kiá»ƒm tra mÃ¡y bÃ o'));
 document.getElementById('mech-work-date-filter').value = workDate;
 mech.renderMechWorkPlanList();
-check('Agenda: chọn ngày chỉ hiện công việc của ngày đó', document.getElementById('mech-work-plan-list').innerHTML.includes('Kiểm tra máy bào') &&
-  !document.getElementById('mech-work-plan-list').innerHTML.includes('Việc ngày kế tiếp'));
-check('UI: hai màn hình Cơ điện dùng lớp phủ toàn màn hình, có tổng quan và điều hướng ngày',
+check('Agenda: chá»n ngÃ y chá»‰ hiá»‡n cÃ´ng viá»‡c cá»§a ngÃ y Ä‘Ã³', document.getElementById('mech-work-plan-list').innerHTML.includes('Kiá»ƒm tra mÃ¡y bÃ o') &&
+  !document.getElementById('mech-work-plan-list').innerHTML.includes('Viá»‡c ngÃ y káº¿ tiáº¿p'));
+check('UI: hai mÃ n hÃ¬nh CÆ¡ Ä‘iá»‡n dÃ¹ng lá»›p phá»§ toÃ n mÃ n hÃ¬nh, cÃ³ tá»•ng quan vÃ  Ä‘iá»u hÆ°á»›ng ngÃ y',
   css.includes('#modal-mech-work-plan > .mech-work-modal') && css.includes('#modal-x2-incidents.is-mech-center > .inc-card') &&
   html.includes('id="mech-work-kpi-today"') && html.includes('id="btn-mech-work-date-today"'));
-check('Sự cố: thẻ Cơ điện mở chế độ riêng, vẫn nhóm phiếu theo ngày và giữ điểm mở cũ',
+check('Sá»± cá»‘: tháº» CÆ¡ Ä‘iá»‡n má»Ÿ cháº¿ Ä‘á»™ riÃªng, váº«n nhÃ³m phiáº¿u theo ngÃ y vÃ  giá»¯ Ä‘iá»ƒm má»Ÿ cÅ©',
   incidentSource.includes('function openMechanicalIncidentCenter()') && incidentSource.includes('function incidentDayCardHtml') &&
   incidentSource.includes('byDate.get(dt)') && events.includes("safeOn('btn-incident-reports', 'click', () => openIncidentReports())"));
-check('PWA: cache v456 đồng bộ APP_VERSION và đưa module Cơ điện vào shell', sw.includes('nha-may-ngoc-son-v456') &&
-  sw.includes("'./js/mech-work.js'") && stateSource.includes("APP_VERSION = 'v456'"));
+check('PWA: cache v486 Ä‘á»“ng bá»™ APP_VERSION vÃ  Ä‘Æ°a module CÆ¡ Ä‘iá»‡n vÃ o shell', sw.includes('nha-may-ngoc-son-v486') &&
+  sw.includes("'./js/mech-work.js'") && stateSource.includes("APP_VERSION = 'v486'"));
 
 console.log(`MECH-WORK-PLAN: ${passed} PASS, ${failed} FAIL`);
 if (failed) process.exitCode = 1;
+

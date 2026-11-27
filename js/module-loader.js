@@ -43,7 +43,7 @@ export async function loadModulesForView(viewId) {
       })
       .catch(e => {
         console.warn(`[ModuleLoader] Failed to load ${moduleName}:`, e);
-        loadedModules.set(moduleName, false); // đánh dấu thất bại để không retry
+
       })
       .finally(() => {
         loadingPromises.delete(moduleName);
@@ -82,7 +82,7 @@ export function preloadModulesForView(viewId) {
     if (!loadedModules.has(moduleName) && !loadingPromises.has(moduleName)) {
       const promise = import(`./${moduleName}.js`)
         .then(() => { loadedModules.set(moduleName, true); })
-        .catch(() => { loadedModules.set(moduleName, false); })
+        .catch(() => {})
         .finally(() => { loadingPromises.delete(moduleName); });
       loadingPromises.set(moduleName, promise);
     }

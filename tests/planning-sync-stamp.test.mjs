@@ -1,10 +1,10 @@
-// tests/planning-sync-stamp.test.mjs — KẾ HOẠCH SX: BẢN SỬA PHẢI THẮNG KHI ĐỒNG BỘ
-// Sửa lỗi người dùng báo: "thẻ kế hoạch sx tự hồi sinh số ban đầu sau khi sửa".
-// NGUYÊN NHÂN: js/planning.js trước đây KHÔNG ghi `updatedAt` ở bất kỳ đường ghi
-// nào. Nhánh sửa thẻ chỉ đổi item.qty tại chỗ, giữ nguyên createdAt cũ → khi đồng
-// bộ, cloud.recCompare() hòa mốc thời gian → quyết định bằng BĂM NỘI DUNG → bản
-// trên mây (số cũ) có thể "thắng" → số vừa nhập bị trả về. Nay mọi đường ghi đều
-// ghi updatedAt nên bản sửa luôn mới hơn và được giữ.
+﻿// tests/planning-sync-stamp.test.mjs â€” Káº¾ HOáº CH SX: Báº¢N Sá»¬A PHáº¢I THáº®NG KHI Äá»’NG Bá»˜
+// Sá»­a lá»—i ngÆ°á»i dÃ¹ng bÃ¡o: "tháº» káº¿ hoáº¡ch sx tá»± há»“i sinh sá»‘ ban Ä‘áº§u sau khi sá»­a".
+// NGUYÃŠN NHÃ‚N: js/planning.js trÆ°á»›c Ä‘Ã¢y KHÃ”NG ghi `updatedAt` á»Ÿ báº¥t ká»³ Ä‘Æ°á»ng ghi
+// nÃ o. NhÃ¡nh sá»­a tháº» chá»‰ Ä‘á»•i item.qty táº¡i chá»—, giá»¯ nguyÃªn createdAt cÅ© â†’ khi Ä‘á»“ng
+// bá»™, cloud.recCompare() hÃ²a má»‘c thá»i gian â†’ quyáº¿t Ä‘á»‹nh báº±ng BÄ‚M Ná»˜I DUNG â†’ báº£n
+// trÃªn mÃ¢y (sá»‘ cÅ©) cÃ³ thá»ƒ "tháº¯ng" â†’ sá»‘ vá»«a nháº­p bá»‹ tráº£ vá». Nay má»i Ä‘Æ°á»ng ghi Ä‘á»u
+// ghi updatedAt nÃªn báº£n sá»­a luÃ´n má»›i hÆ¡n vÃ  Ä‘Æ°á»£c giá»¯.
 'use strict';
 import fs from 'node:fs';
 function makeEl(id) {
@@ -25,7 +25,7 @@ function makeEl(id) {
   return el;
 }
 const els = new Map();
-const qtyInputs = [];   // các ô "#plan-edit-items .plan-edit-qty"
+const qtyInputs = [];   // cÃ¡c Ã´ "#plan-edit-items .plan-edit-qty"
 global.document = {
   body: makeEl('body'), head: makeEl('head'), documentElement: makeEl('html'),
   activeElement: null, readyState: 'complete', visibilityState: 'visible',
@@ -70,15 +70,15 @@ const preventDefault = () => {};
 
 let pass = 0, fail = 0;
 function check(name, cond) {
-  if (cond) { pass++; console.log('  ✓ ' + name); }
-  else { fail++; console.error('  ✗ ' + name); }
+  if (cond) { pass++; console.log('  âœ“ ' + name); }
+  else { fail++; console.error('  âœ— ' + name); }
 }
 
 
-// ─── A. THÊM KẾ HOẠCH MỚI: có createdAt + updatedAt ─────────────────
+// â”€â”€â”€ A. THÃŠM Káº¾ HOáº CH Má»šI: cÃ³ createdAt + updatedAt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 {
   state.currentUser = { email: 'admin@test.local', fullname: 'Admin', role: 'admin' };
-  state.materialRates = [{ id: 'r1', product: 'Ván 1200x382x12', nan1: '1250x22x8', nanQty1: 40, efficiency: 70, createdAt: '2026-10-01T00:00:00.000Z' }];
+  state.materialRates = [{ id: 'r1', product: 'VÃ¡n 1200x382x12', nan1: '1250x22x8', nanQty1: 40, efficiency: 70, createdAt: '2026-10-01T00:00:00.000Z' }];
   state.planningItems = [];
   document.getElementById('plan-item-year').value = '2026';
   document.getElementById('plan-item-week').value = '40';
@@ -86,14 +86,14 @@ function check(name, cond) {
   document.getElementById('plan-item-qty').value = '250';
   plan.handlePlanningItemSubmit({ preventDefault });
   const it = state.planningItems[0];
-  check('A1: thêm kế hoạch có createdAt + updatedAt', !!it && !!it.createdAt && !!it.updatedAt);
-  check('A2: số lượng đúng như nhập', it && it.qty === 250);
+  check('A1: thÃªm káº¿ hoáº¡ch cÃ³ createdAt + updatedAt', !!it && !!it.createdAt && !!it.updatedAt);
+  check('A2: sá»‘ lÆ°á»£ng Ä‘Ãºng nhÆ° nháº­p', it && it.qty === 250);
 }
 
-// ─── B. SỬA THẺ: updatedAt mới → bản sửa THẮNG bản mây cũ ───────────
+// â”€â”€â”€ B. Sá»¬A THáºº: updatedAt má»›i â†’ báº£n sá»­a THáº®NG báº£n mÃ¢y cÅ© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 {
   state.planningItems = [{
-    id: 'p1', week: 'Tuần 40', year: 2026, productId: 'r1', qty: 250,
+    id: 'p1', week: 'Tuáº§n 40', year: 2026, productId: 'r1', qty: 250,
     createdAt: '2026-10-01T00:00:00.000Z'
   }];
   cloud.captureSyncBase(null, {});
@@ -105,19 +105,19 @@ function check(name, cond) {
   qtyInputs.push(Object.assign(makeEl('qty1'), { value: '400' }));
   plan.handlePlanningEditSubmit({ preventDefault });
   const after = state.planningItems.find(p => p.id === 'p1');
-  check('B1: sửa xong số lượng = 400 (máy)', after.qty === 400);
-  check('B2: bản sửa CÓ updatedAt mới (điều kiện để thắng khi đồng bộ)',
+  check('B1: sá»­a xong sá»‘ lÆ°á»£ng = 400 (mÃ¡y)', after.qty === 400);
+  check('B2: báº£n sá»­a CÃ“ updatedAt má»›i (Ä‘iá»u kiá»‡n Ä‘á»ƒ tháº¯ng khi Ä‘á»“ng bá»™)',
     !!after.updatedAt && after.updatedAt > after.createdAt);
 
-  const cloudOld = [{ id: 'p1', week: 'Tuần 40', year: 2026, productId: 'r1', qty: 250, createdAt: '2026-10-01T00:00:00.000Z' }];
+  const cloudOld = [{ id: 'p1', week: 'Tuáº§n 40', year: 2026, productId: 'r1', qty: 250, createdAt: '2026-10-01T00:00:00.000Z' }];
   cloud.mergeRemoteIntoLocal({ planningItems: cloudOld }, false, true, { protectDirty: true, mergeNewer: true });
-  check('B3: SAU ĐỒNG BỘ số lượng vẫn là 400 (không bị hồi sinh về 250)',
+  check('B3: SAU Äá»’NG Bá»˜ sá»‘ lÆ°á»£ng váº«n lÃ  400 (khÃ´ng bá»‹ há»“i sinh vá» 250)',
     state.planningItems.find(p => p.id === 'p1').qty === 400);
-  check('B4: không sinh thêm dòng trùng', state.planningItems.filter(p => p.id === 'p1').length === 1);
+  check('B4: khÃ´ng sinh thÃªm dÃ²ng trÃ¹ng', state.planningItems.filter(p => p.id === 'p1').length === 1);
 
-// ─── C. NHÂN BẢN THẺ + D. ĐỊNH MỨC + E. CẤU TRÚC ────────────────────
+// â”€â”€â”€ C. NHÃ‚N Báº¢N THáºº + D. Äá»ŠNH Má»¨C + E. Cáº¤U TRÃšC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 {
-  state.planningItems = [{ id: 'p1', week: 'Tuần 40', year: 2026, productId: 'r1', qty: 250, createdAt: '2026-10-01T00:00:00.000Z' }];
+  state.planningItems = [{ id: 'p1', week: 'Tuáº§n 40', year: 2026, productId: 'r1', qty: 250, createdAt: '2026-10-01T00:00:00.000Z' }];
   document.getElementById('plan-edit-mode').value = 'dup';
   document.getElementById('plan-edit-year').value = '2026';
   document.getElementById('plan-edit-week').value = '41';
@@ -126,19 +126,19 @@ function check(name, cond) {
   qtyInputs.push(Object.assign(makeEl('qty2'), { value: '300' }));
   plan.handlePlanningEditSubmit({ preventDefault });
   const dup = state.planningItems.find(p => p.duplicatedFrom === 'p1');
-  check('C1: nhân bản ra bản sao tuần 41, số 300', !!dup && dup.qty === 300 && dup.week === 'Tuần 41');
-  check('C2: bản sao có createdAt + updatedAt', !!dup && !!dup.createdAt && !!dup.updatedAt);
-  check('C3: bản gốc không bị sửa', state.planningItems.find(p => p.id === 'p1').qty === 250);
+  check('C1: nhÃ¢n báº£n ra báº£n sao tuáº§n 41, sá»‘ 300', !!dup && dup.qty === 300 && dup.week === 'Tuáº§n 41');
+  check('C2: báº£n sao cÃ³ createdAt + updatedAt', !!dup && !!dup.createdAt && !!dup.updatedAt);
+  check('C3: báº£n gá»‘c khÃ´ng bá»‹ sá»­a', state.planningItems.find(p => p.id === 'p1').qty === 250);
 }
 {
   state.materialRates = [{
-    id: 'r1', product: 'Ván 1200x382x12', nan1: '1250x22x8', nan1Qty: 40, efficiency: 70,
+    id: 'r1', product: 'VÃ¡n 1200x382x12', nan1: '1250x22x8', nan1Qty: 40, efficiency: 70,
     createdAt: '2026-10-01T00:00:00.000Z'
   }];
   document.getElementById('mat-rate-id').value = 'r1';
-  document.getElementById('mat-rate-product').value = 'Ván 1200x382x12';
-  document.getElementById('mat-rate-nan-use').value = 'Ván';
-  document.getElementById('mat-rate-unit').value = 'Tấm';
+  document.getElementById('mat-rate-product').value = 'VÃ¡n 1200x382x12';
+  document.getElementById('mat-rate-nan-use').value = 'VÃ¡n';
+  document.getElementById('mat-rate-unit').value = 'Táº¥m';
   document.getElementById('mat-rate-code').value = '';
   document.getElementById('mat-rate-fullname').value = '';
   document.getElementById('mat-rate-press-type').value = '';
@@ -153,32 +153,32 @@ function check(name, cond) {
   document.getElementById('mat-rate-efficiency').value = '75';
   plan.handleMaterialRateSubmit({ preventDefault });
   const r = state.materialRates[0];
-  check('D1: sửa định mức giữ đúng hiệu suất mới', r.efficiency === 75);
-  check('D2: createdAt gốc được GIỮ (lịch sử không bị đổi)', r.createdAt === '2026-10-01T00:00:00.000Z');
-  check('D3: bản sửa có updatedAt mới → thắng bản mây khi đồng bộ',
+  check('D1: sá»­a Ä‘á»‹nh má»©c giá»¯ Ä‘Ãºng hiá»‡u suáº¥t má»›i', r.efficiency === 75);
+  check('D2: createdAt gá»‘c Ä‘Æ°á»£c GIá»® (lá»‹ch sá»­ khÃ´ng bá»‹ Ä‘á»•i)', r.createdAt === '2026-10-01T00:00:00.000Z');
+  check('D3: báº£n sá»­a cÃ³ updatedAt má»›i â†’ tháº¯ng báº£n mÃ¢y khi Ä‘á»“ng bá»™',
     !!r.updatedAt && r.updatedAt > r.createdAt);
   cloud.mergeRemoteIntoLocal({
-    materialRates: [{ id: 'r1', product: 'Ván 1200x382x12', nan1: '1250x22x8', nan1Qty: 40, efficiency: 70, createdAt: '2026-10-01T00:00:00.000Z' }]
+    materialRates: [{ id: 'r1', product: 'VÃ¡n 1200x382x12', nan1: '1250x22x8', nan1Qty: 40, efficiency: 70, createdAt: '2026-10-01T00:00:00.000Z' }]
   }, false, true, { protectDirty: true, mergeNewer: true });
-  check('D4: sau đồng bộ vẫn giữ hiệu suất vừa sửa (75)', state.materialRates[0].efficiency === 75);
+  check('D4: sau Ä‘á»“ng bá»™ váº«n giá»¯ hiá»‡u suáº¥t vá»«a sá»­a (75)', state.materialRates[0].efficiency === 75);
 }
 {
   const src = SRC('js/planning.js');
   check('E1: handlePlanningItemSubmit ghi updatedAt', /state\.planningItems\.push\(\{[\s\S]{0,400}?updatedAt/.test(src));
-  check('E2: nhánh SỬA thẻ ghi item.updatedAt', /item\.updatedAt = nowIso;/.test(src));
-  check('E3: định mức ghi updatedAt + giữ createdAt khi sửa',
+  check('E2: nhÃ¡nh Sá»¬A tháº» ghi item.updatedAt', /item\.updatedAt = nowIso;/.test(src));
+  check('E3: Ä‘á»‹nh má»©c ghi updatedAt + giá»¯ createdAt khi sá»­a',
     /createdAt: rateId \? \(oldRate && oldRate\.createdAt\) \|\| nowIso : nowIso/.test(src));
-  check('E4: cloud.js so sánh bản ghi đã chuẩn hóa thứ tự khóa (recSame/canonicalJson)',
+  check('E4: cloud.js so sÃ¡nh báº£n ghi Ä‘Ã£ chuáº©n hÃ³a thá»© tá»± khÃ³a (recSame/canonicalJson)',
     /function canonicalJson/.test(SRC('js/cloud.js')) && /function recSame/.test(SRC('js/cloud.js')));
-  check('E5: sw.js + APP_VERSION đã tăng cache',
-    /nha-may-ngoc-son-v456/.test(SRC('sw.js')) && /v456/.test(SRC('js/state.js')));
+  check('E5: sw.js + APP_VERSION Ä‘Ã£ tÄƒng cache',
+    /nha-may-ngoc-son-v486/.test(SRC('sw.js')) && /v486/.test(SRC('js/state.js')));
 }
 
-console.log('\nKết quả: ' + pass + ' pass, ' + fail + ' fail');
+console.log('\nKáº¿t quáº£: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
 
 
   const noStamp = { id: 'p1', qty: 400, createdAt: '2026-10-01T00:00:00.000Z' };
-  check('B5: thiếu updatedAt → bản máy KHÔNG chắc thắng (nguyên nhân lỗi cũ)',
+  check('B5: thiáº¿u updatedAt â†’ báº£n mÃ¡y KHÃ”NG cháº¯c tháº¯ng (nguyÃªn nhÃ¢n lá»—i cÅ©)',
     cloud.recCompare(noStamp, { id: 'p1', qty: 250, createdAt: '2026-10-01T00:00:00.000Z' }) !== 1);
 }

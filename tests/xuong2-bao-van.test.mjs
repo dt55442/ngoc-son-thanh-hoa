@@ -1,12 +1,12 @@
-// tests/xuong2-bao-van.test.mjs — Kiểm thử THẺ "BÀO VÁN" (Xưởng 2) — 2 công đoạn
-// nhỏ trong 1 thẻ: BÀO + CHÀ THÙNG — form CHỈ có ĐẦU VÀO + SỐ LƯỢNG (như thẻ Cắt
-// ván, KHÔNG có ô Đầu ra). Nguồn = ván Ép Ván theo kỳ 1/2 tuần, TỒN TRỪ THEO KỲ
-// nhưng SỔ RIÊNG (không trừ chéo với thẻ Cắt Ván). Định mức CẢ 2 = tấm/h →
-// Bảng Tổng Hợp Công Suất 2 dòng riêng.
+﻿// tests/xuong2-bao-van.test.mjs â€” Kiá»ƒm thá»­ THáºº "BÃ€O VÃN" (XÆ°á»Ÿng 2) â€” 2 cÃ´ng Ä‘oáº¡n
+// nhá» trong 1 tháº»: BÃ€O + CHÃ€ THÃ™NG â€” form CHá»ˆ cÃ³ Äáº¦U VÃ€O + Sá» LÆ¯á»¢NG (nhÆ° tháº» Cáº¯t
+// vÃ¡n, KHÃ”NG cÃ³ Ã´ Äáº§u ra). Nguá»“n = vÃ¡n Ã‰p VÃ¡n theo ká»³ 1/2 tuáº§n, Tá»’N TRá»ª THEO Ká»²
+// nhÆ°ng Sá»” RIÃŠNG (khÃ´ng trá»« chÃ©o vá»›i tháº» Cáº¯t VÃ¡n). Äá»‹nh má»©c Cáº¢ 2 = táº¥m/h â†’
+// Báº£ng Tá»•ng Há»£p CÃ´ng Suáº¥t 2 dÃ²ng riÃªng.
 'use strict';
 import fs from 'node:fs';
 
-// ─── Stubs môi trường (giống xuong2-cat-van.test.mjs) ────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng xuong2-cat-van.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -74,164 +74,164 @@ function check(label, cond) {
   else { fail++; console.log('FAIL ' + label); }
 }
 
-// ─── Dữ liệu mẫu: LƯỢT ÉP VÁN (nguồn ĐẦU VÀO — cùng kỳ 41/42 như test Cắt Ván) ──
+// â”€â”€â”€ Dá»¯ liá»‡u máº«u: LÆ¯á»¢T Ã‰P VÃN (nguá»“n Äáº¦U VÃ€O â€” cÃ¹ng ká»³ 41/42 nhÆ° test Cáº¯t VÃ¡n) â”€â”€
 const { state, STORAGE_KEY_XUONG2_BAO_VAN, STORAGE_KEY_X2_BAO_VAN_RATE, STORAGE_KEY_X2_BAO_VAN_SPAN } =
   await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.pressRecords = [
-  { id: 'p1', date: '2026-10-06', week: 'Tuần 41', year: 2026, finishedQty: 0, productName: '', fpDim: '',
+  { id: 'p1', date: '2026-10-06', week: 'Tuáº§n 41', year: 2026, finishedQty: 0, productName: '', fpDim: '',
     vanTho: [{ vtDim: '1220x2440x9', vtQty: 20 }], sticks: [] },
-  { id: 'p2', date: '2026-10-13', week: 'Tuần 42', year: 2026, finishedQty: 0, productName: '', fpDim: '',
+  { id: 'p2', date: '2026-10-13', week: 'Tuáº§n 42', year: 2026, finishedQty: 0, productName: '', fpDim: '',
     vanTho: [{ vtDim: '1220x2440x9', vtQty: 30 }], sticks: [] },
-  { id: 'p3', date: '2026-10-13', week: 'Tuần 42', year: 2026, finishedQty: 50,
-    productName: 'Ván 1200x382x12', fpDim: '1200×382×12', vanTho: [], sticks: [] },
-  { id: 'p4', date: '2026-09-30', week: 'Tuần 40', year: 2026, finishedQty: 0, productName: '', fpDim: '',
+  { id: 'p3', date: '2026-10-13', week: 'Tuáº§n 42', year: 2026, finishedQty: 50,
+    productName: 'VÃ¡n 1200x382x12', fpDim: '1200Ã—382Ã—12', vanTho: [], sticks: [] },
+  { id: 'p4', date: '2026-09-30', week: 'Tuáº§n 40', year: 2026, finishedQty: 0, productName: '', fpDim: '',
     vanTho: [{ vtDim: '1220x2440x9', vtQty: 999 }], sticks: [] }
 ];
 state.xuong2BaoVanRecords = [];
 state.x2BaoVanRates = { bao: {}, cha: {} };
 state.x2BaoVanEditId = null;
 state.x2BaoVanSpan = 1;
-// THẺ CẮT VÁN đã có lượt (sổ RIÊNG — Bào Ván KHÔNG được trừ phần này)
+// THáºº Cáº®T VÃN Ä‘Ã£ cÃ³ lÆ°á»£t (sá»• RIÃŠNG â€” BÃ o VÃ¡n KHÃ”NG Ä‘Æ°á»£c trá»« pháº§n nÃ y)
 state.xuong2CatVanRecords = [
   { id: 'cvseed', kind: 'cat', date: '2026-10-06', span: 2, periodKey: '2026-W41-42',
-    inGroup: 'vantho', inSizeKey: '1220×2440×9', inDims: [1220, 2440, 9],
+    inGroup: 'vantho', inSizeKey: '1220Ã—2440Ã—9', inDims: [1220, 2440, 9],
     qtyIn: 7, quantity: 7, createdAt: '2026-10-06T01:00:00.000Z' }
 ];
 state.x2CatVanEditId = null;
 state.x2CatVanSpan = 2;
 
-// ─── Nhân Sự: phân vị "Bào Ván" + "Chà Thùng" (Xưởng 2) ──────────────
+// â”€â”€â”€ NhÃ¢n Sá»±: phÃ¢n vá»‹ "BÃ o VÃ¡n" + "ChÃ  ThÃ¹ng" (XÆ°á»Ÿng 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.hrEmployees = [
-  { id: 'empBao', name: 'Hoàng Văn Bào', quitDate: '' },
-  { id: 'empCha', name: 'Vũ Thị Chà', quitDate: '' },
-  { id: 'empOther', name: 'Lê Văn Khác', quitDate: '' }
+  { id: 'empBao', name: 'HoÃ ng VÄƒn BÃ o', quitDate: '' },
+  { id: 'empCha', name: 'VÅ© Thá»‹ ChÃ ', quitDate: '' },
+  { id: 'empOther', name: 'LÃª VÄƒn KhÃ¡c', quitDate: '' }
 ];
 state.hrPositions = [
-  { id: 'pbv', name: 'Bào Ván', department: 'Xưởng 2' },
-  { id: 'pct', name: 'Chà Thùng', department: 'Xưởng 2' },
-  { id: 'pkhac', name: 'Bào Tinh', department: 'Xưởng 2' }
+  { id: 'pbv', name: 'BÃ o VÃ¡n', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pct', name: 'ChÃ  ThÃ¹ng', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pkhac', name: 'BÃ o Tinh', department: 'XÆ°á»Ÿng 2' }
 ];
 state.hrAssignments = [
-  { id: 'a-bao', date: '2026-10-06', department: 'Xưởng 2', positionId: 'pbv', employeeId: 'empBao', start: '07:00', end: '12:00' },
-  { id: 'a-cha', date: '2026-10-06', department: 'Xưởng 2', positionId: 'pct', employeeId: 'empCha', start: '13:00', end: '17:30' },
-  { id: 'a-khac', date: '2026-10-06', department: 'Xưởng 2', positionId: 'pkhac', employeeId: 'empOther', start: '07:00', end: '12:00' }
+  { id: 'a-bao', date: '2026-10-06', department: 'XÆ°á»Ÿng 2', positionId: 'pbv', employeeId: 'empBao', start: '07:00', end: '12:00' },
+  { id: 'a-cha', date: '2026-10-06', department: 'XÆ°á»Ÿng 2', positionId: 'pct', employeeId: 'empCha', start: '13:00', end: '17:30' },
+  { id: 'a-khac', date: '2026-10-06', department: 'XÆ°á»Ÿng 2', positionId: 'pkhac', employeeId: 'empOther', start: '07:00', end: '12:00' }
 ];
 
 const x2 = await import('../js/xuong2.js');
 
-// ─── A. THẺ LAUNCHER + MỞ POP-UP ──────────────────────────────────────
+// â”€â”€â”€ A. THáºº LAUNCHER + Má»ž POP-UP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.renderXuong2Cards();
-check('THẺ: mini card Bào Ván chưa có lượt → "Chưa ghi"',
-  document.getElementById('x2-mini-count-bao-van').textContent === 'Chưa ghi');
-check('THẺ: KHÔNG còn cờ "soon" (đã bật chức năng)',
+check('THáºº: mini card BÃ o VÃ¡n chÆ°a cÃ³ lÆ°á»£t â†’ "ChÆ°a ghi"',
+  document.getElementById('x2-mini-count-bao-van').textContent === 'ChÆ°a ghi');
+check('THáºº: KHÃ”NG cÃ²n cá» "soon" (Ä‘Ã£ báº­t chá»©c nÄƒng)',
   !x2.X2_CARD_DEFS['x2-bao-van-card'].soon);
-check('THẺ: mở thẻ Bào Ván trả về true (render không ném lỗi)',
+check('THáºº: má»Ÿ tháº» BÃ o VÃ¡n tráº£ vá» true (render khÃ´ng nÃ©m lá»—i)',
   x2.x2OpenCard('x2-bao-van-card') === true);
-check('THẺ: pop-up bật + thẻ hiện (không còn x2-card-hidden)',
+check('THáºº: pop-up báº­t + tháº» hiá»‡n (khÃ´ng cÃ²n x2-card-hidden)',
   document.getElementById('x2-detail-overlay').classList.contains('show') &&
   !document.getElementById('x2-bao-van-card').classList.contains('x2-card-hidden'));
-check('THẺ: vùng dữ liệu Lịch sử + nguồn Xuất Excel của thẻ Bào Ván',
+check('THáºº: vÃ¹ng dá»¯ liá»‡u Lá»‹ch sá»­ + nguá»“n Xuáº¥t Excel cá»§a tháº» BÃ o VÃ¡n',
   state.x2OpenCardId === 'x2-bao-van-card' &&
   x2.x2OpenCardHistoryDomain() === 'xuong2BaoVanRecords' &&
   x2.x2OpenCardExportSource() === 'baovan');
 
-// ─── B. KỲ TỒN 1/2 TUẦN (dùng chung quy tắc cặp tuần) ────────────────
+// â”€â”€â”€ B. Ká»² Tá»’N 1/2 TUáº¦N (dÃ¹ng chung quy táº¯c cáº·p tuáº§n) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-bv-date').value = '2026-10-06';
 x2.renderX2BaoVanCard();
-check('KỲ (1 tuần): pool chỉ ván thô tuần 41 — 20 tấm (tuần 40 + 42 KHÔNG lọt)',
+check('Ká»² (1 tuáº§n): pool chá»‰ vÃ¡n thÃ´ tuáº§n 41 â€” 20 táº¥m (tuáº§n 40 + 42 KHÃ”NG lá»t)',
   (() => { const it = x2.baoVanInputPool('2026-10-06'); return it.length === 1 && it[0].total === 20 && it[0].group === 'vantho'; })());
-check('KỲ (1 tuần): thanh tồn ghi "Ván thô: 20 tấm" + kỳ "Tuần 41"',
-  document.getElementById('x2-bv-stock-bar').innerHTML.includes('Ván thô: <strong>20 tấm</strong>') &&
-  document.getElementById('x2-bv-stock-bar').innerHTML.includes('Tuần 41'));
+check('Ká»² (1 tuáº§n): thanh tá»“n ghi "VÃ¡n thÃ´: 20 táº¥m" + ká»³ "Tuáº§n 41"',
+  document.getElementById('x2-bv-stock-bar').innerHTML.includes('VÃ¡n thÃ´: <strong>20 táº¥m</strong>') &&
+  document.getElementById('x2-bv-stock-bar').innerHTML.includes('Tuáº§n 41'));
 
-// ─── C. SỔ RIÊNG: lượt CẮT VÁN KHÔNG trừ sang Bào Ván ───────────────
-check('SỔ RIÊNG: Cắt Ván đã dùng 7 tấm (tồn cat = 43/50 kỳ 2 tuần) — Bào Ván kỳ 1 tuần VẪN 20/20',
-  x2.catVanInputPool('2026-10-06').find(x => x.key === 'vantho|1220×2440×9').remaining === 43 &&
-  x2.baoVanInputPool('2026-10-06').find(x => x.key === 'vantho|1220×2440×9').remaining === 20);
+// â”€â”€â”€ C. Sá»” RIÃŠNG: lÆ°á»£t Cáº®T VÃN KHÃ”NG trá»« sang BÃ o VÃ¡n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('Sá»” RIÃŠNG: Cáº¯t VÃ¡n Ä‘Ã£ dÃ¹ng 7 táº¥m (tá»“n cat = 43/50 ká»³ 2 tuáº§n) â€” BÃ o VÃ¡n ká»³ 1 tuáº§n VáºªN 20/20',
+  x2.catVanInputPool('2026-10-06').find(x => x.key === 'vantho|1220Ã—2440Ã—9').remaining === 43 &&
+  x2.baoVanInputPool('2026-10-06').find(x => x.key === 'vantho|1220Ã—2440Ã—9').remaining === 20);
 
-// ─── D. ĐỔI SANG 2 TUẦN (CẶP 41–42) ──────────────────────────────────
+// â”€â”€â”€ D. Äá»”I SANG 2 TUáº¦N (Cáº¶P 41â€“42) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.setX2BaoVanSpan(2);
-check('KỲ 2 TUẦN: pool có ván thô 50 + thành phẩm 50 — tuần 40 vẫn loại',
+check('Ká»² 2 TUáº¦N: pool cÃ³ vÃ¡n thÃ´ 50 + thÃ nh pháº©m 50 â€” tuáº§n 40 váº«n loáº¡i',
   (() => {
     const it = x2.baoVanInputPool('2026-10-06');
-    const vt = it.find(x => x.group === 'vantho' && x.sizeKey === '1220×2440×9');
-    const fp = it.find(x => x.group === 'thanhpham' && x.sizeKey === '1200×382×12');
+    const vt = it.find(x => x.group === 'vantho' && x.sizeKey === '1220Ã—2440Ã—9');
+    const fp = it.find(x => x.group === 'thanhpham' && x.sizeKey === '1200Ã—382Ã—12');
     return !!vt && vt.total === 50 && !!fp && fp.total === 50;
   })());
-check('SỔ RIÊNG (cùng kỳ 2 tuần): Bào Ván vẫn 50/50 — KHÔNG trừ 7 tấm của Cắt Ván',
-  x2.baoVanInputPool('2026-10-06').find(x => x.key === 'vantho|1220×2440×9').remaining === 50);
-check('KỲ 2 TUẦN: nhãn kỳ "Tuần 41–42" + remembered theo MÁY',
-  document.getElementById('x2-bv-stock-bar').innerHTML.includes('Tuần 41–42') &&
+check('Sá»” RIÃŠNG (cÃ¹ng ká»³ 2 tuáº§n): BÃ o VÃ¡n váº«n 50/50 â€” KHÃ”NG trá»« 7 táº¥m cá»§a Cáº¯t VÃ¡n',
+  x2.baoVanInputPool('2026-10-06').find(x => x.key === 'vantho|1220Ã—2440Ã—9').remaining === 50);
+check('Ká»² 2 TUáº¦N: nhÃ£n ká»³ "Tuáº§n 41â€“42" + remembered theo MÃY',
+  document.getElementById('x2-bv-stock-bar').innerHTML.includes('Tuáº§n 41â€“42') &&
   localStorage.getItem(STORAGE_KEY_X2_BAO_VAN_SPAN) === '2');
-check('CÔNG ĐOẠN: 2 lựa chọn Bào / Chà thùng + form CHỈ có Đầu vào + Số lượng (KHÔNG ô Đầu ra)',
+check('CÃ”NG ÄOáº N: 2 lá»±a chá»n BÃ o / ChÃ  thÃ¹ng + form CHá»ˆ cÃ³ Äáº§u vÃ o + Sá»‘ lÆ°á»£ng (KHÃ”NG Ã´ Äáº§u ra)',
   (() => {
     const h = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const form = h.slice(h.indexOf('id="x2-bv-form"'), h.indexOf('</form>', h.indexOf('id="x2-bv-form"')));
-    return h.includes('<option value="bao">Bào') && h.includes('<option value="cha">Chà thùng') &&
+    return h.includes('<option value="bao">BÃ o') && h.includes('<option value="cha">ChÃ  thÃ¹ng') &&
       !form.includes('x2-bv-out') && form.includes('id="x2-bv-qty"');
   })());
-// ─── E. LƯU LƯỢT BÀO (trừ tồn theo kỳ 2 tuần — sổ RIÊNG) ────────────
+// â”€â”€â”€ E. LÆ¯U LÆ¯á»¢T BÃ€O (trá»« tá»“n theo ká»³ 2 tuáº§n â€” sá»• RIÃŠNG) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-bv-kind').value = 'bao';
 document.getElementById('x2-bv-date').value = '2026-10-06';
 x2.renderX2BaoVanSource();
-document.getElementById('x2-bv-source').value = 'vantho|1220×2440×9';
+document.getElementById('x2-bv-source').value = 'vantho|1220Ã—2440Ã—9';
 document.getElementById('x2-bv-qty').value = '12';
 await x2.handleXuong2BaoVanSubmit({ preventDefault(){} });
 const recBao = (state.xuong2BaoVanRecords || [])[0];
-check('LƯU BÀO: ghi 1 lượt kind=bao · qtyIn 12 · quantity 12 (tấm — không có đầu ra)',
+check('LÆ¯U BÃ€O: ghi 1 lÆ°á»£t kind=bao Â· qtyIn 12 Â· quantity 12 (táº¥m â€” khÃ´ng cÃ³ Ä‘áº§u ra)',
   state.xuong2BaoVanRecords.length === 1 && recBao.kind === 'bao' &&
   recBao.qtyIn === 12 && recBao.quantity === 12 && !recBao.outSizeKey);
-check('LƯU BÀO: periodKey cặp 2026-W41-42 + span 2 + đã ghi localStorage key riêng',
+check('LÆ¯U BÃ€O: periodKey cáº·p 2026-W41-42 + span 2 + Ä‘Ã£ ghi localStorage key riÃªng',
   recBao.periodKey === '2026-W41-42' && recBao.span === 2 &&
   JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_BAO_VAN) || '[]').length === 1);
-check('LƯU BÀO: TỒN CỘT NGAY — ván thô còn 38 / 50 tấm (sổ RIÊNG)',
-  document.getElementById('x2-bv-source').innerHTML.includes('1220×2440×9 — còn 38 / 50 tấm'));
-check('LƯU BÀO: chip mini card = "1 lượt · 12 tấm"',
-  document.getElementById('x2-mini-count-bao-van').textContent === '1 lượt · 12 tấm');
+check('LÆ¯U BÃ€O: Tá»’N Cá»˜T NGAY â€” vÃ¡n thÃ´ cÃ²n 38 / 50 táº¥m (sá»• RIÃŠNG)',
+  document.getElementById('x2-bv-source').innerHTML.includes('1220Ã—2440Ã—9 â€” cÃ²n 38 / 50 táº¥m'));
+check('LÆ¯U BÃ€O: chip mini card = "1 lÆ°á»£t Â· 12 táº¥m"',
+  document.getElementById('x2-mini-count-bao-van').textContent === '1 lÆ°á»£t Â· 12 táº¥m');
 {
   const before = state.xuong2BaoVanRecords.length;
-  document.getElementById('x2-bv-qty').value = '40';   // 40 > 38 còn lại
+  document.getElementById('x2-bv-qty').value = '40';   // 40 > 38 cÃ²n láº¡i
   await x2.handleXuong2BaoVanSubmit({ preventDefault(){} });
-  check('CHẶN VƯỢT: nhập 40 tấm (còn 38) → KHÔNG ghi lượt mới',
+  check('CHáº¶N VÆ¯á»¢T: nháº­p 40 táº¥m (cÃ²n 38) â†’ KHÃ”NG ghi lÆ°á»£t má»›i',
     state.xuong2BaoVanRecords.length === before);
 }
 
-// ─── F. LƯỢT CHÀ THÙNG (cùng form Đầu vào + Số lượng) ────────────────
+// â”€â”€â”€ F. LÆ¯á»¢T CHÃ€ THÃ™NG (cÃ¹ng form Äáº§u vÃ o + Sá»‘ lÆ°á»£ng) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-bv-kind').value = 'cha';
-document.getElementById('x2-bv-source').value = 'vantho|1220×2440×9';
+document.getElementById('x2-bv-source').value = 'vantho|1220Ã—2440Ã—9';
 document.getElementById('x2-bv-qty').value = '10';
 await x2.handleXuong2BaoVanSubmit({ preventDefault(){} });
 const recCha = (state.xuong2BaoVanRecords || []).find(r => r.kind === 'cha');
-check('LƯU CHÀ: ghi lượt kind=cha · qtyIn 10 · quantity 10 (tấm)',
+check('LÆ¯U CHÃ€: ghi lÆ°á»£t kind=cha Â· qtyIn 10 Â· quantity 10 (táº¥m)',
   !!recCha && recCha.qtyIn === 10 && recCha.quantity === 10);
-check('LƯU CHÀ: TỒN TRỪ — ván thô còn 28 / 50 tấm · thanh thành phẩm không bị đụng (50/50)',
-  document.getElementById('x2-bv-source').innerHTML.includes('1220×2440×9 — còn 28 / 50 tấm') &&
-  document.getElementById('x2-bv-source').innerHTML.includes('1200×382×12 — còn 50 / 50 tấm'));
+check('LÆ¯U CHÃ€: Tá»’N TRá»ª â€” vÃ¡n thÃ´ cÃ²n 28 / 50 táº¥m Â· thanh thÃ nh pháº©m khÃ´ng bá»‹ Ä‘á»¥ng (50/50)',
+  document.getElementById('x2-bv-source').innerHTML.includes('1220Ã—2440Ã—9 â€” cÃ²n 28 / 50 táº¥m') &&
+  document.getElementById('x2-bv-source').innerHTML.includes('1200Ã—382Ã—12 â€” cÃ²n 50 / 50 táº¥m'));
 
-// ─── G. SỬA LƯỢT — TRẢ LẠI PHẦN CỦA NÓ (excludeId) ──────────────────
+// â”€â”€â”€ G. Sá»¬A LÆ¯á»¢T â€” TRáº¢ Láº I PHáº¦N Cá»¦A NÃ“ (excludeId) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.editXuong2BaoVan(recBao.id);
-check('SỬA: nạp lại lượt (kỳ vẫn 2 tuần · số lượng 12)',
+check('Sá»¬A: náº¡p láº¡i lÆ°á»£t (ká»³ váº«n 2 tuáº§n Â· sá»‘ lÆ°á»£ng 12)',
   state.x2BaoVanEditId === recBao.id && document.getElementById('x2-bv-qty').value == 12);
 {
-  // Pool LOẠI lượt đang sửa → còn 50 − 10 = 40 → nhập 45 bị chặn
+  // Pool LOáº I lÆ°á»£t Ä‘ang sá»­a â†’ cÃ²n 50 âˆ’ 10 = 40 â†’ nháº­p 45 bá»‹ cháº·n
   document.getElementById('x2-bv-qty').value = '45';
   await x2.handleXuong2BaoVanSubmit({ preventDefault(){} });
-  check('SỬA: nhập 45 tấm (chỉ còn 40 khi loại lượt này) → bị chặn',
+  check('Sá»¬A: nháº­p 45 táº¥m (chá»‰ cÃ²n 40 khi loáº¡i lÆ°á»£t nÃ y) â†’ bá»‹ cháº·n',
     state.x2BaoVanEditId === recBao.id && recBao.qtyIn === 12);
   document.getElementById('x2-bv-qty').value = '40';
   await x2.handleXuong2BaoVanSubmit({ preventDefault(){} });
-  // Lưu xong form tự xoá ô Ngày ⇒ tồn tính theo tuần HIỆN TẠI của máy nên test
-  // sẽ sai khi chạy vào tuần khác. Chọn lại ngày cố định rồi vẽ lại tồn.
+  // LÆ°u xong form tá»± xoÃ¡ Ã´ NgÃ y â‡’ tá»“n tÃ­nh theo tuáº§n HIá»†N Táº I cá»§a mÃ¡y nÃªn test
+  // sáº½ sai khi cháº¡y vÃ o tuáº§n khÃ¡c. Chá»n láº¡i ngÃ y cá»‘ Ä‘á»‹nh rá»“i váº½ láº¡i tá»“n.
   document.getElementById('x2-bv-date').value = '2026-10-06';
   x2.renderX2BaoVanSource();
-  check('SỬA: 40 tấm → cập nhật + thoát chế độ sửa (ván thô = 40 + 10 chà = 50)',
+  check('Sá»¬A: 40 táº¥m â†’ cáº­p nháº­t + thoÃ¡t cháº¿ Ä‘á»™ sá»­a (vÃ¡n thÃ´ = 40 + 10 chÃ  = 50)',
     recBao.qtyIn === 40 && state.x2BaoVanEditId === null &&
-    document.getElementById('x2-bv-source').innerHTML.includes('1200×382×12 — còn 50 / 50 tấm') &&
-    !document.getElementById('x2-bv-source').innerHTML.includes('1220×2440×9 — còn'));
+    document.getElementById('x2-bv-source').innerHTML.includes('1200Ã—382Ã—12 â€” cÃ²n 50 / 50 táº¥m') &&
+    !document.getElementById('x2-bv-source').innerHTML.includes('1220Ã—2440Ã—9 â€” cÃ²n'));
 }
 
-// ─── H. ĐỊNH MỨC — CẢ 2 = tấm/h ──────────────────────────────────────
+// â”€â”€â”€ H. Äá»ŠNH Má»¨C â€” Cáº¢ 2 = táº¥m/h â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-bv-rate-kind').value = 'bao';
 document.getElementById('x2-bv-rate-month').value = '2026-10';
 document.getElementById('x2-bv-rate-value').value = '120';
@@ -240,34 +240,34 @@ document.getElementById('x2-bv-rate-kind').value = 'cha';
 document.getElementById('x2-bv-rate-month').value = '2026-10';
 document.getElementById('x2-bv-rate-value').value = '200';
 x2.handleX2BaoVanRateSave();
-check('ĐỊNH MỨC: bao = 120 tấm/h · cha = 200 tấm/h (state + localStorage)',
+check('Äá»ŠNH Má»¨C: bao = 120 táº¥m/h Â· cha = 200 táº¥m/h (state + localStorage)',
   state.x2BaoVanRates.bao['2026-10'] === 120 && state.x2BaoVanRates.cha['2026-10'] === 200 &&
   JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BAO_VAN_RATE)).bao['2026-10'] === 120 &&
   JSON.parse(localStorage.getItem(STORAGE_KEY_X2_BAO_VAN_RATE)).cha['2026-10'] === 200);
-check('ĐỊNH MỨC: baoVanRateOf đọc đúng từng công đoạn',
+check('Äá»ŠNH Má»¨C: baoVanRateOf Ä‘á»c Ä‘Ãºng tá»«ng cÃ´ng Ä‘oáº¡n',
   x2.baoVanRateOf('2026-10-06', 'bao') === 120 && x2.baoVanRateOf('2026-10-06', 'cha') === 200);
-// ─── I. THẺ NGÀY CHIA 2 VÙNG + CÔNG SUẤT 2 DÒNG tấm/h ───────────────
+// â”€â”€â”€ I. THáºº NGÃ€Y CHIA 2 VÃ™NG + CÃ”NG SUáº¤T 2 DÃ’NG táº¥m/h â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('x2-bv-date').value = '2026-10-06';
 x2.renderX2BaoVanCard();
 const dayHtml = document.getElementById('x2-bv-day-cards').innerHTML;
-check('THẺ NGÀY: có VÙNG "Bào" + VÙNG "Chà thùng" (2 bảng riêng, cùng cột Đầu vào/SL)',
-  dayHtml.includes('Bào — đầu vào từ Ép Ván') && dayHtml.includes('Chà thùng — đầu vào từ Ép Ván'));
-check('THẺ NGÀY: đầu thẻ CS Bào + CS Chà (đều tấm/h) + chip kỳ + ô sự cố baovan',
-  dayHtml.includes('CS Bào:') && dayHtml.includes('CS Chà:') &&
-  (dayHtml.match(/tấm\/h/g) || []).length >= 4 &&
-  dayHtml.includes('Tuần 41–42') && dayHtml.includes('data-x2-incident'));
-check('THẺ NGÀY: người Bào / người Chà từ Bảng bố trí + dòng TỔNG 2 vùng',
-  dayHtml.includes('Hoàng Văn Bào') && dayHtml.includes('Vũ Thị Chà') &&
-  dayHtml.includes('tấm đã bào') && dayHtml.includes('tấm đã chà thùng'));
-check('THẺ NGÀY: nút Sửa/Xóa uỷ nhiệm data-x2-bv-edit / data-x2-bv-delete',
+check('THáºº NGÃ€Y: cÃ³ VÃ™NG "BÃ o" + VÃ™NG "ChÃ  thÃ¹ng" (2 báº£ng riÃªng, cÃ¹ng cá»™t Äáº§u vÃ o/SL)',
+  dayHtml.includes('BÃ o â€” Ä‘áº§u vÃ o tá»« Ã‰p VÃ¡n') && dayHtml.includes('ChÃ  thÃ¹ng â€” Ä‘áº§u vÃ o tá»« Ã‰p VÃ¡n'));
+check('THáºº NGÃ€Y: Ä‘áº§u tháº» CS BÃ o + CS ChÃ  (Ä‘á»u táº¥m/h) + chip ká»³ + Ã´ sá»± cá»‘ baovan',
+  dayHtml.includes('CS BÃ o:') && dayHtml.includes('CS ChÃ :') &&
+  (dayHtml.match(/táº¥m\/h/g) || []).length >= 4 &&
+  dayHtml.includes('Tuáº§n 41â€“42') && dayHtml.includes('data-x2-incident'));
+check('THáºº NGÃ€Y: ngÆ°á»i BÃ o / ngÆ°á»i ChÃ  tá»« Báº£ng bá»‘ trÃ­ + dÃ²ng Tá»”NG 2 vÃ¹ng',
+  dayHtml.includes('HoÃ ng VÄƒn BÃ o') && dayHtml.includes('VÅ© Thá»‹ ChÃ ') &&
+  dayHtml.includes('táº¥m Ä‘Ã£ bÃ o') && dayHtml.includes('táº¥m Ä‘Ã£ chÃ  thÃ¹ng'));
+check('THáºº NGÃ€Y: nÃºt Sá»­a/XÃ³a uá»· nhiá»‡m data-x2-bv-edit / data-x2-bv-delete',
   dayHtml.includes('data-x2-bv-edit=') && dayHtml.includes('data-x2-bv-delete='));
 
 const cap = await import('../js/capacity.js');
 const capSrc = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
-check('CAPACITY: Bào và Chà thùng không còn dòng công suất Dashboard',
+check('CAPACITY: BÃ o vÃ  ChÃ  thÃ¹ng khÃ´ng cÃ²n dÃ²ng cÃ´ng suáº¥t Dashboard',
   !cap.CAP_STAGES.some(s => s.id === 'baovan_bao' || s.id === 'baovan_cha'));
 
-// ─── J. CẤU TRÚC NỐI Đủ ──────────────────────────────────────────────
+// â”€â”€â”€ J. Cáº¤U TRÃšC Ná»I Äá»§ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const rd = (f) => fs.readFileSync(new URL('../js/' + f, import.meta.url), 'utf8');
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const stylesCss = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
@@ -275,54 +275,55 @@ const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const jsStorage = rd('storage.js'), jsCloud = rd('cloud.js'), jsHistory = rd('history.js');
 const jsMain = rd('main.js'), jsEvents = rd('events.js'), jsExport = rd('export-xlsx.js');
 
-check('CẤU TRÚC (index.html): thẻ đủ — tồn · form (Kỳ 1/2 + nút Thêm) · thống kê · lịch sử · popup ĐM',
+check('Cáº¤U TRÃšC (index.html): tháº» Ä‘á»§ â€” tá»“n Â· form (Ká»³ 1/2 + nÃºt ThÃªm) Â· thá»‘ng kÃª Â· lá»‹ch sá»­ Â· popup ÄM',
   ['id="x2-bv-stock-bar"', 'id="x2-bv-form"', 'id="x2-bv-kind"', 'id="x2-bv-source"',
    'id="x2-bv-qty"', 'id="x2-bv-span-btns"', 'id="x2-bv-period-label"', 'id="btn-x2-bv-add"',
    'id="x2-bv-calc"', 'id="x2-bv-stats"', 'id="x2-bv-day-cards"', 'id="btn-toggle-x2bv-table"',
    'id="btn-x2-bv-rate"', 'id="modal-x2-bv-rate"', 'id="btn-x2-bv-rate-save"']
     .every(s => idxHtml.includes(s)) &&
   idxHtml.includes('data-x2-bv-span="1"') && idxHtml.includes('data-x2-bv-span="2"') &&
-  idxHtml.includes('Bào + Chà thùng'));
-check('CẤU TRÚC (events.js): nối form + kỳ + input + định mức + sửa/xóa uỷ nhiệm',
+  idxHtml.includes('BÃ o + ChÃ  thÃ¹ng'));
+check('Cáº¤U TRÃšC (events.js): ná»‘i form + ká»³ + input + Ä‘á»‹nh má»©c + sá»­a/xÃ³a uá»· nhiá»‡m',
   jsEvents.includes("safeOn('x2-bv-form', 'submit', handleXuong2BaoVanSubmit)") &&
   jsEvents.includes("safeOn('x2-bv-span-btns'") &&
   jsEvents.includes("safeOn('x2-bv-date', 'change'") &&
   jsEvents.includes("safeOn('btn-x2-bv-rate-save', 'click', handleX2BaoVanRateSave)") &&
   jsEvents.includes("closest('[data-x2-bv-edit]')") &&
   jsEvents.includes("closest('[data-x2-bv-delete]')"));
-check('NỐI (state): 3 key + trường state',
+check('Ná»I (state): 3 key + trÆ°á»ng state',
   fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8')
     .includes('bamboo_tracker_xuong2_bao_van_v1'));
-check('NỐI (storage): restore + 3 đường nạp + 2 snapshot + export',
+check('Ná»I (storage): restore + 3 Ä‘Æ°á»ng náº¡p + 2 snapshot + export',
   jsStorage.includes('restoreXuong2BaoVan') && jsStorage.includes('restoreX2BaoVanRates') &&
   jsStorage.includes('xuong2BaoVanRecords: state.xuong2BaoVanRecords') &&
   jsStorage.includes('x2BaoVanRates: state.x2BaoVanRates'));
-check('NỐI (cloud): snapshot · cloudCore · merge · persist · apply · RATE_DOMAINS',
+check('Ná»I (cloud): snapshot Â· cloudCore Â· merge Â· persist Â· apply Â· RATE_DOMAINS',
   jsCloud.includes('xuong2BaoVanRecords: state.xuong2BaoVanRecords') &&
   jsCloud.includes('xuong2BaoVanRecords: obj.xuong2BaoVanRecords') &&
   jsCloud.includes("clean('xuong2BaoVanRecords'") &&
   jsCloud.includes('STORAGE_KEY_X2_BAO_VAN_RATE') &&
   jsCloud.includes("'x2BaoVanRates'"));
-check('NỐI (history): 2 vùng dữ liệu tab kanban',
+check('Ná»I (history): 2 vÃ¹ng dá»¯ liá»‡u tab kanban',
   jsHistory.includes('xuong2BaoVanRecords') && jsHistory.includes('x2BaoVanRates'));
-check('NỐI (main): load 3 khoá lúc boot',
+check('Ná»I (main): load 3 khoÃ¡ lÃºc boot',
   jsMain.includes('loadXuong2BaoVan()') && jsMain.includes('loadX2BaoVanRates()') &&
   jsMain.includes('loadX2BaoVanSpan()'));
-check('NỐI (export-xlsx): nguồn xuất "baovan" + cột 2 công đoạn',
+check('Ná»I (export-xlsx): nguá»“n xuáº¥t "baovan" + cá»™t 2 cÃ´ng Ä‘oáº¡n',
   jsExport.includes("id: 'baovan'") && jsExport.includes("source === 'baovan'"));
-check('CẤU TRÚC (styles + sw): dùng lại khối nút kỳ + CACHE_NAME v456',
-  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v456/.test(swJs));
+check('Cáº¤U TRÃšC (styles + sw): dÃ¹ng láº¡i khá»‘i nÃºt ká»³ + CACHE_NAME v486',
+  stylesCss.includes('.x2-cv-span-btn.active') && /nha-may-ngoc-son-v486/.test(swJs));
 
-// ─── K. XOÁ LƯỢT (tombstone) ──────────────────────────────────────────
+// â”€â”€â”€ K. XOÃ LÆ¯á»¢T (tombstone) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 {
   const before = state.xuong2BaoVanRecords.length;
   x2.deleteXuong2BaoVan(recCha.id);
-  check('XÓA: giảm 1 lượt + có tombstone (đồng bộ xóa đa máy)',
+  check('XÃ“A: giáº£m 1 lÆ°á»£t + cÃ³ tombstone (Ä‘á»“ng bá»™ xÃ³a Ä‘a mÃ¡y)',
     state.xuong2BaoVanRecords.length === before - 1 &&
     !!(state.deletedIds && state.deletedIds.xuong2BaoVanRecords && state.deletedIds.xuong2BaoVanRecords[recCha.id]));
-  check('XÓA: ván thô của lượt chà ĐƯỢC TRẢ LẠI kỳ (40 + 10 → còn 10 tấm)',
-    document.getElementById('x2-bv-source').innerHTML.includes('1220×2440×9 — còn 10 / 50 tấm'));
+  check('XÃ“A: vÃ¡n thÃ´ cá»§a lÆ°á»£t chÃ  ÄÆ¯á»¢C TRáº¢ Láº I ká»³ (40 + 10 â†’ cÃ²n 10 táº¥m)',
+    document.getElementById('x2-bv-source').innerHTML.includes('1220Ã—2440Ã—9 â€” cÃ²n 10 / 50 táº¥m'));
 }
 
-console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
+console.log('Káº¾T QUáº¢: ' + pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
+

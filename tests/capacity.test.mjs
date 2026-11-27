@@ -1,18 +1,18 @@
-// tests/capacity.test.mjs — Kiểm thử BẢNG TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT
-// (thẻ #capacity-card — đầu tab Tổng Quan, js/capacity.js):
-//   • Khóa tuần ISO khớp materialWeekLabel + dịch tuần 2 chiều;
-//   • Giờ đếm ĐÚNG 1 LẦN mỗi (công đoạn, ca) khi có ca; nếu không thì 1 lần/ngày;
-//   • Công suất/Hiệu suất TUẦN = Σ sản lượng ÷ Σ giờ ÷ định mức tuần;
-//   • Định mức TUẦN vắt 2 tháng = bình quân GIA QUYỀN theo sản lượng;
-//   • Chọn Nan Thô bỏ lượt nan mua ngoài (external); Bào Thô chờ Chọn Nan Thô → "—";
-//   • Than Hóa + Sấy: hiệu suất = giờ cần ÷ (giờ thực − sự cố) + ĐM phút/m³ mỗi lần;
-//   • Ép Ván theo m³/h; Hiệu suất XƯỞNG bình quân gia quyền theo giờ + nút thắt;
-//   • 3 tầng render (tuần → công đoạn → ngày) + đổi xưởng + thu gọn + nhớ UI;
-//   • Sparkline SVG 8 tuần trên mini card; cấu trúc index.html/styles.css/sw.js.
+﻿// tests/capacity.test.mjs â€” Kiá»ƒm thá»­ Báº¢NG Tá»”NG Há»¢P CÃ”NG SUáº¤T & HIá»†U SUáº¤T
+// (tháº» #capacity-card â€” Ä‘áº§u tab Tá»•ng Quan, js/capacity.js):
+//   â€¢ KhÃ³a tuáº§n ISO khá»›p materialWeekLabel + dá»‹ch tuáº§n 2 chiá»u;
+//   â€¢ Giá» Ä‘áº¿m ÄÃšNG 1 Láº¦N má»—i (cÃ´ng Ä‘oáº¡n, ca) khi cÃ³ ca; náº¿u khÃ´ng thÃ¬ 1 láº§n/ngÃ y;
+//   â€¢ CÃ´ng suáº¥t/Hiá»‡u suáº¥t TUáº¦N = Î£ sáº£n lÆ°á»£ng Ã· Î£ giá» Ã· Ä‘á»‹nh má»©c tuáº§n;
+//   â€¢ Äá»‹nh má»©c TUáº¦N váº¯t 2 thÃ¡ng = bÃ¬nh quÃ¢n GIA QUYá»€N theo sáº£n lÆ°á»£ng;
+//   â€¢ Chá»n Nan ThÃ´ bá» lÆ°á»£t nan mua ngoÃ i (external); BÃ o ThÃ´ chá» Chá»n Nan ThÃ´ â†’ "â€”";
+//   â€¢ Than HÃ³a + Sáº¥y: hiá»‡u suáº¥t = giá» cáº§n Ã· (giá» thá»±c âˆ’ sá»± cá»‘) + ÄM phÃºt/mÂ³ má»—i láº§n;
+//   â€¢ Ã‰p VÃ¡n theo mÂ³/h; Hiá»‡u suáº¥t XÆ¯á»žNG bÃ¬nh quÃ¢n gia quyá»n theo giá» + nÃºt tháº¯t;
+//   â€¢ 3 táº§ng render (tuáº§n â†’ cÃ´ng Ä‘oáº¡n â†’ ngÃ y) + Ä‘á»•i xÆ°á»Ÿng + thu gá»n + nhá»› UI;
+//   â€¢ Sparkline SVG 8 tuáº§n trÃªn mini card; cáº¥u trÃºc index.html/styles.css/sw.js.
 'use strict';
 import fs from 'node:fs';
 
-// ─── Stubs môi trường (giống xuong2-bo-ong.test.mjs) ─────────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng xuong2-bo-ong.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -102,16 +102,16 @@ let fullAssignmentFilterCalls = 0, fullAssignmentIterationCalls = 0;
 const indexedDisplayAssignments = Array.from({ length: 15000 }, (_, i) => ({
   id: `indexed-noise-${i}`,
   date: `2026-09-${String((i % 28) + 1).padStart(2, '0')}`,
-  department: 'Xưởng 2',
+  department: 'XÆ°á»Ÿng 2',
   positionId: 'indexed-unmatched-position',
   employeeId: 'indexed-worker',
   start: '07:00',
   end: '08:00'
 }));
 indexedDisplayAssignments.push(
-  { id: 'indexed-x2', date: '2026-09-10', department: 'Xưởng 2', positionId: 'indexed-x2-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' },
-  { id: 'indexed-x1', date: '2026-09-10', department: 'Xưởng 1', positionId: 'indexed-x1-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' },
-  { id: 'indexed-press', date: '2026-09-10', department: 'Xưởng 2', positionId: 'indexed-press-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' }
+  { id: 'indexed-x2', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'indexed-x2-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' },
+  { id: 'indexed-x1', date: '2026-09-10', department: 'XÆ°á»Ÿng 1', positionId: 'indexed-x1-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' },
+  { id: 'indexed-press', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'indexed-press-position', employeeId: 'indexed-worker', start: '07:00', end: '08:00' }
 );
 state.hrAssignments = new Proxy(indexedDisplayAssignments, {
   get(target, property, receiver) {
@@ -128,9 +128,9 @@ state.hrAssignments = new Proxy(indexedDisplayAssignments, {
 });
 state.hrEmployees = [{ id: 'indexed-worker', name: 'Indexed Worker' }];
 state.hrPositions = [
-  { id: 'indexed-x2-position', name: 'Bốc Luồng', department: 'Xưởng 2' },
-  { id: 'indexed-x1-position', name: 'Cắt Ống', department: 'Xưởng 1' },
-  { id: 'indexed-press-position', name: 'Ép Ván', department: 'Xưởng 2' }
+  { id: 'indexed-x2-position', name: 'Bá»‘c Luá»“ng', department: 'XÆ°á»Ÿng 2' },
+  { id: 'indexed-x1-position', name: 'Cáº¯t á»ng', department: 'XÆ°á»Ÿng 1' },
+  { id: 'indexed-press-position', name: 'Ã‰p VÃ¡n', department: 'XÆ°á»Ÿng 2' }
 ];
 state.materialRecords = [];
 state.xuong2BoluongRecords = [];
@@ -147,7 +147,7 @@ const indexedCatOngDisplay = x2.x1CatOngDisplay({
 const press = await import('../js/press.js');
 const indexedPressSnapshot = press.epVanSnapshotOf('2026-09-10');
 const indexedPressRows = cap.CAP_STAGES.find(stage => stage.id === 'epvan').rows();
-check('HIỆU NĂNG: tra cứu bố trí công đoạn dùng chỉ mục theo ngày',
+check('HIá»†U NÄ‚NG: tra cá»©u bá»‘ trÃ­ cÃ´ng Ä‘oáº¡n dÃ¹ng chá»‰ má»¥c theo ngÃ y',
   fullAssignmentIterationCalls === 1 && fullAssignmentFilterCalls === 0 &&
   indexedBoluongDisplay.workerRows.some(row => row.name === 'Indexed Worker') &&
   indexedCatOngDisplay.workerRows.some(row => row.name === 'Indexed Worker') &&
@@ -160,29 +160,29 @@ state.xuong2BoluongRecords = indexedDisplayState.xuong2BoluongRecords;
 state.xuong1CatOngRecords = indexedDisplayState.xuong1CatOngRecords;
 state.pressRecords = indexedDisplayState.pressRecords;
 
-// ─── A. TUẦN ISO ──────────────────────────────────────────────
-check('TUẦN: khóa tuần khớp materialWeekLabel (chuẩn chung của app)',
+// â”€â”€â”€ A. TUáº¦N ISO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('TUáº¦N: khÃ³a tuáº§n khá»›p materialWeekLabel (chuáº©n chung cá»§a app)',
   cap.capWeekKeyOf('2026-09-10') === mats.materialWeekLabel('2026-09-10'));
 const wk = cap.capWeekKeyOf('2026-09-10');
-check('TUẦN: khóa đúng dạng YYYY-Wnn', /^\d{4}-W\d{2}$/.test(wk));
-check('TUẦN: dịch −1 tuần rồi +1 tuần → về đúng khóa ban đầu',
+check('TUáº¦N: khÃ³a Ä‘Ãºng dáº¡ng YYYY-Wnn', /^\d{4}-W\d{2}$/.test(wk));
+check('TUáº¦N: dá»‹ch âˆ’1 tuáº§n rá»“i +1 tuáº§n â†’ vá» Ä‘Ãºng khÃ³a ban Ä‘áº§u',
   cap.capWeekShift(cap.capWeekShift(wk, -1), 1) === wk);
-check('TUẦN: nhãn khoảng ngày dạng dd/MM – dd/MM',
-  /^\d{2}\/\d{2} – \d{2}\/\d{2}$/.test(cap.capWeekRangeLabel(wk)));
-check('TUẦN: số tuần khớp khóa', cap.capWeekNumOf(wk) === Number(wk.split('-W')[1]));
+check('TUáº¦N: nhÃ£n khoáº£ng ngÃ y dáº¡ng dd/MM â€“ dd/MM',
+  /^\d{2}\/\d{2} â€“ \d{2}\/\d{2}$/.test(cap.capWeekRangeLabel(wk)));
+check('TUáº¦N: sá»‘ tuáº§n khá»›p khÃ³a', cap.capWeekNumOf(wk) === Number(wk.split('-W')[1]));
 
-// helper: ISO từ nhãn khoảng tuần (dùng để tìm tuần vắt 2 tháng)
+// helper: ISO tá»« nhÃ£n khoáº£ng tuáº§n (dÃ¹ng Ä‘á»ƒ tÃ¬m tuáº§n váº¯t 2 thÃ¡ng)
 function isoFromRangeLabel(lbl, year) {
-  const m = /^(\d{2})\/(\d{2}) – (\d{2})\/(\d{2})$/.exec(String(lbl || ''));
+  const m = /^(\d{2})\/(\d{2}) â€“ (\d{2})\/(\d{2})$/.exec(String(lbl || ''));
   if (!m) return null;
   return [`${year}-${m[2]}-${m[1]}`, `${year}-${m[4]}-${m[3]}`];
 }
 
-// ─── B. CẮT CHỌN: giờ đếm 1 LẦN/ngày + công suất/hiệu suất tuần ──
+// â”€â”€â”€ B. Cáº®T CHá»ŒN: giá» Ä‘áº¿m 1 Láº¦N/ngÃ y + cÃ´ng suáº¥t/hiá»‡u suáº¥t tuáº§n â”€â”€
 state.materialRecords = [
-  { id: 'mat-a', type: 'Luồng cây xô', supplier: 'Nhà Tế', location: 'xuong-2', weight: 1000, date: '2026-09-10' },
-  { id: 'mat-b', type: 'Luồng cây xô', supplier: 'Nhà Tế', location: 'xuong-2', weight: 500, date: '2026-09-10' },
-  { id: 'mat-c', type: 'Luồng ống', supplier: 'Nhà Trung', location: 'xuong-2', weight: 800, date: '2026-09-11' }
+  { id: 'mat-a', type: 'Luá»“ng cÃ¢y xÃ´', supplier: 'NhÃ  Táº¿', location: 'xuong-2', weight: 1000, date: '2026-09-10' },
+  { id: 'mat-b', type: 'Luá»“ng cÃ¢y xÃ´', supplier: 'NhÃ  Táº¿', location: 'xuong-2', weight: 500, date: '2026-09-10' },
+  { id: 'mat-c', type: 'Luá»“ng á»‘ng', supplier: 'NhÃ  Trung', location: 'xuong-2', weight: 800, date: '2026-09-11' }
 ];
 state.xuong2CutRecords = [
   { id: 'c1', materialId: 'mat-a', date: '2026-09-10', cutHours: 5 },
@@ -191,27 +191,29 @@ state.xuong2CutRecords = [
 ];
 const cutSt = cap.CAP_STAGES.find(s => s.id === 'cut');
 const cutDays = cap.capStageDayRows(cutSt, wk);
-check('CẮT: 2 ngày có dữ liệu trong tuần (10/09 và 11/09)', cutDays.length === 2);
-check('CẮT: ngày 10/09 có 2 lượt nhưng GIỜ chỉ đếm 1 LẦN = 5h (không nhân đôi)',
+check('Cáº®T: 2 ngÃ y cÃ³ dá»¯ liá»‡u trong tuáº§n (10/09 vÃ  11/09)', cutDays.length === 2);
+check('Cáº®T: ngÃ y 10/09 cÃ³ 2 lÆ°á»£t nhÆ°ng GIá»œ chá»‰ Ä‘áº¿m 1 Láº¦N = 5h (khÃ´ng nhÃ¢n Ä‘Ã´i)',
   cutDays[0].turns === 2 && cutDays[0].hours === 5);
-check('CẮT: sản lượng ngày 10/09 = 2,5 xe (1.000÷600 + 500÷600 — đơn vị mới xe/h)',
-  Math.abs(cutDays[0].qty - 2.5) < 1e-9);
-const cutRow = cap.capStageWeekRow(cutSt, wk); // CHƯA có ĐM — dùng kiểm tra số thô
-check('CẮT: tuần = 3 lượt · 3,83 xe · 9 giờ (5 + 4)',
-  cutRow.turns === 3 && Math.abs(cutRow.qty - (2300 / 600)) < 1e-9 && cutRow.hours === 9);
-check('CẮT: chưa có ĐM → hiệu suất tuần "—"', cutRow.eff == null);
-// Định mức CŨ khai 300 kg/h → tự quy đổi ÷ 600 = 0,5 xe/h (hiệu suất KHÔNG đổi)
+check('Cáº®T: sáº£n lÆ°á»£ng ngÃ y 10/09 = 1.500 kg (Ä‘Æ¡n vá»‹ sáº£n lÆ°á»£ng kg, khÃ´ng cÃ²n xe)',
+  Math.abs(cutDays[0].qty - 1500) < 1e-9);
+const cutRow = cap.capStageWeekRow(cutSt, wk); // CHÆ¯A cÃ³ ÄM â€” dÃ¹ng kiá»ƒm tra sá»‘ thÃ´
+check('Cáº®T: tuáº§n = 3 lÆ°á»£t Â· 2.300 kg Â· 9 giá» (5 + 4)',
+  cutRow.turns === 3 && cutRow.qty === 2300 && cutRow.hours === 9);
+check('Cáº®T: chÆ°a cÃ³ ÄM â†’ hiá»‡u suáº¥t tuáº§n "â€”"', cutRow.eff == null);
+// Äá»‹nh má»©c CÅ¨ khai 300 kg/h â†’ tá»± quy Ä‘á»•i Ã· 600 = 0,5 xe/h (hiá»‡u suáº¥t KHÃ”NG Ä‘á»•i)
 state.x2CapRates = { '2026-09': 300 };
 const cutRowRated = cap.capStageWeekRow(cutSt, wk);
-check('CẮT: công suất tuần = 3,83 xe ÷ 9h ≈ 0,426 xe/h', approx(cutRowRated.cap, (2300 / 600) / 9));
-check('CẮT: ĐM cũ 300 kg/h → 0,5 xe/h · hiệu suất tuần vẫn ≈ 85,2%',
-  approx(cutRowRated.rate, 0.5) && approx(cutRowRated.eff, (2300 / 600) / 9 / 0.5 * 100, 1e-4));
-check('EXPORT: 6 hàm đọc định mức đã export từ xuong2.js (1 nguồn chân lý)',
+check('Cáº®T: cÃ´ng suáº¥t tuáº§n = 2.300 kg Ã· 9h â‰ˆ 255,56 kg/h',
+  approx(cutRowRated.cap, 2300 / 9));
+check('Cáº®T: ÄM cÅ© 300 kg/h â†’ 0,5 xe/h Â· hiá»‡u suáº¥t tuáº§n váº«n â‰ˆ 85,2%',
+  approx(cutRowRated.rate, 0.5) &&
+  approx(cutRowRated.eff, ((2300 / 9) / 600) / 0.5 * 100, 1e-4));
+check('EXPORT: 6 hÃ m Ä‘á»c Ä‘á»‹nh má»©c Ä‘Ã£ export tá»« xuong2.js (1 nguá»“n chÃ¢n lÃ½)',
   typeof x2.capRateOf === 'function' && typeof x2.bulligRateOf === 'function' &&
   typeof x2.boOngRateOf === 'function' && typeof x2.baoThoRateOf === 'function' &&
   typeof x2.chonNanRateOf === 'function' && typeof x2.baoTinhRateOf === 'function');
 
-// ─── C. BỔ ỐNG: Định mức TUẦN vắt 2 tháng = bình quân theo sản lượng ──
+// â”€â”€â”€ C. Bá»” á»NG: Äá»‹nh má»©c TUáº¦N váº¯t 2 thÃ¡ng = bÃ¬nh quÃ¢n theo sáº£n lÆ°á»£ng â”€â”€
 let straddle = null;
 {
   let cursor = cap.capWeekKeyOf('2026-09-05');
@@ -221,7 +223,7 @@ let straddle = null;
     cursor = cap.capWeekShift(cursor, 1);
   }
 }
-check('TUẦN: tìm được tuần vắt 2 tháng quanh tháng 9/2026', !!straddle);
+check('TUáº¦N: tÃ¬m Ä‘Æ°á»£c tuáº§n váº¯t 2 thÃ¡ng quanh thÃ¡ng 9/2026', !!straddle);
 state.xuong2BoOngRecords = [
   { id: 'b1', date: straddle.d1, inputOng: 600, workHours: 6 },
   { id: 'b2', date: straddle.d2, inputOng: 400, workHours: 4 }
@@ -230,11 +232,11 @@ const m1 = straddle.d1.slice(0, 7), m2 = straddle.d2.slice(0, 7);
 state.x2BoOngRates = { [m1]: 100, [m2]: 200 };
 const boongSt = cap.CAP_STAGES.find(s => s.id === 'boong');
 const boongRow = cap.capStageWeekRow(boongSt, straddle.wk);
-check('BỔ ỐNG: định mức tuần = (600×100 + 400×200) ÷ 1.000 = 140 kg/h', approx(boongRow.rate, 140));
-check('BỔ ỐNG: công suất tuần = 1.000 ÷ 10 = 100 kg/h', approx(boongRow.cap, 100));
-check('BỔ ỐNG: hiệu suất tuần = 100 ÷ 140 ≈ 71,4%', approx(boongRow.eff, (100 / 140) * 100, 1e-4));
+check('Bá»” á»NG: Ä‘á»‹nh má»©c tuáº§n = (600Ã—100 + 400Ã—200) Ã· 1.000 = 140 kg/h', approx(boongRow.rate, 140));
+check('Bá»” á»NG: cÃ´ng suáº¥t tuáº§n = 1.000 Ã· 10 = 100 kg/h', approx(boongRow.cap, 100));
+check('Bá»” á»NG: hiá»‡u suáº¥t tuáº§n = 100 Ã· 140 â‰ˆ 71,4%', approx(boongRow.eff, (100 / 140) * 100, 1e-4));
 
-// ─── D. CHỌN NAN THÔ: bỏ lượt nan mua ngoài (external) ──────────
+// â”€â”€â”€ D. CHá»ŒN NAN THÃ”: bá» lÆ°á»£t nan mua ngoÃ i (external) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.xuong2BaoThoRecords = [
   { id: 'bt-cap-cn', date: '2026-08-01', shiftIdx: null, workHours: 4 }
 ];
@@ -245,22 +247,22 @@ state.xuong2ChonNanThoRecords = [
 state.x2ChonNanRates = { '2026-09': 60 };
 const cnSt = cap.CAP_STAGES.find(s => s.id === 'chonnan');
 const cnRow = cap.capStageWeekRow(cnSt, wk);
-check('CHỌN NAN: chỉ cộng phần sang Bào Thô (bỏ external) → 200 thanh · 2 lượt', cnRow.qty === 200 && cnRow.turns === 2);
-check('CHỌN NAN: giờ đếm 1 lần/ngày = 4h', cnRow.hours === 4);
-check('CHỌN NAN: hiệu suất = (200÷4) ÷ 60 ≈ 83,3%', approx(cnRow.eff, (200 / 4) / 60 * 100, 1e-4));
+check('CHá»ŒN NAN: chá»‰ cá»™ng pháº§n sang BÃ o ThÃ´ (bá» external) â†’ 200 thanh Â· 2 lÆ°á»£t', cnRow.qty === 200 && cnRow.turns === 2);
+check('CHá»ŒN NAN: giá» Ä‘áº¿m 1 láº§n/ngÃ y = 4h', cnRow.hours === 4);
+check('CHá»ŒN NAN: hiá»‡u suáº¥t = (200Ã·4) Ã· 60 â‰ˆ 83,3%', approx(cnRow.eff, (200 / 4) / 60 * 100, 1e-4));
 
-// ─── E. BÀO THÔ: chờ Chọn Nan Thô → sản lượng "—" (không bịa số) ──
+// â”€â”€â”€ E. BÃ€O THÃ”: chá» Chá»n Nan ThÃ´ â†’ sáº£n lÆ°á»£ng "â€”" (khÃ´ng bá»‹a sá»‘) â”€â”€
 state.xuong2BaoThoRecords = [
   { id: 'bt1', date: '2026-09-10', daiText: '1250', rongText: '80', dayText: '12', workHours: 3 },
   { id: 'bt-cap-cn', date: '2026-08-01', shiftIdx: null, workHours: 4 }
 ];
-state.x2BaoThoRates = {}; // chưa khai định mức
+state.x2BaoThoRates = {}; // chÆ°a khai Ä‘á»‹nh má»©c
 const bthSt = cap.CAP_STAGES.find(s => s.id === 'baotho');
 const bthRow = cap.capStageWeekRow(bthSt, wk);
-check('BÀO THÔ: chưa link Chọn Nan Thô → qty null (không bịa số)', bthRow.qty == null && bthRow.qtyKnown === false);
-check('BÀO THÔ: công suất + hiệu suất đều "—"', bthRow.cap == null && bthRow.eff == null);
+check('BÃ€O THÃ”: chÆ°a link Chá»n Nan ThÃ´ â†’ qty null (khÃ´ng bá»‹a sá»‘)', bthRow.qty == null && bthRow.qtyKnown === false);
+check('BÃ€O THÃ”: cÃ´ng suáº¥t + hiá»‡u suáº¥t Ä‘á»u "â€”"', bthRow.cap == null && bthRow.eff == null);
 
-// ─── E1. CÔNG ĐOẠN GHI SẢN LƯỢNG THEO CA: tổng giờ phải cộng theo CA ──
+// â”€â”€â”€ E1. CÃ”NG ÄOáº N GHI Sáº¢N LÆ¯á»¢NG THEO CA: tá»•ng giá» pháº£i cá»™ng theo CA â”€â”€
 const shiftDate = '2026-09-11';
 const shiftWeek = cap.capWeekKeyOf(shiftDate);
 const baselineBoOngRecords = state.xuong2BoOngRecords;
@@ -278,13 +280,13 @@ state.xuong2BoOngRecords = [
 state.x2BoOngRates = { '2026-09': 100 };
 const boOngShiftDays = cap.capStageDayRows(boongSt, shiftWeek);
 const boOngShiftRow = cap.capStageWeekRow(boongSt, shiftWeek);
-check('BỔ ỐNG: ngày ghi riêng 2 ca → chi tiết có 2 hàng ca, giờ của ca lặp nhiều lượt chỉ đếm 1 lần',
+check('Bá»” á»NG: ngÃ y ghi riÃªng 2 ca â†’ chi tiáº¿t cÃ³ 2 hÃ ng ca, giá» cá»§a ca láº·p nhiá»u lÆ°á»£t chá»‰ Ä‘áº¿m 1 láº§n',
   boOngShiftDays.length === 2 &&
   boOngShiftDays[0].shiftIdx === 0 && boOngShiftDays[0].turns === 2 &&
   boOngShiftDays[0].qty === 800 && boOngShiftDays[0].hours === 10.5 &&
   boOngShiftDays[1].shiftIdx === 1 && boOngShiftDays[1].qty === 1200 &&
   boOngShiftDays[1].hours === 5.5);
-check('BỔ ỐNG: tổng tuần chia 2.000 kg cho tổng 16h (không chỉ 10,5h ca ngày)',
+check('Bá»” á»NG: tá»•ng tuáº§n chia 2.000 kg cho tá»•ng 16h (khÃ´ng chá»‰ 10,5h ca ngÃ y)',
   boOngShiftRow.qty === 2000 && boOngShiftRow.hours === 16 &&
   approx(boOngShiftRow.cap, 125) && approx(boOngShiftRow.eff, 125));
 const baselineStageIncidents = state.x2StageIncidents;
@@ -292,7 +294,7 @@ const baselineIncidentReports = state.x2IncidentReports;
 state.x2StageIncidents = { 'boong|2026-09-11': 2 };
 state.x2IncidentReports = [];
 const boOngIncidentRow = cap.capStageWeekRow(boongSt, shiftWeek);
-check('BỔ ỐNG: 2h sự cố theo ngày phân bổ theo tỉ lệ ca và chỉ trừ đúng 2h trong tổng kỳ',
+check('Bá»” á»NG: 2h sá»± cá»‘ theo ngÃ y phÃ¢n bá»• theo tá»‰ lá»‡ ca vÃ  chá»‰ trá»« Ä‘Ãºng 2h trong tá»•ng ká»³',
   approx(boOngIncidentRow.days.reduce((sum, day) => sum + day.incident, 0), 2) &&
   approx(boOngIncidentRow.cap, 2000 / 14));
 state.xuong2BoOngRecords = [
@@ -301,7 +303,7 @@ state.xuong2BoOngRecords = [
 ];
 state.x2StageIncidents = { 'boong|2026-09-11': 1 };
 const boOngNoHoursIncidentRow = cap.capStageWeekRow(boongSt, shiftWeek);
-check('BỔ ỐNG: khi tổng giờ ca bằng 0, sự cố vẫn chỉ ghi một lần và không gây lỗi',
+check('Bá»” á»NG: khi tá»•ng giá» ca báº±ng 0, sá»± cá»‘ váº«n chá»‰ ghi má»™t láº§n vÃ  khÃ´ng gÃ¢y lá»—i',
   approx(boOngNoHoursIncidentRow.days.reduce((sum, day) => sum + day.incident, 0), 1) &&
   boOngNoHoursIncidentRow.days[0].incident === 1 &&
   boOngNoHoursIncidentRow.days[1].incident === 0);
@@ -318,7 +320,7 @@ state.xuong2ChonNanThoRecords = [
 ];
 state.x2BaoThoRates = { '2026-09': 100 };
 const bthShiftRow = cap.capStageWeekRow(bthSt, shiftWeek);
-check('BÀO THÔ: tổng sản lượng liên kết theo ca chia cho tổng giờ của cả hai ca',
+check('BÃ€O THÃ”: tá»•ng sáº£n lÆ°á»£ng liÃªn káº¿t theo ca chia cho tá»•ng giá» cá»§a cáº£ hai ca',
   bthShiftRow.qty === 1200 && bthShiftRow.hours === 16 && approx(bthShiftRow.cap, 75));
 
 state.xuong2ChonNanThoRecords = [
@@ -327,7 +329,7 @@ state.xuong2ChonNanThoRecords = [
 ];
 state.x2ChonNanRates = { '2026-09': 100 };
 const cnShiftRow = cap.capStageWeekRow(cnSt, shiftWeek);
-check('CHỌN NAN: tổng hiệu suất dùng đủ giờ của hai ca',
+check('CHá»ŒN NAN: tá»•ng hiá»‡u suáº¥t dÃ¹ng Ä‘á»§ giá» cá»§a hai ca',
   cnShiftRow.qty === 1200 && cnShiftRow.hours === 16 && approx(cnShiftRow.cap, 75));
 
 state.xuong2BoOngRecords = [
@@ -335,7 +337,7 @@ state.xuong2BoOngRecords = [
   { id: 'bo-mixed-shift', date: '2026-09-12', shiftIdx: 1, inputOng: 200, workHoursHC: 5.5, workHoursTC: 0 }
 ];
 const mixedBoOngDays = cap.capStageDayRows(boongSt, cap.capWeekKeyOf('2026-09-12'));
-check('BỔ ỐNG: ngày trộn dữ liệu cũ và ghi ca vẫn gộp ngày, giữ giờ bản ghi đầu',
+check('Bá»” á»NG: ngÃ y trá»™n dá»¯ liá»‡u cÅ© vÃ  ghi ca váº«n gá»™p ngÃ y, giá»¯ giá» báº£n ghi Ä‘áº§u',
   mixedBoOngDays.length === 1 && mixedBoOngDays[0].shiftIdx == null &&
   mixedBoOngDays[0].qty === 300 && mixedBoOngDays[0].hours === 9);
 state.xuong2BoOngRecords = baselineBoOngRecords;
@@ -345,7 +347,7 @@ state.x2BaoThoRates = baselineBaoThoRates;
 state.xuong2ChonNanThoRecords = baselineChonNanRecords;
 state.x2ChonNanRates = baselineChonNanRates;
 
-// ─── F. THAN HÓA + SẤY: giờ cần ÷ (giờ thực − sự cố) ────────────
+// â”€â”€â”€ F. THAN HÃ“A + Sáº¤Y: giá» cáº§n Ã· (giá» thá»±c âˆ’ sá»± cá»‘) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const indexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const stylesCss = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
@@ -353,354 +355,401 @@ const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 state.batches = [
   { id: 'lot1', code: 'L-001', date: '2026-09-10', stage: 'say1', quantity: 1000, volume: 2, location: 'LS1' }
 ];
-state.hrEmployees = [{ id: 'e1', name: 'Nguyễn Văn A', quitDate: '' }];
+state.hrEmployees = [{ id: 'e1', name: 'Nguyá»…n VÄƒn A', quitDate: '' }];
 state.hrPositions = [
-  { id: 'pth', name: 'Than hóa', department: 'Xưởng 2' },
-  { id: 'pep', name: 'Ép ván X2', department: 'Xưởng 2' }
+  { id: 'pth', name: 'Than hÃ³a', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pep', name: 'Ã‰p vÃ¡n X2', department: 'XÆ°á»Ÿng 2' }
 ];
 state.hrAssignments = [
-  { id: 'a1', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pth', employeeId: 'e1', start: '07:00', end: '11:00' },
-  { id: 'a2', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pep', employeeId: 'e1', start: '07:00', end: '11:00' }
+  { id: 'a1', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'pth', employeeId: 'e1', start: '07:00', end: '11:00' },
+  { id: 'a2', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'pep', employeeId: 'e1', start: '07:00', end: '11:00' }
 ];
 state.x2SayTimes = {};
 state.x2SayIncidents = {};
 const saySt = cap.CAP_STAGES.find(s => s.id === 'say');
 const sayDays = cap.capStageDayRows(saySt, wk);
-check('THAN HÓA + SẤY: 1 công đoạn GỘP — KHÔNG còn 2 dòng "Sấy 1" / "Sấy 2" (18/10/2026)',
-  !!saySt && saySt.label === 'Than Hóa + Sấy' &&
+check('THAN HÃ“A + Sáº¤Y: 1 cÃ´ng Ä‘oáº¡n Gá»˜P â€” KHÃ”NG cÃ²n 2 dÃ²ng "Sáº¥y 1" / "Sáº¥y 2" (18/10/2026)',
+  !!saySt && saySt.label === 'Than HÃ³a + Sáº¥y' &&
   cap.CAP_STAGES.filter(s => s.id === 'say1' || s.id === 'say2').length === 0);
-check('THAN HÓA + SẤY: 2 m³ vào sấy ngày 10/09 → 1 lần (dữ liệu mới đếm theo lượt lưu/mặc định)',
+check('THAN HÃ“A + Sáº¤Y: 2 mÂ³ vÃ o sáº¥y ngÃ y 10/09 â†’ 1 láº§n (dá»¯ liá»‡u má»›i Ä‘áº¿m theo lÆ°á»£t lÆ°u/máº·c Ä‘á»‹nh)',
   sayDays.length === 1 && sayDays[0].turns === 1 && approx(sayDays[0].qty, 2));
-check('THAN HÓA + SẤY: giờ cần = 105 phút ÷ 60 = 1,75h', approx(sayDays[0].need, 105 / 60));
-check('THAN HÓA + SẤY: giờ thực từ Bảng bố trí "Than hóa" = 4h HC (07:00–11:00, không vắt nghỉ trưa)', approx(sayDays[0].hours, 4));
+check('THAN HÃ“A + Sáº¤Y: giá» cáº§n = 105 phÃºt Ã· 60 = 1,75h', approx(sayDays[0].need, 105 / 60));
+check('THAN HÃ“A + Sáº¤Y: giá» thá»±c tá»« Báº£ng bá»‘ trÃ­ "Than hÃ³a" = 4h HC (07:00â€“11:00, khÃ´ng váº¯t nghá»‰ trÆ°a)', approx(sayDays[0].hours, 4));
 const sayRow = cap.capStageWeekRow(saySt, wk);
-check('THAN HÓA + SẤY: hiệu suất = 1,75 ÷ 4 = 43,75%', approx(sayRow.eff, 43.75, 1e-4));
-check('THAN HÓA + SẤY: nhãn ĐM hiện đủ 2 công đoạn sấy (S1 · S2) + phút/lần "105\'"',
+check('THAN HÃ“A + Sáº¤Y: hiá»‡u suáº¥t = 1,75 Ã· 4 = 43,75%', approx(sayRow.eff, 43.75, 1e-4));
+check('THAN HÃ“A + Sáº¤Y: nhÃ£n ÄM hiá»‡n Ä‘á»§ 2 cÃ´ng Ä‘oáº¡n sáº¥y (S1 Â· S2) + phÃºt/láº§n "105\'"',
   String(sayRow.rateText).includes('S1') && String(sayRow.rateText).includes('S2') && String(sayRow.rateText).includes("105'"));
 state.x2SayIncidents = { '2026-09-10': 1 };
 const sayRow2 = cap.capStageWeekRow(saySt, wk);
-check('THAN HÓA + SẤY: có sự cố 1h → hiệu suất = 1,75 ÷ (4 − 1) ≈ 58,3%', approx(sayRow2.eff, (1.75 / 3) * 100, 1e-4));
+check('THAN HÃ“A + Sáº¤Y: cÃ³ sá»± cá»‘ 1h â†’ hiá»‡u suáº¥t = 1,75 Ã· (4 âˆ’ 1) â‰ˆ 58,3%', approx(sayRow2.eff, (1.75 / 3) * 100, 1e-4));
 
-// ─── G. ÉP VÁN: m³/h theo phân vị ÉP VÁN thật ───────────────────
+// â”€â”€â”€ G. Ã‰P VÃN: mÂ³/h theo phÃ¢n vá»‹ Ã‰P VÃN tháº­t â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.pressRecords = [
   { id: 'p1', date: '2026-09-10', finishedQty: 20, vanTho: [{ vtDim: '1200x600x12', vtQty: 10 }] }
 ];
 state.x2EpVanRates = { '2026-09': 0.03 };
 const epSt = cap.CAP_STAGES.find(s => s.id === 'epvan');
 const epRow = cap.capStageWeekRow(epSt, wk);
-check('ÉP VÁN: thể tích tuần = 0,0864 m³ (10 tấm ván thô 1200×600×12)', approx(epRow.qty, 0.0864, 1e-6));
-check('ÉP VÁN: giờ từ phân vị Ép = 4h', approx(epRow.hours, 4));
-check('ÉP VÁN: hiệu suất = (0,0864÷4) ÷ 0,03 = 72%', approx(epRow.eff, 72, 1e-4));
+check('Ã‰P VÃN: thá»ƒ tÃ­ch tuáº§n = 0,0864 mÂ³ (10 táº¥m vÃ¡n thÃ´ 1200Ã—600Ã—12)', approx(epRow.qty, 0.0864, 1e-6));
+check('Ã‰P VÃN: giá» tá»« phÃ¢n vá»‹ Ã‰p = 4h', approx(epRow.hours, 4));
+check('Ã‰P VÃN: hiá»‡u suáº¥t = (0,0864Ã·4) Ã· 0,03 = 72%', approx(epRow.eff, 72, 1e-4));
 
-// ─── H. HIỆU SUẤT XƯỞNG (tầng 1) = bình quân gia quyền theo giờ ──
+// â”€â”€â”€ H. HIá»†U SUáº¤T XÆ¯á»žNG (táº§ng 1) = bÃ¬nh quÃ¢n gia quyá»n theo giá» â”€â”€
 const w = cap.capWorkshopWeekRow('x2', wk);
 const expectedWsEff = (cutRowRated.eff * cutRowRated.hours + cnRow.eff * cnRow.hours + sayRow2.eff * sayRow2.hours + epRow.eff * epRow.hours)
   / (cutRowRated.hours + cnRow.hours + sayRow2.hours + epRow.hours);
-check('XƯỞNG: 5 công đoạn có dữ liệu / 10 công đoạn Xưởng 2 còn công suất', w.dataCount === 5 && w.stagesCount === 10);
-check('XƯỞNG: tổng giờ = 9 + 4 + 3 + 4 + 4 = 24h (mỗi ngày mỗi CĐ đếm 1 lần)', approx(w.hours, 24));
-check('XƯỞNG: 4 công đoạn tính được hiệu suất · 0 công đoạn đạt ≥100%', w.effCount === 4 && w.passCount === 0);
-check('XƯỞNG: hiệu suất xưởng = bình quân gia quyền theo GIỜ', approx(w.eff, expectedWsEff, 1e-6));
-check('XƯỞNG: nút thắt cổ chai = Than Hóa + Sấy (hiệu suất thấp nhất)', w.bottleneck && w.bottleneck.st.id === 'say');
+check('XÆ¯á»žNG: 5 cÃ´ng Ä‘oáº¡n cÃ³ dá»¯ liá»‡u / 10 cÃ´ng Ä‘oáº¡n XÆ°á»Ÿng 2 cÃ²n cÃ´ng suáº¥t', w.dataCount === 5 && w.stagesCount === 10);
+check('XÆ¯á»žNG: tá»•ng giá» = 9 + 4 + 3 + 4 + 4 = 24h (má»—i ngÃ y má»—i CÄ Ä‘áº¿m 1 láº§n)', approx(w.hours, 24));
+check('XÆ¯á»žNG: 4 cÃ´ng Ä‘oáº¡n tÃ­nh Ä‘Æ°á»£c hiá»‡u suáº¥t Â· 0 cÃ´ng Ä‘oáº¡n Ä‘áº¡t â‰¥100%', w.effCount === 4 && w.passCount === 0);
+check('XÆ¯á»žNG: hiá»‡u suáº¥t xÆ°á»Ÿng = bÃ¬nh quÃ¢n gia quyá»n theo GIá»œ', approx(w.eff, expectedWsEff, 1e-6));
+check('XÆ¯á»žNG: nÃºt tháº¯t cá»• chai = Than HÃ³a + Sáº¥y (hiá»‡u suáº¥t tháº¥p nháº¥t)', w.bottleneck && w.bottleneck.st.id === 'say');
 
-// ─── I. RENDER 3 TẦNG + ĐỔI XƯỞNG + THU GỌN ─────────────────────
+// â”€â”€â”€ I. RENDER 3 Táº¦NG + Äá»”I XÆ¯á»žNG + THU Gá»ŒN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 cap.setCapacityWeek(wk);
-check('RENDER: nhãn xưởng mặc định "Xưởng 2"', document.getElementById('capacity-mode-label').textContent === 'Xưởng 2');
-check('RENDER: nhãn tuần hiện "Tuần ..."', document.getElementById('capacity-week-label').textContent.includes('Tuần'));
-check('RENDER: dải chip tổng quan có "Hiệu suất xưởng" + "Nút thắt"',
-  document.getElementById('cap-summary-strip').innerHTML.includes('Hiệu suất xưởng') &&
-  document.getElementById('cap-summary-strip').innerHTML.includes('Nút thắt'));
+check('RENDER: nhÃ£n xÆ°á»Ÿng máº·c Ä‘á»‹nh "XÆ°á»Ÿng 2"', document.getElementById('capacity-mode-label').textContent === 'XÆ°á»Ÿng 2');
+check('RENDER: nhÃ£n tuáº§n hiá»‡n "Tuáº§n ..."', document.getElementById('capacity-week-label').textContent.includes('Tuáº§n'));
+check('RENDER: dáº£i strip cÅ© Ä‘Ã£ áº©n; tháº» Hiá»‡u suáº¥t má»›i thay tháº¿',
+  document.getElementById('cap-summary-strip').hidden === true &&
+  document.getElementById('cap-visual-row').innerHTML.includes('cap-efficiency-card'));
 const tbody = document.getElementById('capacity-week-rows');
-check('RENDER: dòng tuần đang chọn mang data-cap-week-row', tbody.innerHTML.includes(`data-cap-week-row="${wk}"`));
-check('RENDER: bảng tầng 1 có ít nhất 2 dòng tuần (tuần dữ liệu + tuần hiện tại)',
+check('RENDER: dÃ²ng tuáº§n Ä‘ang chá»n mang data-cap-week-row', tbody.innerHTML.includes(`data-cap-week-row="${wk}"`));
+check('RENDER: báº£ng táº§ng 1 cÃ³ Ã­t nháº¥t 2 dÃ²ng tuáº§n (tuáº§n dá»¯ liá»‡u + tuáº§n hiá»‡n táº¡i)',
   (tbody.innerHTML.match(/data-cap-week-row=/g) || []).length >= 2);
-check('RENDER: cột Nút thắt hiện đúng công đoạn thấp nhất', tbody.innerHTML.includes('Than Hóa + Sấy'));
+check('RENDER: cá»™t NÃºt tháº¯t hiá»‡n Ä‘Ãºng cÃ´ng Ä‘oáº¡n tháº¥p nháº¥t', tbody.innerHTML.includes('Than HÃ³a + Sáº¥y'));
 cap.toggleCapacityWeekOpen(wk);
-check('TẦNG 2: bấm tuần → xổ bảng công đoạn (có cột "Định mức tuần")', tbody.innerHTML.includes('Định mức tuần'));
-check('TẦNG 2: có dòng Cắt Chọn kèm chip đơn vị xe/h', tbody.innerHTML.includes('Cắt Chọn') && tbody.innerHTML.includes('xe/h'));
-check('TẦNG 2: dòng Bào Thô hiện "chưa có ĐM" (chưa khai định mức)', tbody.innerHTML.includes('chưa có ĐM'));
-check('TẦNG 2: có cột So tuần trước + nút Mở thẻ công đoạn',
+check('Táº¦NG 2: báº¥m tuáº§n â†’ xá»• báº£ng cÃ´ng Ä‘oáº¡n (cÃ³ cá»™t "Äá»‹nh má»©c tuáº§n")', tbody.innerHTML.includes('Äá»‹nh má»©c tuáº§n'));
+check('Táº¦NG 2: cÃ³ dÃ²ng Cáº¯t Chá»n kÃ¨m Ä‘Æ¡n vá»‹ kg/h',
+  tbody.innerHTML.includes('Cáº¯t Chá»n') && tbody.innerHTML.includes('kg/h'));
+check('Táº¦NG 2: dÃ²ng BÃ o ThÃ´ hiá»‡n "chÆ°a cÃ³ ÄM" (chÆ°a khai Ä‘á»‹nh má»©c)', tbody.innerHTML.includes('chÆ°a cÃ³ ÄM'));
+check('Táº¦NG 2: cÃ³ cá»™t So tuáº§n trÆ°á»›c + nÃºt Má»Ÿ tháº» cÃ´ng Ä‘oáº¡n',
   tbody.innerHTML.includes('cap-delta') && tbody.innerHTML.includes('data-cap-open-card="x2-cut-card"'));
 cap.toggleCapacityStageDays('cut');
-check('TẦNG 3: bấm công đoạn → xổ khối NGÀY (cap-day-tr)', tbody.innerHTML.includes('cap-day-tr'));
-check('TẦNG 3: ngày 10/09/26 · 2,5 xe · công suất ngày 0,5 xe/h (2,5 ÷ 5h)', tbody.innerHTML.includes('10/09/26') && tbody.innerHTML.includes('2,5 xe') && tbody.innerHTML.includes('0,5 xe/h'));
+check('Táº¦NG 3: báº¥m cÃ´ng Ä‘oáº¡n â†’ xá»• khá»‘i NGÃ€Y (cap-day-tr)', tbody.innerHTML.includes('cap-day-tr'));
+check('Táº¦NG 3: ngÃ y 10/09/26 Â· 1.500 kg Â· cÃ´ng suáº¥t ngÃ y 300 kg/h',
+  tbody.innerHTML.includes('10/09/26') && tbody.innerHTML.includes('1.500 kg') &&
+  tbody.innerHTML.includes('300 kg/h'));
 cap.toggleCapacityStageDays('cut');
-check('TẦNG 3: bấm lần nữa → đóng khối ngày', !tbody.innerHTML.includes('cap-day-tr'));
-// ─── K. ĐIỀU HƯỚNG TUẦN + ĐỔI XƯỞNG + THU GỌN + NHỚ UI ─────────
+check('Táº¦NG 3: báº¥m láº§n ná»¯a â†’ Ä‘Ã³ng khá»‘i ngÃ y', !tbody.innerHTML.includes('cap-day-tr'));
+// â”€â”€â”€ K. ÄIá»€U HÆ¯á»šNG TUáº¦N + Äá»”I XÆ¯á»žNG + THU Gá»ŒN + NHá»š UI â”€â”€â”€â”€â”€â”€â”€â”€â”€
 cap.setCapacityWeek(wk);
 cap.shiftCapacityWeek(1);
-check('ĐIỀU HƯỚNG: › sang tuần kế → tuần mới được chọn + tầng công đoạn tự xổ',
+check('ÄIá»€U HÆ¯á»šNG: â€º sang tuáº§n káº¿ â†’ tuáº§n má»›i Ä‘Æ°á»£c chá»n + táº§ng cÃ´ng Ä‘oáº¡n tá»± xá»•',
   state.capUi.week === cap.capWeekShift(wk, 1) && state.capUi.weekOpen === state.capUi.week);
-check('ĐIỀU HƯỚNG: tuần không có dữ liệu → hiện thông báo (không bịa số)',
-  document.getElementById('capacity-week-rows').innerHTML.includes('Không có lượt nào trong tuần này'));
+check('ÄIá»€U HÆ¯á»šNG: tuáº§n khÃ´ng cÃ³ dá»¯ liá»‡u â†’ hiá»‡n thÃ´ng bÃ¡o (khÃ´ng bá»‹a sá»‘)',
+  document.getElementById('capacity-week-rows').innerHTML.includes('KhÃ´ng cÃ³ lÆ°á»£t nÃ o trong tuáº§n nÃ y'));
 cap.toggleCapacityWorkshop();
-check('XƯỞNG 1: đổi xưởng → nhãn "Xưởng 1" + thẻ gắn class cap-ws-x1',
-  document.getElementById('capacity-mode-label').textContent === 'Xưởng 1' &&
+check('XÆ¯á»žNG 1: Ä‘á»•i xÆ°á»Ÿng â†’ nhÃ£n "XÆ°á»Ÿng 1" + tháº» gáº¯n class cap-ws-x1',
+  document.getElementById('capacity-mode-label').textContent === 'XÆ°á»Ÿng 1' &&
   document.getElementById('capacity-card').classList.contains('cap-ws-x1'));
-check('XƯỞNG 1: bảng hiện thông báo "chưa có số liệu" (đã khai 3 công đoạn, chưa ghi lượt — KHÔNG bịa số)',
-  document.getElementById('capacity-week-rows').innerHTML.includes('Xưởng 1 — chưa có số liệu.') &&
-  document.getElementById('capacity-week-rows').innerHTML.includes('Cắt Ống · Sấy Sinh · Bốc'));
-check('XƯỞNG 1: sổ đăng ký đã có 7 công đoạn X1 · chưa có tuần dữ liệu nào',
+check('XÆ¯á»žNG 1: báº£ng hiá»‡n thÃ´ng bÃ¡o "chÆ°a cÃ³ sá»‘ liá»‡u" (Ä‘Ã£ khai 3 cÃ´ng Ä‘oáº¡n, chÆ°a ghi lÆ°á»£t â€” KHÃ”NG bá»‹a sá»‘)',
+  document.getElementById('capacity-week-rows').innerHTML.includes('XÆ°á»Ÿng 1 â€” chÆ°a cÃ³ sá»‘ liá»‡u.') &&
+  document.getElementById('capacity-week-rows').innerHTML.includes('Cáº¯t á»ng Â· Sáº¥y Sinh Â· Bá»‘c'));
+check('XÆ¯á»žNG 1: sá»• Ä‘Äƒng kÃ½ Ä‘Ã£ cÃ³ 7 cÃ´ng Ä‘oáº¡n X1 Â· chÆ°a cÃ³ tuáº§n dá»¯ liá»‡u nÃ o',
   cap.capStagesOf('x1').length === 7 && cap.capWeekRowsFor('x1').length === 0);
 cap.toggleCapacityWorkshop();
-check('XƯỞNG 2: đổi lại → nhãn "Xưởng 2"', document.getElementById('capacity-mode-label').textContent === 'Xưởng 2');
+check('XÆ¯á»žNG 2: Ä‘á»•i láº¡i â†’ nhÃ£n "XÆ°á»Ÿng 2"', document.getElementById('capacity-mode-label').textContent === 'XÆ°á»Ÿng 2');
 cap.toggleCapacityCollapse();
-check('THU GỌN: thân thẻ ẩn + nút thành "Mở rộng"',
+check('THU Gá»ŒN: thÃ¢n tháº» áº©n + nÃºt thÃ nh "Má»Ÿ rá»™ng"',
   document.getElementById('capacity-body').hidden === true &&
-  document.getElementById('cap-toggle-label').textContent === 'Mở rộng');
+  document.getElementById('cap-toggle-label').textContent === 'Má»Ÿ rá»™ng');
 cap.toggleCapacityCollapse();
-check('THU GỌN: mở lại thân thẻ', document.getElementById('capacity-body').hidden === false);
+check('THU Gá»ŒN: má»Ÿ láº¡i thÃ¢n tháº»', document.getElementById('capacity-body').hidden === false);
 cap.setCapacityWeek(wk);
 const savedUi = JSON.parse(localStorage.getItem(STORAGE_KEY_CAPACITY_UI) || '{}');
-check('NHỚ UI: trạng thái đã lưu theo máy (xưởng + tuần đang xem)',
+check('NHá»š UI: tráº¡ng thÃ¡i Ä‘Ã£ lÆ°u theo mÃ¡y (xÆ°á»Ÿng + tuáº§n Ä‘ang xem)',
   savedUi.ws === 'x2' && savedUi.week === wk);
 localStorage.setItem(STORAGE_KEY_CAPACITY_UI, JSON.stringify({ ws: 'x9', week: 'khong-hop-le', collapsed: 'yes' }));
 cap.loadCapacityUi();
-check('NHỚ UI: dữ liệu rác tự về mặc định an toàn (x2 · week rỗng · không thu gọn)',
+check('NHá»š UI: dá»¯ liá»‡u rÃ¡c tá»± vá» máº·c Ä‘á»‹nh an toÃ n (x2 Â· week rá»—ng Â· khÃ´ng thu gá»n)',
   state.capUi.ws === 'x2' && state.capUi.week === '' && state.capUi.collapsed === false);
-cap.setCapacityWeek(wk); // nạp lại tuần dữ liệu cho các kiểm thử sau
+cap.setCapacityWeek(wk); // náº¡p láº¡i tuáº§n dá»¯ liá»‡u cho cÃ¡c kiá»ƒm thá»­ sau
 
-// ─── L. SPARKLINE HIỆU SUẤT 8 TUẦN TRÊN MINI CARD ───────────────
+// â”€â”€â”€ L. SPARKLINE HIá»†U SUáº¤T 8 TUáº¦N TRÃŠN MINI CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 cap.renderX2MiniSparklines();
-check('SPARK: thẻ Cắt Chọn có SVG + số % tuần này',
+check('SPARK: tháº» Cáº¯t Chá»n cÃ³ SVG + sá»‘ % tuáº§n nÃ y',
   document.getElementById('x2-mini-spark-cut').innerHTML.includes('cap-spark-svg') &&
   document.getElementById('x2-mini-spark-cut').innerHTML.includes('cap-spark-val'));
-check('SPARK: thẻ Bullig chưa có dữ liệu → "chưa có ĐM" (không bịa số)',
+check('SPARK: tháº» Bullig chÆ°a cÃ³ dá»¯ liá»‡u â†’ "chÆ°a cÃ³ ÄM" (khÃ´ng bá»‹a sá»‘)',
   document.getElementById('x2-mini-spark-bullig').innerHTML.includes('cap-spark-none'));
-check('SPARK: thẻ Than Hóa + Sấy có sparkline (dòng gộp có hiệu suất)',
+check('SPARK: tháº» Than HÃ³a + Sáº¥y cÃ³ sparkline (dÃ²ng gá»™p cÃ³ hiá»‡u suáº¥t)',
   document.getElementById('x2-mini-spark-than-hoa').innerHTML.includes('cap-spark-svg'));
 const sparkCut = cap.capSparkSeries(['cut']);
-check('SPARK: chuỗi 8 tuần · phần tử CUỐI là tuần có dữ liệu có hiệu suất',
+check('SPARK: chuá»—i 8 tuáº§n Â· pháº§n tá»­ CUá»I lÃ  tuáº§n cÃ³ dá»¯ liá»‡u cÃ³ hiá»‡u suáº¥t',
   sparkCut.length === 8 && sparkCut[7].eff != null);
-check('SPARK: 8 chổ gắn sparkline đều có trong index.html (8 thẻ launcher có dữ liệu)',
+check('SPARK: 8 chá»• gáº¯n sparkline Ä‘á»u cÃ³ trong index.html (8 tháº» launcher cÃ³ dá»¯ liá»‡u)',
   ['cut', 'bo-ong', 'bao-tho', 'chon-nan-tho', 'than-hoa', 'bao-tinh', 'ep-van', 'bullig']
     .every(k => indexHtml.includes(`id="x2-mini-spark-${k}"`)));
 
-// ─── M. CẤU TRÚC + SỔ ĐĂNG KÝ ───────────────────────────────────
-check('CẤU TRÚC (index.html): thẻ tổng hợp đủ nút (đổi xưởng · tuần · thu gọn · bảng tuần)',
+// â”€â”€â”€ M. Cáº¤U TRÃšC + Sá»” ÄÄ‚NG KÃ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('Cáº¤U TRÃšC (index.html): tháº» tá»•ng há»£p Ä‘á»§ nÃºt (Ä‘á»•i xÆ°á»Ÿng Â· tuáº§n Â· thu gá»n Â· báº£ng tuáº§n)',
   indexHtml.includes('id="capacity-card"') && indexHtml.includes('id="capacity-week-rows"') &&
   indexHtml.includes('id="capacity-mode-toggle"') && indexHtml.includes('id="btn-toggle-capacity"') &&
   indexHtml.includes('id="capacity-week-prev"') && indexHtml.includes('id="capacity-week-next"'));
-check('CẤU TRÚC (index.html): thẻ tổng hợp đặt TRƯỚC thẻ biểu đồ gộp #plan-vs-press-card (lãnh đạo thấy đầu tiên)',
+check('Cáº¤U TRÃšC (index.html): tháº» tá»•ng há»£p Ä‘áº·t TRÆ¯á»šC tháº» biá»ƒu Ä‘á»“ gá»™p #plan-vs-press-card (lÃ£nh Ä‘áº¡o tháº¥y Ä‘áº§u tiÃªn)',
   indexHtml.indexOf('id="capacity-card"') >= 0 &&
   indexHtml.indexOf('id="capacity-card"') < indexHtml.indexOf('id="plan-vs-press-card"'));
-check('CẤU TRÚC (index.html): chữ nút toolbar bọc .cap-btn-text để gọn trên điện thoại (desktop vẫn hiện)',
-  indexHtml.includes('class="cap-btn-text">Biểu đồ') && indexHtml.includes('class="cap-btn-text">Bảng dữ liệu') &&
-  indexHtml.includes('class="cap-btn-text">In báo cáo') && indexHtml.includes('id="cap-toggle-label"') &&
+check('Cáº¤U TRÃšC (index.html): chá»¯ nÃºt toolbar bá»c .cap-btn-text Ä‘á»ƒ gá»n trÃªn Ä‘iá»‡n thoáº¡i (desktop váº«n hiá»‡n)',
+  indexHtml.includes('class="cap-btn-text">Biá»ƒu Ä‘á»“') && indexHtml.includes('class="cap-btn-text">Báº£ng dá»¯ liá»‡u') &&
+  indexHtml.includes('class="cap-btn-text">In bÃ¡o cÃ¡o') && indexHtml.includes('id="cap-toggle-label"') &&
   indexHtml.includes('id="cap-view-visual"') && indexHtml.includes('id="btn-cap-print"'));
-check('CẤU TRÚC (styles.css): khối CSS thẻ tổng hợp + sparkline + màu ngưỡng',
+check('Cáº¤U TRÃšC (styles.css): khá»‘i CSS tháº» tá»•ng há»£p + sparkline + mÃ u ngÆ°á»¡ng',
   stylesCss.includes('.cap-mode-btn') && stylesCss.includes('.cap-spark-svg') &&
   stylesCss.includes('.cap-eff-good') && stylesCss.includes('.cap-eff-low'));
-check('CẤU TRÚC (styles.css): điện thoại ẩn chữ cụm Biểu đồ/Bảng + In/Thu gọn, giữ chữ Tuần/Tháng',
+check('Cáº¤U TRÃšC (styles.css): Ä‘iá»‡n thoáº¡i áº©n chá»¯ cá»¥m Biá»ƒu Ä‘á»“/Báº£ng + In/Thu gá»n, giá»¯ chá»¯ Tuáº§n/ThÃ¡ng',
   stylesCss.includes('.cap-view-toggle .cap-btn-text') && stylesCss.includes('display: none') &&
   stylesCss.includes('.cap-period-toggle .pv-unit-btn'));
-check('CẤU TRÚC (sw.js): APP_SHELL có js/capacity.js', swJs.includes("'./js/capacity.js'"));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v456', /nha-may-ngoc-son-v456/.test(swJs));
-check('SỔ ĐĂNG KÝ: Cắt Ván và Bào Ván không còn dòng công suất; còn 10 dòng Xưởng 2 · 7 thao tác Xưởng 1',
+check('LAYOUT: tháº» Giá» lÃ m chia 1/4 KPI dá»c vÃ  3/4 chart',
+  stylesCss.includes('grid-template-columns: minmax(150px, 1fr) minmax(0, 3fr)') &&
+  stylesCss.includes('.cap-hours-kpis') && stylesCss.includes('flex-direction: column'));
+check('Cáº¤U TRÃšC (sw.js): APP_SHELL cÃ³ js/capacity.js', swJs.includes("'./js/capacity.js'"));
+check('Cáº¤U TRÃšC (sw.js): Ä‘Ã£ tÄƒng CACHE_NAME v486', /nha-may-ngoc-son-v486/.test(swJs));
+check('Sá»” ÄÄ‚NG KÃ: Cáº¯t VÃ¡n vÃ  BÃ o VÃ¡n khÃ´ng cÃ²n dÃ²ng cÃ´ng suáº¥t; cÃ²n 10 dÃ²ng XÆ°á»Ÿng 2 Â· 7 thao tÃ¡c XÆ°á»Ÿng 1',
   cap.capStagesOf('x2').length === 10 && cap.capStagesOf('x1').length === 7 &&
   !cap.capStagesOf('x2').some(s => String(s.id).startsWith('catvan_') || String(s.id).startsWith('baovan_')) &&
   cap.capStagesOf('x1').map(s => s.id).join(',') ===
     'x1catong,x1saysinh,x1boc,x1locong,x1catmat,x1bo,x1locthanh');
-check('SỔ ĐĂNG KÝ: mỗi công đoạn khai đủ đơn vị + thẻ gốc ở tab Công Đoạn (cardId) + xưởng đúng',
+check('Sá»” ÄÄ‚NG KÃ: má»—i cÃ´ng Ä‘oáº¡n khai Ä‘á»§ Ä‘Æ¡n vá»‹ + tháº» gá»‘c á»Ÿ tab CÃ´ng Äoáº¡n (cardId) + xÆ°á»Ÿng Ä‘Ãºng',
   cap.CAP_STAGES.every(s => s.cardId && s.unit && s.unitQty &&
     (s.ws === 'x2' || (s.ws === 'x1' && s.cardId.startsWith('x1-')))) &&
   cap.CAP_STAGES.filter(s => s.ws === 'x1').every(s => s.cardId.startsWith('x1-')));
 
-// ─── N. CHẾ ĐỘ "BIỂU ĐỒ" ⇄ "BẢNG DỮ LIỆU" + 4 WIDGET TRỰC QUAN ──
+// â”€â”€â”€ N. CHáº¾ Äá»˜ "BIá»‚U Äá»’" â‡„ "Báº¢NG Dá»® LIá»†U" + 4 WIDGET TRá»°C QUAN â”€â”€
 state.capUi.chartStage = '';
-cap.setCapacityWeek(wk); // render lại với tuần dữ liệu (chế độ mặc định)
+cap.setCapacityWeek(wk); // render láº¡i vá»›i tuáº§n dá»¯ liá»‡u (cháº¿ Ä‘á»™ máº·c Ä‘á»‹nh)
 const visualRow = document.getElementById('cap-visual-row');
-check('CHẾ ĐỘ: mặc định là "Biểu đồ" (visual)', state.capUi.view === 'visual');
-check('CHẾ ĐỘ: nút "Biểu đồ" đang active, nút "Bảng" không',
+check('CHáº¾ Äá»˜: máº·c Ä‘á»‹nh lÃ  "Biá»ƒu Ä‘á»“" (visual)', state.capUi.view === 'visual');
+check('CHáº¾ Äá»˜: nÃºt "Biá»ƒu Ä‘á»“" Ä‘ang active, nÃºt "Báº£ng" khÃ´ng',
   document.getElementById('cap-view-visual').classList.contains('active') &&
   !document.getElementById('cap-view-table').classList.contains('active'));
 const wEffNow = cap.capWorkshopWeekRow('x2', wk);
-check('GAUGE: có đồng hồ + số % khớp hiệu suất xưởng tính được',
-  visualRow.innerHTML.includes('cap-gauge-val') &&
-  visualRow.innerHTML.includes(wEffNow.eff.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%'));
-check('GAUGE: chip "Nút thắt" hiện đúng công đoạn Than Hóa + Sấy',
-  visualRow.innerHTML.includes('Nút thắt') && visualRow.innerHTML.includes('Than Hóa + Sấy'));
-check('RANK: không còn dòng công suất Cắt Ván/Bào Ván (data-cap-rank)', (visualRow.innerHTML.match(/data-cap-rank=/g) || []).length === 10);
-check('RANK: tag "nút thắt" gắn đúng Than Hóa + Sấy', /Than Hóa \+ Sấy[^<]*<em class="cap-rank-bt"/.test(visualRow.innerHTML));
-check('GỠ BẢN ĐỒ NHIỆT: dải trực quan KHÔNG còn lưới nhiệt (đã bỏ 21/10/2026 để tiết kiệm diện tích)',
+check('CARDS: cÃ³ 3 tháº» má»›i Hiá»‡u suáº¥t Â· Giá» Â· Lao Ä‘á»™ng',
+  visualRow.innerHTML.includes('cap-efficiency-card') &&
+  visualRow.innerHTML.includes('cap-hours-card') &&
+  visualRow.innerHTML.includes('cap-labor-card'));
+check('CARDS: nÃºt tháº¯t Ä‘Ãºng cÃ´ng Ä‘oáº¡n Than HÃ³a + Sáº¥y',
+  visualRow.innerHTML.includes('NÃºt tháº¯t') && visualRow.innerHTML.includes('Than HÃ³a + Sáº¥y'));
+check('CARDS: chá»n cÃ´ng Ä‘oáº¡n báº±ng selector má»›i, khÃ´ng cÃ²n data-cap-rank',
+  visualRow.innerHTML.includes('data-cap-open-stage') &&
+  !visualRow.innerHTML.includes('data-cap-rank'));
+check('Gá»  Báº¢N Äá»’ NHIá»†T: dáº£i trá»±c quan KHÃ”NG cÃ²n lÆ°á»›i nhiá»‡t (Ä‘Ã£ bá» 21/10/2026 Ä‘á»ƒ tiáº¿t kiá»‡m diá»‡n tÃ­ch)',
   !visualRow.innerHTML.includes('data-cap-heat') && !visualRow.innerHTML.includes('cap-heat'));
-check('CHART: mặc định tự chọn NÚT THẮT (Than Hóa + Sấy) → panel đúng tiêu đề + canvas (trong dải trực quan)',
-  state.capUi.chartStage === 'say' &&
-  visualRow.innerHTML.includes('cap-chart-head') && visualRow.innerHTML.includes('Than Hóa + Sấy') &&
-  visualRow.innerHTML.includes('id="cap-stage-chart"'));
-check('CHART: instance Chart.js đã tạo', !!state.capacityStageInstance);
-cap.selectCapacityStage('cut');
-check('CHART: bấm hàng rank "Cắt Chọn" → panel đổi tiêu đề + dựng lại instance',
-  visualRow.innerHTML.includes('<strong>Cắt Chọn</strong> — 8 tuần gần nhất') && !!state.capacityStageInstance);
-cap.selectCapacityStage('cut'); // bấm lần nữa → đóng panel
-check('CHART: bấm lần nữa → đóng panel (KHÔNG tự mở lại nút thắt)',
-  state.capUi.chartStage === '' && state.capUi.chartClosed === true &&
-  document.getElementById('cap-stage-chart-panel').hidden === true && state.capacityStageInstance == null);
-cap.setCapacityWeek(cap.capWeekShift(wk, -1)); // đổi kỳ về tuần trước
-cap.selectCapacityStage('cut');
-check('CHART: đổi kỳ (‹ ›) rồi chọn công đoạn → đúng kỳ + mở panel đúng công đoạn',
-  state.capUi.week === cap.capWeekShift(wk, -1) && state.capUi.chartStage === 'cut');
-cap.setCapacityWeek(wk); // quay lại tuần dữ liệu
-// Thiếu Chart.js → hiện text thay thế, KHÔNG crash (guard window.Chart)
-const ChartStubKeep = global.Chart;
-delete global.Chart;
-cap.selectCapacityStage('baotinh');
-check('CHART: thiếu Chart.js → hiện text thay thế, instance hủy sạch',
-  document.getElementById('cap-stage-chart-box').innerHTML.includes('cap-chart-fallback') &&
+check('ÄÃƒ Bá»Ž CHART 8 TUáº¦N (11/2026 â€” khÃ´ng dÃ¹ng): dáº£i trá»±c quan KHÃ”NG cÃ²n panel biá»ƒu Ä‘á»“ cÃ´ng Ä‘oáº¡n',
+  !visualRow.innerHTML.includes('cap-stage-chart-panel') && !visualRow.innerHTML.includes('id="cap-stage-chart"'));
+check('ÄÃƒ Bá»Ž CHART 8 TUáº¦N: instance biá»ƒu Ä‘á»“ cÃ´ng Ä‘oáº¡n khÃ´ng cÃ²n Ä‘Æ°á»£c táº¡o á»Ÿ cháº¿ Ä‘á»™ Biá»ƒu Ä‘á»“',
   state.capacityStageInstance == null);
-global.Chart = ChartStubKeep;
-cap.selectCapacityStage('cut'); // khôi phục canvas + biểu đồ
-// Chuyển sang chế độ BẢNG DỮ LIỆU
+check('ÄÃƒ Bá»Ž CHART 8 TUáº¦N: báº¥m chip cÃ´ng Ä‘oáº¡n khÃ´ng crash (panel Ä‘Ã£ bá», má»Ÿ tháº» qua events)',
+  (cap.selectCapacityStage('cut'), cap.selectCapacityStage('cut'), state.capacityStageInstance == null));
+cap.setCapacityWeek(wk); // quay láº¡i tuáº§n dá»¯ liá»‡u
+check('ÄÃƒ Bá»Ž CHART 8 TUáº¦N: sau khi Ä‘á»•i ká»³, dáº£i trá»±c quan váº«n khÃ´ng cÃ³ panel biá»ƒu Ä‘á»“',
+  !visualRow.innerHTML.includes('cap-stage-chart-panel'));
+// Chuyá»ƒn sang cháº¿ Ä‘á»™ Báº¢NG Dá»® LIá»†U
 cap.setCapacityView('table');
-check('CHẾ ĐỘ: nút "Bảng dữ liệu" active + dải trực quan ẨN và RỖNG (tránh 2 canvas cùng id)',
+check('CHáº¾ Äá»˜: nÃºt "Báº£ng dá»¯ liá»‡u" active + dáº£i trá»±c quan áº¨N vÃ  Rá»–NG (trÃ¡nh 2 canvas cÃ¹ng id)',
   document.getElementById('cap-view-table').classList.contains('active') &&
   document.getElementById('cap-visual-row').hidden === true &&
   document.getElementById('cap-visual-row').innerHTML === '');
-check('CHẾ ĐỘ: bảng 3 tầng hiện lại (table-wrap không ẩn)', document.getElementById('cap-table-wrap').hidden === false);
-cap.toggleCapacityWeekOpen(wk); // mở tầng công đoạn của tuần dữ liệu
+check('CHáº¾ Äá»˜: báº£ng 3 táº§ng hiá»‡n láº¡i (table-wrap khÃ´ng áº©n)', document.getElementById('cap-table-wrap').hidden === false);
+cap.toggleCapacityWeekOpen(wk); // má»Ÿ táº§ng cÃ´ng Ä‘oáº¡n cá»§a tuáº§n dá»¯ liá»‡u
 cap.toggleCapacityStageDays('cut');
-check('CHẾ ĐỘ BẢNG: tầng 2 mở → chart combo hiện ngay trong khối tầng 2 (cap-chart-tr + instance)',
-  document.getElementById('capacity-week-rows').innerHTML.includes('cap-chart-tr') && !!state.capacityStageInstance);
+check('CHẾ ĐỘ BẢNG: tầng 2 mở → KHÔNG còn biểu đồ 8 kỳ (đã gỡ 27/11/2026)',
+  !document.getElementById('capacity-week-rows').innerHTML.includes('cap-chart-tr') && !state.capacityStageInstance);
 cap.toggleCapacityStageDays('cut');
 const savedView = JSON.parse(localStorage.getItem(STORAGE_KEY_CAPACITY_UI) || '{}');
-check('NHỚ UI: chế độ "Bảng dữ liệu" đã lưu theo máy', savedView.view === 'table');
+check('NHá»š UI: cháº¿ Ä‘á»™ "Báº£ng dá»¯ liá»‡u" Ä‘Ã£ lÆ°u theo mÃ¡y', savedView.view === 'table');
 cap.setCapacityView('visual');
 const savedView2 = JSON.parse(localStorage.getItem(STORAGE_KEY_CAPACITY_UI) || '{}');
-check('CHẾ ĐỘ: quay lại "Biểu đồ" → dải trực quan đủ 3 khối + đã lưu',
+check('CHáº¾ Äá»˜: quay láº¡i "Biá»ƒu Ä‘á»“" â†’ dáº£i 4 tháº», KHÃ”NG cÃ²n panel biá»ƒu Ä‘á»“ 8 tuáº§n',
   savedView2.view === 'visual' && document.getElementById('cap-visual-row').hidden === false &&
-  visualRow.innerHTML.includes('cap-gauge') && visualRow.innerHTML.includes('cap-rank') &&
-  !visualRow.innerHTML.includes('cap-heat') && visualRow.innerHTML.includes('cap-stage-chart-panel'));
+  visualRow.innerHTML.includes('cap-efficiency-card') &&
+  visualRow.innerHTML.includes('cap-hours-card') &&
+  visualRow.innerHTML.includes('cap-labor-card') &&
+  !visualRow.innerHTML.includes('cap-heat') && !visualRow.innerHTML.includes('cap-stage-chart-panel'));
 const dashJs = fs.readFileSync(new URL('../js/dashboard.js', import.meta.url), 'utf8');
 const capJs = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (index.html): nút chuyển chế độ + khối trực quan (canvas do JS dựng)',
+check('LAYOUT: hiá»‡u suáº¥t tá»± xuá»‘ng nhiá»u hÃ ng vÃ  cÃ³ sáº£n lÆ°á»£ng cáº£ ká»³',
+  stylesCss.includes('repeat(auto-fit, minmax(86px, 1fr))') &&
+  capJs.includes('Sáº£n lÆ°á»£ng cáº£ ká»³') &&
+  capJs.includes('quantityByUnit'));
+check('Cáº¤U TRÃšC (index.html): nÃºt chuyá»ƒn cháº¿ Ä‘á»™ + khá»‘i trá»±c quan (canvas do JS dá»±ng)',
   indexHtml.includes('data-cap-view="visual"') && indexHtml.includes('data-cap-view="table"') &&
   indexHtml.includes('id="cap-visual-row"') && indexHtml.includes('id="cap-table-wrap"'));
-check('CẤU TRÚC (capacity.js): panel biểu đồ dựng canvas #cap-stage-chart + plugin vạch 100%',
-  capJs.includes('id="cap-stage-chart"') && capJs.includes("id: 'capTargetLine'"));
-check('CẤU TRÚC (dashboard.js): nút mở rộng nhận thẻ tổng hợp + instance chart riêng',
-  dashJs.includes('.capacity-card') && dashJs.includes('#cap-stage-chart'));
-check('CẤU TRÚC (styles.css): CSS widget trực quan + cảnh báo quá hạn + fullscreen thẻ tổng hợp',
+check('CẤU TRÚC (capacity.js): KHÔNG còn panel biểu đồ 8 kỳ / plugin vạch 100% (đã gỡ 27/11/2026)',
+  !capJs.includes('id="cap-stage-chart"') && !capJs.includes("id: 'capTargetLine'"));
+check('CẤU TRÚC (dashboard.js): KHÔNG còn tham chiếu canvas #cap-stage-chart',
+  dashJs.includes('.capacity-card') && !dashJs.includes('#cap-stage-chart'));
+check('Cáº¤U TRÃšC (styles.css): CSS widget trá»±c quan + cáº£nh bÃ¡o quÃ¡ háº¡n + fullscreen tháº» tá»•ng há»£p',
   stylesCss.includes('.cap-stale-head') && stylesCss.includes('.cap-gauge-svg') &&
   stylesCss.includes('.capacity-card:fullscreen') && !stylesCss.includes('.cap-heat-cell'));
 
-// ─── O. NÚT CHẾ ĐỘ TƯƠNG PHẢN · KÉO NGANG NHIỆT · MÀU TAB ĐANG CHỌN ──
-check('NÚT CHẾ ĐỘ: nút chưa chọn = chữ ĐẬM (không còn chữ trắng khó thấy)',
+// â”€â”€â”€ O. NÃšT CHáº¾ Äá»˜ TÆ¯Æ NG PHáº¢N Â· KÃ‰O NGANG NHIá»†T Â· MÃ€U TAB ÄANG CHá»ŒN â”€â”€
+check('NÃšT CHáº¾ Äá»˜: nÃºt chÆ°a chá»n = chá»¯ Äáº¬M (khÃ´ng cÃ²n chá»¯ tráº¯ng khÃ³ tháº¥y)',
   stylesCss.includes('.pv-unit-btn {') &&
-  stylesCss.includes('color: var(--text-main); /* chữ ĐẬM — đọc rõ trên nền thẻ sáng/khaki */'));
-check('NÚT CHẾ ĐỘ: nút đang chọn nổi gradient xanh teal + chữ trắng',
+  stylesCss.includes('color: var(--text-main); /* chá»¯ Äáº¬M â€” Ä‘á»c rÃµ trÃªn ná»n tháº» sÃ¡ng/khaki */'));
+check('NÃšT CHáº¾ Äá»˜: nÃºt Ä‘ang chá»n ná»•i gradient xanh teal + chá»¯ tráº¯ng',
   stylesCss.includes('.pv-unit-btn.active') &&
   stylesCss.includes('background: linear-gradient(135deg, #0f766e, #0369a1)'));
-check('GỠ BẢN ĐỒ NHIỆT: KHÔNG còn CSS lưới nhiệt / kéo ngang nhiệt (đã bỏ 21/10/2026)',
+check('Gá»  Báº¢N Äá»’ NHIá»†T: KHÃ”NG cÃ²n CSS lÆ°á»›i nhiá»‡t / kÃ©o ngang nhiá»‡t (Ä‘Ã£ bá» 21/10/2026)',
   !stylesCss.includes('.cap-heat-grid') && !stylesCss.includes('.cap-heat-dragging') &&
   !stylesCss.includes('.cap-heat-cell') && !capJs.includes('capAttachHeatDrag'));
-check('GỠ BẢN ĐỒ NHIỆT: KHÔNG còn markup/handler ô nhiệt trong capacity.js + events.js',
+check('Gá»  Báº¢N Äá»’ NHIá»†T: KHÃ”NG cÃ²n markup/handler Ã´ nhiá»‡t trong capacity.js + events.js',
   !capJs.includes('data-cap-heat') && !capJs.includes('capHeatHtml') &&
   !fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8').includes('data-cap-heat'));
-check('TAB: bỏ ép màu xanh lá #2e7d32 cho tab đang chọn ở theme hiện tại',
+check('TAB: bá» Ã©p mÃ u xanh lÃ¡ #2e7d32 cho tab Ä‘ang chá»n á»Ÿ theme hiá»‡n táº¡i',
   !stylesCss.includes('body[data-theme="night"] .nav-btn.active') &&
   !stylesCss.includes('#2e7d32;\n  text-shadow'));
-check('TAB: tab Nhân Sự có màu đặc trưng riêng (hổ phách) + bỏ accent tab đã xóa',
+check('TAB: tab NhÃ¢n Sá»± cÃ³ mÃ u Ä‘áº·c trÆ°ng riÃªng (há»• phÃ¡ch) + bá» accent tab Ä‘Ã£ xÃ³a',
   stylesCss.includes('data-target="hr-view"') && stylesCss.includes('--tab-accent: #d97706') &&
   !stylesCss.includes('data-target="press-view"'));
 
-// ─── P. CHẾ ĐỘ THÁNG + GIỜ HC/TC TÁCH RIÊNG + IN BÁO CÁO (30/09/2026) ──
-// P1. Nhãn + dịch tháng (vắt năm)
-check('THÁNG: dịch ±1 tháng vắt năm đúng (2025-01 −1 = 2024-12 · 2024-12 +1 = 2025-01)',
+
+// â”€â”€â”€ Q. THáºº LAO Äá»˜NG / CHáº¤M CÃ”NG: Äáº¾M ÄÆ N + 3 Táº¦NG TRáº NG THÃI + 2 BIá»‚U Äá»’ â”€â”€
+state.hrLeaves = [
+  { id: "l1", from: "2026-09-07", to: "2026-09-07", status: "pending" },
+  { id: "l2", from: "2026-09-08", to: "2026-09-08", status: "pending" },
+  { id: "l3", from: "2026-09-09", to: "2026-09-09", status: "pending" },
+  { id: "l4", from: "2026-09-10", to: "2026-09-10", status: "pending" },
+  { id: "l5", from: "2026-09-11", to: "2026-09-11", status: "pending" }
+];
+state.hrOvertimes = [];
+const wkRange = cap.capPeriodRangeOf(wk, "week");
+const tiles = cap.capApprovalTilesForPeriod(wkRange);
+check("Äáº¾M ÄÆ N: 5 Ä‘Æ¡n nghá»‰ phÃ©p chá» duyá»‡t â†’ leave.pending = 5", tiles.leave.pending === 5 && tiles.leave.total === 5);
+check("Äáº¾M ÄÆ N: khÃ´ng cÃ³ Ä‘Æ¡n tÄƒng ca â†’ overtime.total = 0", tiles.overtime.total === 0);
+check("Äáº¾M ÄÆ N: tráº¡ng thÃ¡i leave = bad khi cÃ³ Ä‘Æ¡n chá»", tiles.leave.state === "bad");
+
+const laborKpiHtml = cap.capLaborKpiCard("x2", { weekKey: wk, eff: null, hc: 0, tc: 0, hours: 0 }, wk, "week");
+const laborChartHtml = cap.capLaborChartCard("x2", { weekKey: wk, eff: null, hc: 0, tc: 0, hours: 0 }, wk, "week");
+check("LAO Äá»˜NG: cÃ³ tá»•ng lao Ä‘á»™ng trong ká»³", laborKpiHtml.includes("Tá»•ng lao Ä‘á»™ng trong ká»³"));
+check("LAO Äá»˜NG: cÃ³ tá»· lá»‡ Ä‘i lÃ m trong ká»³ (táº§ng trÃªn)", laborKpiHtml.includes("Tá»· lá»‡ Ä‘i lÃ m trong ká»³"));
+check("LAO Äá»˜NG: cÃ³ hÃ´m nay + cáº£ ká»³ (táº§ng dÆ°á»›i)", laborKpiHtml.includes("HÃ´m nay") && laborKpiHtml.includes("Cáº£ ká»³"));
+check("LAO Äá»˜NG: tile duyá»‡t nghá»‰ phÃ©p hiá»‡n sá»‘ chá» duyá»‡t", laborKpiHtml.includes("duyá»‡t 0 Â· chá» 5 Â· tá»« chá»‘i 0"));
+check("BIá»‚U Äá»’ LAO Äá»˜NG: 2 canvas riÃªng (lá»±c lÆ°á»£ng + tá»· lá»‡)", laborChartHtml.includes(`id="cap-labor-wf-chart"`) && laborChartHtml.includes(`id="cap-labor-att-chart"`));
+check("BIá»‚U Äá»’ LAO Äá»˜NG: KHÃ”NG cÃ²n canvas cÅ© cap-labor-chart", !laborChartHtml.includes(`id="cap-labor-chart"`));
+
+// â€” Sá»¬A Lá»–I LUÃ”N 100%: máº«u sá»‘ = Tá»”NG lao Ä‘á»™ng xÆ°á»Ÿng (khÃ´ng phá»¥ thuá»™c phÃ¢n cÃ´ng) â€”
+const qEmp = state.hrEmployees, qAsg = state.hrAssignments, qAtt = state.hrAttendance;
+state.hrEmployees = [
+  { id: "q1", name: "CÃ´ng A", department: "XÆ°á»Ÿng 2", status: "active" },
+  { id: "q2", name: "CÃ´ng B", department: "XÆ°á»Ÿng 2", status: "active" },
+  { id: "q3", name: "CÃ´ng C", department: "XÆ°á»Ÿng 2", status: "active" },
+  { id: "q4", name: "ÄÃ£ nghá»‰", department: "XÆ°á»Ÿng 2", status: "quit" },
+  { id: "q5", name: "QC ngÆ°á»i", department: "QC", status: "active" }
+];
+state.hrAssignments = [];
+state.hrAttendance = [];
+check("MáºªU Sá»: tá»•ng lao Ä‘á»™ng XÆ°á»Ÿng 2 = 3 (bá» ngÆ°á»i nghá»‰ viá»‡c + bá»™ pháº­n khÃ¡c)", cap.capTotalActiveWorkforce("x2") === 3);
+check("MáºªU Sá»: Ä‘áº¿m ngÆ°á»i Ä‘i lÃ m hÃ´m nay Ä‘á»c tráº¡ng thÃ¡i cháº¥m cÃ´ng", cap.capWorkedPeopleOnDate("x2", cap.capTodayLocalISO()) === 0);
+const kpiHtml2 = cap.capLaborKpiCard("x2", { weekKey: wk, eff: null, hc: 0, tc: 0, hours: 0 }, wk, "week");
+check("MáºªU Sá»: HÃ´m nay = 0/3 (khÃ´ng cÃ²n n/n = 100% sai)", kpiHtml2.includes(">0/3</strong>"));
+check("MáºªU Sá»: tá»· lá»‡ Ä‘i lÃ m trong ká»³ bÃ¬nh quÃ¢n theo ngÃ y", kpiHtml2.includes("BÃ¬nh quÃ¢n tá»· lá»‡ Ä‘i lÃ m theo ngÃ y"));
+check("MáºªU Sá»: chart tá»· lá»‡ khÃ³a trá»¥c 0â€“100 vÃ  cÃ³ padding trÃªn",
+  stylesCss.includes('cap-labor-chart-half') &&
+  capJs.includes('max: 100') &&
+  capJs.includes('top: 18'));
+check("MáºªU Sá»: tile mini dÃ n NGANG (cap-labor-grid + cap-labor-mini)", kpiHtml2.includes("cap-labor-grid") && kpiHtml2.includes("cap-labor-mini"));
+state.hrEmployees = qEmp; state.hrAssignments = qAsg; state.hrAttendance = qAtt;
+
+// â”€â”€â”€ P. CHáº¾ Äá»˜ THÃNG + GIá»œ HC/TC TÃCH RIÃŠNG + IN BÃO CÃO (30/09/2026) â”€â”€
+// P1. NhÃ£n + dá»‹ch thÃ¡ng (váº¯t nÄƒm)
+check('THÃNG: dá»‹ch Â±1 thÃ¡ng váº¯t nÄƒm Ä‘Ãºng (2025-01 âˆ’1 = 2024-12 Â· 2024-12 +1 = 2025-01)',
   cap.capMonthShift('2025-01', -1) === '2024-12' && cap.capMonthShift('2024-12', 1) === '2025-01');
-check('THÁNG: nhãn đầy đủ = "Tháng 9/2026 · 01/09 – 30/09"',
-  cap.capMonthHeadLabel('2026-09') === 'Tháng 9/2026' &&
-  cap.capMonthRangeLabel('2026-09') === '01/09 – 30/09' &&
-  cap.capPeriodLabel('2026-09', 'month') === 'Tháng 9/2026 · 01/09 – 30/09');
-check('THÁNG: nhãn rút gọn "T9" cho trục biểu đồ', 
+check('THÃNG: nhÃ£n Ä‘áº§y Ä‘á»§ = "ThÃ¡ng 9/2026 Â· 01/09 â€“ 30/09"',
+  cap.capMonthHeadLabel('2026-09') === 'ThÃ¡ng 9/2026' &&
+  cap.capMonthRangeLabel('2026-09') === '01/09 â€“ 30/09' &&
+  cap.capPeriodLabel('2026-09', 'month') === 'ThÃ¡ng 9/2026 Â· 01/09 â€“ 30/09');
+check('THÃNG: nhÃ£n rÃºt gá»n "T9" cho trá»¥c biá»ƒu Ä‘á»“', 
   cap.capPeriodShortLabel('2026-09', 'month') === 'T9' && cap.capPeriodShortLabel(wk, 'week') === `T${cap.capWeekNumOf(wk)}`);
 
-// P2. Gộp theo THÁNG (mode='month') — cùng dữ liệu đã seed ở trên
+// P2. Gá»™p theo THÃNG (mode='month') â€” cÃ¹ng dá»¯ liá»‡u Ä‘Ã£ seed á»Ÿ trÃªn
 const cutStP = cap.CAP_STAGES.find(s => s.id === 'cut');
 const cutMonthRow = cap.capStagePeriodRow(cutStP, '2026-09', 'month');
-check('THÁNG: Cắt Chọn gộp CẢ THÁNG = 3 lượt · 3,83 xe · 9 giờ (giờ vẫn đếm 1 lần/ngày)',
-  cutMonthRow.turns === 3 && Math.abs(cutMonthRow.qty - (2300 / 600)) < 1e-9 && cutMonthRow.hours === 9);
-check('THÁNG: định mức cũ 300 kg/h → 0,5 xe/h → hiệu suất ≈ 85,2%',
-  approx(cutMonthRow.rate, 0.5) && approx(cutMonthRow.eff, (2300 / 600) / 9 / 0.5 * 100, 1e-4));
-check('TUẦN: bản cũ capStageWeekRow giữ nguyên hành vi (không đổi gì)',
+check('THÃNG: Cáº¯t Chá»n gá»™p Cáº¢ THÃNG = 3 lÆ°á»£t Â· 2.300 kg Â· 9 giá»',
+  cutMonthRow.turns === 3 && cutMonthRow.qty === 2300 && cutMonthRow.hours === 9);
+check('THÃNG: Ä‘á»‹nh má»©c cÅ© 300 kg/h â†’ 0,5 xe/h â†’ hiá»‡u suáº¥t â‰ˆ 85,2%',
+  approx(cutMonthRow.rate, 0.5) &&
+  approx(cutMonthRow.eff, ((2300 / 9) / 600) / 0.5 * 100, 1e-4));
+check('TUáº¦N: báº£n cÅ© capStageWeekRow giá»¯ nguyÃªn hÃ nh vi (khÃ´ng Ä‘á»•i gÃ¬)',
   cap.capStageWeekRow(cutStP, wk).turns === 3 && cap.capStageWeekRow(cutStP, wk).hours === 9);
 
-// P3. Đổi chế độ + chọn tháng + điều hướng kỳ
+// P3. Äá»•i cháº¿ Ä‘á»™ + chá»n thÃ¡ng + Ä‘iá»u hÆ°á»›ng ká»³
 cap.setCapacityMode('month');
-check('THÁNG: setCapacityMode("month") → mode = "month" + tự neo kỳ mới nhất CÓ dữ liệu (2026-09)',
+check('THÃNG: setCapacityMode("month") â†’ mode = "month" + tá»± neo ká»³ má»›i nháº¥t CÃ“ dá»¯ liá»‡u (2026-09)',
   state.capUi.mode === 'month' && state.capUi.week === '' && cap.capSelectedPeriod() === '2026-09');
 cap.setCapacityMonth('2026-09');
-check('THÁNG: chọn tháng 9/2026 → nhãn thẻ hiện "Tháng 9/2026"',
+check('THÃNG: chá»n thÃ¡ng 9/2026 â†’ nhÃ£n tháº» hiá»‡n "ThÃ¡ng 9/2026"',
   state.capUi.week === '2026-09' &&
-  document.getElementById('capacity-week-label').textContent.includes('Tháng 9/2026'));
-check('THÁNG: ô chọn tháng #cap-month hiện ra + đồng bộ đúng giá trị',
+  document.getElementById('capacity-week-label').textContent.includes('ThÃ¡ng 9/2026'));
+check('THÃNG: Ã´ chá»n thÃ¡ng #cap-month hiá»‡n ra + Ä‘á»“ng bá»™ Ä‘Ãºng giÃ¡ trá»‹',
   document.getElementById('cap-month').hidden === false &&
   document.getElementById('cap-month').value === '2026-09');
 cap.shiftCapacityWeek(1);
-check('THÁNG: › nhảy sang tháng kế (2026-10) + tầng công đoạn tự xổ',
+check('THÃNG: â€º nháº£y sang thÃ¡ng káº¿ (2026-10) + táº§ng cÃ´ng Ä‘oáº¡n tá»± xá»•',
   state.capUi.week === cap.capMonthShift('2026-09', 1) && state.capUi.weekOpen === state.capUi.week);
-cap.setCapacityMonth('2026-09'); // tự xổ tầng công đoạn của tháng 9
+cap.setCapacityMonth('2026-09'); // tá»± xá»• táº§ng cÃ´ng Ä‘oáº¡n cá»§a thÃ¡ng 9
 cap.toggleCapacityStageDays('cut');
 const capTbodyMonth = document.getElementById('capacity-week-rows');
-check('THÁNG: tầng 2 có cột "Định mức tháng" + "So tháng trước" + Giờ HC/TC tách riêng (cap-hc/cap-tc)',
-  capTbodyMonth.innerHTML.includes('Định mức tháng') && capTbodyMonth.innerHTML.includes('So tháng trước') &&
+check('THÃNG: táº§ng 2 cÃ³ cá»™t "Äá»‹nh má»©c thÃ¡ng" + "So thÃ¡ng trÆ°á»›c" + Giá» HC/TC tÃ¡ch riÃªng (cap-hc/cap-tc)',
+  capTbodyMonth.innerHTML.includes('Äá»‹nh má»©c thÃ¡ng') && capTbodyMonth.innerHTML.includes('So thÃ¡ng trÆ°á»›c') &&
   capTbodyMonth.innerHTML.includes('cap-hc') && capTbodyMonth.innerHTML.includes('cap-tc'));
 cap.toggleCapacityStageDays('cut');
 
-// P4. Giờ HC/TC ở chip tổng quan + tổng xưởng
+// P4. Giá» HC/TC á»Ÿ chip tá»•ng quan + tá»•ng xÆ°á»Ÿng
 cap.setCapacityView('visual');
 const stripMonth = document.getElementById('cap-summary-strip');
-check('HC/TC: dải chip có "Giờ HC" · "Giờ TC" · "Tổng" (tách riêng, không gộp "x (a/b)")',
-  stripMonth.innerHTML.includes('Giờ HC') && stripMonth.innerHTML.includes('Giờ TC') &&
-  stripMonth.innerHTML.includes('Tổng'));
+check('HC/TC: dáº£i strip cÅ© áº©n; tháº» Giá» tÃ¡ch HC/TC',
+  stripMonth.hidden === true &&
+  document.getElementById('cap-visual-row').innerHTML.includes('HC') &&
+  document.getElementById('cap-visual-row').innerHTML.includes('TC'));
 const wSep = cap.capWorkshopWeekRow('x2', wk);
-check('HC/TC: tổng xưởng tuần dữ liệu — HC = 8h (Sấy 4h + Ép 4h) · TC = 0 · tổng giờ 24h',
+check('HC/TC: tá»•ng xÆ°á»Ÿng tuáº§n dá»¯ liá»‡u â€” HC = 8h (Sáº¥y 4h + Ã‰p 4h) Â· TC = 0 Â· tá»•ng giá» 24h',
   approx(wSep.hc, 8) && wSep.tc === 0 && approx(wSep.hours, 24));
 
-// P5. Báo cáo IN — chỉ thông tin chung của TẤT CẢ bộ phận
+// P5. BÃ¡o cÃ¡o IN â€” chá»‰ thÃ´ng tin chung cá»§a Táº¤T Cáº¢ bá»™ pháº­n
 const reportHtml = cap.buildCapacityReportHtml();
-check('IN: báo cáo có tiêu đề NHÀ MÁY + kỳ báo cáo đang xem (Tháng 9/2026)',
-  reportHtml.includes('NHÀ MÁY NGỌC SƠN THANH HÓA') && reportHtml.includes('Tháng 9/2026'));
-check('IN: gồm TẤT CẢ bộ phận trong sổ CAP_WORKSHOPS (Xưởng 2 có bảng + TỔNG, Xưởng 1 ghi chú chưa có dữ liệu)',
-  reportHtml.includes('Xưởng 2') && reportHtml.includes('TỔNG Xưởng 2') &&
-  reportHtml.includes('Xưởng 1') && reportHtml.includes('Chưa có công đoạn nào'));
-check('IN: bảng có cột Giờ HC · Giờ TC · Tổng giờ RIÊNG BIỆT',
-  reportHtml.includes('Giờ HC') && reportHtml.includes('Giờ TC') && reportHtml.includes('Tổng giờ'));
-check('IN: KHÔNG chứa bản đồ nhiệt (đã gỡ) · biểu đồ 8 kỳ (cap-stage-chart) · gauge (cap-gauge)',
+check('IN: bÃ¡o cÃ¡o cÃ³ tiÃªu Ä‘á» NHÃ€ MÃY + ká»³ bÃ¡o cÃ¡o Ä‘ang xem (ThÃ¡ng 9/2026)',
+  reportHtml.includes('NHÃ€ MÃY NGá»ŒC SÆ N THANH HÃ“A') && reportHtml.includes('ThÃ¡ng 9/2026'));
+check('IN: gá»“m Táº¤T Cáº¢ bá»™ pháº­n trong sá»• CAP_WORKSHOPS (XÆ°á»Ÿng 2 cÃ³ báº£ng + Tá»”NG, XÆ°á»Ÿng 1 ghi chÃº chÆ°a cÃ³ dá»¯ liá»‡u)',
+  reportHtml.includes('XÆ°á»Ÿng 2') && reportHtml.includes('Tá»”NG XÆ°á»Ÿng 2') &&
+  reportHtml.includes('XÆ°á»Ÿng 1') && reportHtml.includes('ChÆ°a cÃ³ cÃ´ng Ä‘oáº¡n nÃ o'));
+check('IN: báº£ng cÃ³ cá»™t Giá» HC Â· Giá» TC Â· Tá»•ng giá» RIÃŠNG BIá»†T',
+  reportHtml.includes('Giá» HC') && reportHtml.includes('Giá» TC') && reportHtml.includes('Tá»•ng giá»'));
+check('IN: KHÃ”NG chá»©a báº£n Ä‘á»“ nhiá»‡t (Ä‘Ã£ gá»¡) Â· biá»ƒu Ä‘á»“ 8 ká»³ (cap-stage-chart) Â· gauge (cap-gauge)',
   !reportHtml.includes('data-cap-heat') && !reportHtml.includes('cap-stage-chart') && !reportHtml.includes('cap-gauge'));
-check('IN: dòng TỔNG xưởng KHÔNG cộng sản lượng khác đơn vị (ô sản lượng là "—")',
-  /TỔNG Xưởng 2[\s\S]*?<td class="num"[^>]*>—<\/td>/.test(reportHtml));
+check('IN: dÃ²ng Tá»”NG xÆ°á»Ÿng KHÃ”NG cá»™ng sáº£n lÆ°á»£ng khÃ¡c Ä‘Æ¡n vá»‹ (Ã´ sáº£n lÆ°á»£ng lÃ  "â€”")',
+  /Tá»”NG XÆ°á»Ÿng 2[\s\S]*?<td class="num"[^>]*>â€”<\/td>/.test(reportHtml));
 cap.setCapacityMode('week');
 const reportWeek = cap.buildCapacityReportHtml();
-check('IN: chế độ TUẦN → báo cáo neo đúng tuần đang xem (nhãn "Tuần ...")',
-  reportWeek.includes('THEO TUẦN') && reportWeek.includes('Tuần '));
+check('IN: cháº¿ Ä‘á»™ TUáº¦N â†’ bÃ¡o cÃ¡o neo Ä‘Ãºng tuáº§n Ä‘ang xem (nhÃ£n "Tuáº§n ...")',
+  reportWeek.includes('THEO TUáº¦N') && reportWeek.includes('Tuáº§n '));
 
-// P6. CẤU TRÚC mới trong index.html / styles.css / events.js
+// P6. Cáº¤U TRÃšC má»›i trong index.html / styles.css / events.js
 const evJs = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (index.html): đủ nút Tuần⇄Tháng + ô chọn tháng + In báo cáo + vùng in riêng',
+check('Cáº¤U TRÃšC (index.html): Ä‘á»§ nÃºt Tuáº§nâ‡„ThÃ¡ng + Ã´ chá»n thÃ¡ng + In bÃ¡o cÃ¡o + vÃ¹ng in riÃªng',
   indexHtml.includes('id="cap-mode-week"') && indexHtml.includes('id="cap-mode-month"') &&
   indexHtml.includes('id="cap-month"') && indexHtml.includes('id="btn-cap-print"') &&
   indexHtml.includes('id="cap-print-area"'));
-check('CẤU TRÚC (styles.css): CSS ô chọn tháng + khối in body.cap-printing (A4 ngang)',
+check('Cáº¤U TRÃšC (styles.css): CSS Ã´ chá»n thÃ¡ng + khá»‘i in body.cap-printing (A4 ngang)',
   stylesCss.includes('.cap-month-input') && stylesCss.includes('body.cap-printing #cap-print-area') &&
   stylesCss.includes('@page { size: A4 landscape; margin: 8mm; }'));
-check('CẤU TRÚC (events.js): đã nối Tuần⇄Tháng + ô tháng + In báo cáo',
+check('Cáº¤U TRÃšC (events.js): Ä‘Ã£ ná»‘i Tuáº§nâ‡„ThÃ¡ng + Ã´ thÃ¡ng + In bÃ¡o cÃ¡o',
   evJs.includes("setCapacityMode('week')") && evJs.includes("setCapacityMode('month')") &&
   evJs.includes('setCapacityMonth') && evJs.includes("'btn-cap-print'"));
 
-// ─── R. HIỆU SUẤT THAN HÓA + SẤY TÍNH TRONG CA (18/10/2026) ─────
-// 2 ca cùng ngày → mỗi ca 1 dòng, giờ là giờ THẬT của ca; KHÔNG chia Sấy 1/Sấy 2
-// và KHÔNG nhân đôi giờ (Σ giờ các ca = đúng giờ của ngày).
+// â”€â”€â”€ R. HIá»†U SUáº¤T THAN HÃ“A + Sáº¤Y TÃNH TRONG CA (18/10/2026) â”€â”€â”€â”€â”€
+// 2 ca cÃ¹ng ngÃ y â†’ má»—i ca 1 dÃ²ng, giá» lÃ  giá» THáº¬T cá»§a ca; KHÃ”NG chia Sáº¥y 1/Sáº¥y 2
+// vÃ  KHÃ”NG nhÃ¢n Ä‘Ã´i giá» (Î£ giá» cÃ¡c ca = Ä‘Ãºng giá» cá»§a ngÃ y).
 const D2 = '2026-09-21';
 const wk2 = cap.capWeekKeyOf(D2);
 state.hrShifts = [{
-  id: 'Xưởng 2', type: 'lamca',
-  shifts: [{ name: 'Ca ngày', start: '07:00', end: '19:00' }, { name: 'Ca đêm', start: '19:00', end: '07:00' }]
+  id: 'XÆ°á»Ÿng 2', type: 'lamca',
+  shifts: [{ name: 'Ca ngÃ y', start: '07:00', end: '19:00' }, { name: 'Ca Ä‘Ãªm', start: '19:00', end: '07:00' }]
 }];
 state.hrWorkCalendar = {};
-state.hrPositions = [{ id: 'pth', name: 'Than hóa', department: 'Xưởng 2' }];
-state.hrEmployees = [{ id: 'e1', name: 'Nguyễn Văn A' }, { id: 'e2', name: 'Trần Thị B' }];
+state.hrPositions = [{ id: 'pth', name: 'Than hÃ³a', department: 'XÆ°á»Ÿng 2' }];
+state.hrEmployees = [{ id: 'e1', name: 'Nguyá»…n VÄƒn A' }, { id: 'e2', name: 'Tráº§n Thá»‹ B' }];
 state.hrAssignments = [
-  { id: 'ta1', date: D2, department: 'Xưởng 2', positionId: 'pth', employeeId: 'e1', start: '07:00', end: '19:00', shiftIdx: 0 },
-  { id: 'ta2', date: D2, department: 'Xưởng 2', positionId: 'pth', employeeId: 'e2', start: '19:00', end: '07:00', shiftIdx: 1 }
+  { id: 'ta1', date: D2, department: 'XÆ°á»Ÿng 2', positionId: 'pth', employeeId: 'e1', start: '07:00', end: '19:00', shiftIdx: 0 },
+  { id: 'ta2', date: D2, department: 'XÆ°á»Ÿng 2', positionId: 'pth', employeeId: 'e2', start: '19:00', end: '07:00', shiftIdx: 1 }
 ];
 state.batches = [
   { id: 'sl1', code: 'SL-1', date: D2, stage: 'say1', quantity: 1000, volume: 4, length: 1250, width: 18, thickness: 7, sayCharges: { say1: 111 }, sayShift: { say1: 0 } },
@@ -709,50 +758,50 @@ state.batches = [
 state.x2SayIncidents = {};
 state.x2SayTimes = {};
 const sayWeek2 = cap.capStagePeriodRow(saySt, wk2, 'week');
-check('CA (Tổng hợp): 2 ca cùng ngày → 2 DÒNG (ngày, ca) — KHÔNG tách Sấy 1 / Sấy 2',
+check('CA (Tá»•ng há»£p): 2 ca cÃ¹ng ngÃ y â†’ 2 DÃ’NG (ngÃ y, ca) â€” KHÃ”NG tÃ¡ch Sáº¥y 1 / Sáº¥y 2',
   sayWeek2.days.length === 2 && sayWeek2.days.map(d => d.shiftIdx).join(',') === '0,1');
-check('CA (Tổng hợp): giờ từng ca là GIỜ THẬT (ca ngày 10,5h · ca đêm 11h) — Σ 21,5h = giờ ngày (KHÔNG nhân đôi)',
+check('CA (Tá»•ng há»£p): giá» tá»«ng ca lÃ  GIá»œ THáº¬T (ca ngÃ y 10,5h Â· ca Ä‘Ãªm 11h) â€” Î£ 21,5h = giá» ngÃ y (KHÃ”NG nhÃ¢n Ä‘Ã´i)',
   approx(sayWeek2.days[0].hours, 10.5) && approx(sayWeek2.days[1].hours, 11) && approx(sayWeek2.hours, 21.5));
-check('CA (Tổng hợp): hiệu suất kỳ = Σ giờ cần (3,5h) ÷ Σ giờ thực (21,5h) ≈ 16,3%',
+check('CA (Tá»•ng há»£p): hiá»‡u suáº¥t ká»³ = Î£ giá» cáº§n (3,5h) Ã· Î£ giá» thá»±c (21,5h) â‰ˆ 16,3%',
   approx(sayWeek2.days.reduce((a, d) => a + d.need, 0), 3.5) && approx(sayWeek2.eff, (3.5 / 21.5) * 100, 1e-4));
-check('CA (Tổng hợp): hiệu suất TỪNG CA = giờ cần của ca ÷ giờ thực của ca (1,75 ÷ 10,5 ≈ 16,7%)',
+check('CA (Tá»•ng há»£p): hiá»‡u suáº¥t Tá»ªNG CA = giá» cáº§n cá»§a ca Ã· giá» thá»±c cá»§a ca (1,75 Ã· 10,5 â‰ˆ 16,7%)',
   approx((sayWeek2.days[0].need / (sayWeek2.days[0].hours - sayWeek2.days[0].incident)) * 100, (1.75 / 10.5) * 100, 1e-4));
-check('CA (Tổng hợp): m³ của ca = m³ THẬT của các lô thuộc ca đó',
+check('CA (Tá»•ng há»£p): mÂ³ cá»§a ca = mÂ³ THáº¬T cá»§a cÃ¡c lÃ´ thuá»™c ca Ä‘Ã³',
   approx(sayWeek2.days[0].qty, 4) && approx(sayWeek2.days[1].qty, 2));
 cap.setCapacityView('table');
 cap.setCapacityWeek(wk2);
 cap.toggleCapacityWeekOpen(wk2);
 cap.toggleCapacityStageDays('say');
 const capTbodyCa = document.getElementById('capacity-week-rows').innerHTML;
-check('CA (Tổng hợp): tầng NGÀY gắn CHIP CA cho từng dòng (data-shift-idx)',
+check('CA (Tá»•ng há»£p): táº§ng NGÃ€Y gáº¯n CHIP CA cho tá»«ng dÃ²ng (data-shift-idx)',
   capTbodyCa.includes('x2-day-shift-chip') && capTbodyCa.includes('data-shift-idx="1"'));
-check('CA (Tổng hợp): cột Định mức của dòng gộp ghi rõ CẢ 2 công đoạn sấy (S1 · S2), KHÔNG phải 0 m³/h',
-  capTbodyCa.includes('S1 ') && capTbodyCa.includes('S2 ') && !capTbodyCa.includes('÷ ĐM 0'));
+check('CA (Tá»•ng há»£p): cá»™t Äá»‹nh má»©c cá»§a dÃ²ng gá»™p ghi rÃµ Cáº¢ 2 cÃ´ng Ä‘oáº¡n sáº¥y (S1 Â· S2), KHÃ”NG pháº£i 0 mÂ³/h',
+  capTbodyCa.includes('S1 ') && capTbodyCa.includes('S2 ') && !capTbodyCa.includes('Ã· ÄM 0'));
 
-// ─── S. CẢNH BÁO DỮ LIỆU QUÁ HẠN (21/10/2026 — thay bản đồ nhiệt đã gỡ) ──
-// Quy tắc: quá 1 NGÀY LÀM VIỆC chưa cập nhật là cảnh báo; bỏ qua CN/ngày nghỉ
-// theo Lịch Làm Việc (trừ ngày làm bù); công đoạn chưa từng nhập → 'never' (xám).
+// â”€â”€â”€ S. Cáº¢NH BÃO Dá»® LIá»†U QUÃ Háº N (21/10/2026 â€” thay báº£n Ä‘á»“ nhiá»‡t Ä‘Ã£ gá»¡) â”€â”€
+// Quy táº¯c: quÃ¡ 1 NGÃ€Y LÃ€M VIá»†C chÆ°a cáº­p nháº­t lÃ  cáº£nh bÃ¡o; bá» qua CN/ngÃ y nghá»‰
+// theo Lá»‹ch LÃ m Viá»‡c (trá»« ngÃ y lÃ m bÃ¹); cÃ´ng Ä‘oáº¡n chÆ°a tá»«ng nháº­p â†’ 'never' (xÃ¡m).
 state.hrWorkCalendar = { '2026-10': { weekdaysOff: [0] } };
-check('QUÁ HẠN: CN mặc định nghỉ → không tính là ngày làm việc (17/10 Thứ 7 → 19/10 Thứ 2 = 1 ngày)',
+check('QUÃ Háº N: CN máº·c Ä‘á»‹nh nghá»‰ â†’ khÃ´ng tÃ­nh lÃ  ngÃ y lÃ m viá»‡c (17/10 Thá»© 7 â†’ 19/10 Thá»© 2 = 1 ngÃ y)',
   cap.capIsWorkDay('2026-10-17') && !cap.capIsWorkDay('2026-10-18') &&
   cap.capIsWorkDay('2026-10-19') && cap.capWorkDaysSince('2026-10-17', '2026-10-19') === 1);
-check('QUÁ HẠN: ngày nghỉ/lễ trong Lịch (restDays) và ngày LÀM BÙ (workDays) đọc đúng',
+check('QUÃ Háº N: ngÃ y nghá»‰/lá»… trong Lá»‹ch (restDays) vÃ  ngÃ y LÃ€M BÃ™ (workDays) Ä‘á»c Ä‘Ãºng',
   (() => {
     state.hrWorkCalendar = { '2026-10': { weekdaysOff: [0], restDays: ['2026-10-19'], workDays: ['2026-10-18'] } };
     const ok = !cap.capIsWorkDay('2026-10-19') && cap.capIsWorkDay('2026-10-18');
     state.hrWorkCalendar = { '2026-10': { weekdaysOff: [0] } };
     return ok;
   })());
-check('QUÁ HẠN: "hôm nay" lấy theo GIỜ MÁY (không lệch 1 ngày do toISOString/UTC)',
+check('QUÃ Háº N: "hÃ´m nay" láº¥y theo GIá»œ MÃY (khÃ´ng lá»‡ch 1 ngÃ y do toISOString/UTC)',
   cap.capTodayLocalISO() === (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })());
-check('QUÁ HẠN: ngày lịch (16/10 → 20/10 = 4) khác ngày làm việc (3: 17, 19, 20 — bỏ CN 18)',
+check('QUÃ Háº N: ngÃ y lá»‹ch (16/10 â†’ 20/10 = 4) khÃ¡c ngÃ y lÃ m viá»‡c (3: 17, 19, 20 â€” bá» CN 18)',
   cap.capCalendarDaysSince('2026-10-16', '2026-10-20') === 4 &&
   cap.capWorkDaysSince('2026-10-16', '2026-10-20') === 3);
 
-// Dữ liệu thử: chỉ Bổ Ống cũ (16/10) + Cắt Chọn mới (20/10), các công đoạn khác rỗng
+// Dá»¯ liá»‡u thá»­: chá»‰ Bá»• á»ng cÅ© (16/10) + Cáº¯t Chá»n má»›i (20/10), cÃ¡c cÃ´ng Ä‘oáº¡n khÃ¡c rá»—ng
 [
   'xuong2BoluongRecords', 'xuong2CutRecords', 'xuong2BoOngRecords', 'xuong2BaoThoRecords',
   'xuong2ChonNanThoRecords', 'xuong2BaoTinhRecords', 'pressRecords', 'xuong2BulligRecords',
@@ -768,82 +817,82 @@ const staleScan = cap.capStaleScan('2026-10-21');
 const staleCut = staleScan.find(r => r.stageId === 'cut');
 const staleBoong = staleScan.find(r => r.stageId === 'boong');
 const staleX1 = staleScan.find(r => r.stageId === 'x1catong');
-check('QUÁ HẠN: mới 1 ngày làm việc (Cắt Chọn 20/10) → KHÔNG cảnh báo', staleCut && staleCut.status === 'ok');
-check('QUÁ HẠN: 4 ngày làm việc (Bổ Ống 16/10) → cảnh báo + đếm đúng ngày lịch/ngày làm việc',
+check('QUÃ Háº N: má»›i 1 ngÃ y lÃ m viá»‡c (Cáº¯t Chá»n 20/10) â†’ KHÃ”NG cáº£nh bÃ¡o', staleCut && staleCut.status === 'ok');
+check('QUÃ Háº N: 4 ngÃ y lÃ m viá»‡c (Bá»• á»ng 16/10) â†’ cáº£nh bÃ¡o + Ä‘áº¿m Ä‘Ãºng ngÃ y lá»‹ch/ngÃ y lÃ m viá»‡c',
   staleBoong && staleBoong.status === 'late' && staleBoong.workDays === 4 && staleBoong.calDays === 5);
-check('QUÁ HẠN: nêu ĐÚNG xưởng + công đoạn (Xưởng 2 · Bổ Ống)', staleBoong.wsLabel === 'Xưởng 2' && staleBoong.stageLabel === 'Bổ Ống');
-check('QUÁ HẠN: công đoạn chưa từng nhập → never (KHÔNG đỏ), vẫn có trong panel',
-  staleX1 && staleX1.status === 'never' && staleX1.wsLabel === 'Xưởng 1');
-check('QUÁ HẠN: quét CẢ 2 xưởng dù đang xem Xưởng 2 (10 X2 còn công suất + 7 X1 = 17 công đoạn)',
+check('QUÃ Háº N: nÃªu ÄÃšNG xÆ°á»Ÿng + cÃ´ng Ä‘oáº¡n (XÆ°á»Ÿng 2 Â· Bá»• á»ng)', staleBoong.wsLabel === 'XÆ°á»Ÿng 2' && staleBoong.stageLabel === 'Bá»• á»ng');
+check('QUÃ Háº N: cÃ´ng Ä‘oáº¡n chÆ°a tá»«ng nháº­p â†’ never (KHÃ”NG Ä‘á»), váº«n cÃ³ trong panel',
+  staleX1 && staleX1.status === 'never' && staleX1.wsLabel === 'XÆ°á»Ÿng 1');
+check('QUÃ Háº N: quÃ©t Cáº¢ 2 xÆ°á»Ÿng dÃ¹ Ä‘ang xem XÆ°á»Ÿng 2 (10 X2 cÃ²n cÃ´ng suáº¥t + 7 X1 = 17 cÃ´ng Ä‘oáº¡n)',
   state.capUi.ws === 'x2' && staleScan.length === 17 &&
   staleScan.some(r => r.ws === 'x1') && staleScan.some(r => r.ws === 'x2'));
 const lateRows = staleScan.filter(r => r.status === 'late');
 const neverRows = staleScan.filter(r => r.status === 'never');
-check('QUÁ HẠN: tóm tắt 1 dòng ghi đúng xưởng + công đoạn + số ngày',
-  cap.capStaleSummaryOf(lateRows).includes('Xưởng 2') && cap.capStaleSummaryOf(lateRows).includes('Bổ Ống (4 ngày)'));
-check('QUÁ HẠN: câu ảnh hưởng nêu hụt hiệu suất + công đoạn sau bị thiếu đầu vào',
-  cap.capStaleImpactOf(staleBoong).includes('thấp hơn thực tế') &&
-  cap.capStaleImpactOf(staleBoong).includes('Chạy Máy Bào Thô'));
+check('QUÃ Háº N: tÃ³m táº¯t 1 dÃ²ng ghi Ä‘Ãºng xÆ°á»Ÿng + cÃ´ng Ä‘oáº¡n + sá»‘ ngÃ y',
+  cap.capStaleSummaryOf(lateRows).includes('XÆ°á»Ÿng 2') && cap.capStaleSummaryOf(lateRows).includes('Bá»• á»ng (4 ngÃ y)'));
+check('QUÃ Háº N: cÃ¢u áº£nh hÆ°á»Ÿng nÃªu há»¥t hiá»‡u suáº¥t + cÃ´ng Ä‘oáº¡n sau bá»‹ thiáº¿u Ä‘áº§u vÃ o',
+  cap.capStaleImpactOf(staleBoong).includes('tháº¥p hÆ¡n thá»±c táº¿') &&
+  cap.capStaleImpactOf(staleBoong).includes('Cháº¡y MÃ¡y BÃ o ThÃ´'));
 
 
 const staleHtml = cap.capStaleHtml(lateRows, neverRows);
-check('QUÁ HẠN: banner + panel nêu ngày cập nhật cuối, số ngày, nút Mở thẻ đúng công đoạn',
-  staleHtml.includes('Bổ Ống') && staleHtml.includes('16/10') &&
-  staleHtml.includes('data-cap-open-card="x2-bo-ong-card"') && staleHtml.includes('Chưa cập nhật'));
-check('QUÁ HẠN: panel có mục xám công đoạn chưa từng nhập + khối nhắc ẢNH HƯỞNG',
-  staleHtml.includes('Chưa từng có số liệu') &&
-  staleHtml.includes('Số liệu không cập nhật thì ảnh hưởng thế nào?') &&
-  staleHtml.includes('Hiệu suất xưởng tuần/tháng bị hụt hoặc sai') &&
-  staleHtml.includes('Báo cáo In · Xuất Excel · Trợ lý AI'));
+check('QUÃ Háº N: banner + panel nÃªu ngÃ y cáº­p nháº­t cuá»‘i, sá»‘ ngÃ y, nÃºt Má»Ÿ tháº» Ä‘Ãºng cÃ´ng Ä‘oáº¡n',
+  staleHtml.includes('Bá»• á»ng') && staleHtml.includes('16/10') &&
+  staleHtml.includes('data-cap-open-card="x2-bo-ong-card"') && staleHtml.includes('ChÆ°a cáº­p nháº­t'));
+check('QUÃ Háº N: panel cÃ³ má»¥c xÃ¡m cÃ´ng Ä‘oáº¡n chÆ°a tá»«ng nháº­p + khá»‘i nháº¯c áº¢NH HÆ¯á»žNG',
+  staleHtml.includes('ChÆ°a tá»«ng cÃ³ sá»‘ liá»‡u') &&
+  staleHtml.includes('Sá»‘ liá»‡u khÃ´ng cáº­p nháº­t thÃ¬ áº£nh hÆ°á»Ÿng tháº¿ nÃ o?') &&
+  staleHtml.includes('Hiá»‡u suáº¥t xÆ°á»Ÿng tuáº§n/thÃ¡ng bá»‹ há»¥t hoáº·c sai') &&
+  staleHtml.includes('BÃ¡o cÃ¡o In Â· Xuáº¥t Excel Â· Trá»£ lÃ½ AI'));
 cap.renderCapStale(staleScan, false);
-check('QUÁ HẠN: renderCapStale đổ banner vào #cap-stale + chip #cap-stale-chip',
-  document.getElementById('cap-stale').hidden === false &&
-  document.getElementById('cap-stale').innerHTML.includes('Bổ Ống') &&
+check('QUÃ Háº N: renderCapStale áº©n banner, chá»‰ giá»¯ chip #cap-stale-chip',
+  document.getElementById('cap-stale').hidden === true &&
+  document.getElementById('cap-stale').innerHTML === '' &&
   document.getElementById('cap-stale-chip').hidden === false &&
-  document.getElementById('cap-stale-chip').innerHTML.includes('CĐ quá hạn'));
+  document.getElementById('cap-stale-chip').innerHTML.includes('CÄ quÃ¡ háº¡n'));
 cap.renderCapStale(staleScan, true);
-check('QUÁ HẠN: xưởng chưa có số liệu (suppress) → ẩn banner + chip, không chồng thông báo',
+check('QUÃ Háº N: xÆ°á»Ÿng chÆ°a cÃ³ sá»‘ liá»‡u (suppress) â†’ áº©n banner + chip, khÃ´ng chá»“ng thÃ´ng bÃ¡o',
   document.getElementById('cap-stale').hidden === true &&
   document.getElementById('cap-stale-chip').hidden === true);
-// Không báo sai khi số liệu là HÔM NAY/HÔM QUA
+// KhÃ´ng bÃ¡o sai khi sá»‘ liá»‡u lÃ  HÃ”M NAY/HÃ”M QUA
 state.xuong2BoOngRecords = [{ id: 's-boong2', date: '2026-10-20', inputOng: 900 }];
-check('QUÁ HẠN: cập nhật hôm qua → không còn cảnh báo (tránh báo phiền buổi sáng)',
+check('QUÃ Háº N: cáº­p nháº­t hÃ´m qua â†’ khÃ´ng cÃ²n cáº£nh bÃ¡o (trÃ¡nh bÃ¡o phiá»n buá»•i sÃ¡ng)',
   cap.capStaleScan('2026-10-21').every(r => r.stageId !== 'boong' || r.status === 'ok'));
 state.xuong2BoOngRecords = [{ id: 's-boong', date: '2026-10-16', inputOng: 1000 }];
-// Nhớ trạng thái mở/đóng panel THEO MÁY (state.capUi.staleOpen trong key UI sẵn có)
+// Nhá»› tráº¡ng thÃ¡i má»Ÿ/Ä‘Ã³ng panel THEO MÃY (state.capUi.staleOpen trong key UI sáºµn cÃ³)
 cap.toggleCapStale(true);
 const staleUiSaved = JSON.parse(localStorage.getItem(STORAGE_KEY_CAPACITY_UI) || '{}');
-check('QUÁ HẠN: mở panel nhớ theo máy (staleOpen=true) + tự mở rộng thẻ khi đang thu gọn',
+check('QUÃ Háº N: má»Ÿ panel nhá»› theo mÃ¡y (staleOpen=true) + tá»± má»Ÿ rá»™ng tháº» khi Ä‘ang thu gá»n',
   state.capUi.staleOpen === true && staleUiSaved.staleOpen === true && state.capUi.collapsed === false);
 cap.toggleCapStale(false);
-check('QUÁ HẠN: bấm lại → đóng panel (staleOpen=false)', state.capUi.staleOpen === false);
+check('QUÃ Háº N: báº¥m láº¡i â†’ Ä‘Ã³ng panel (staleOpen=false)', state.capUi.staleOpen === false);
 const capJsStale = fs.readFileSync(new URL('../js/capacity.js', import.meta.url), 'utf8');
 const evJsStale = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
-check('CẤU TRÚC (index.html): có banner #cap-stale + chip #cap-stale-chip trong thẻ công suất',
+check('Cáº¤U TRÃšC (index.html): cÃ³ banner #cap-stale + chip #cap-stale-chip trong tháº» cÃ´ng suáº¥t',
   indexHtml.includes('id="cap-stale"') && indexHtml.includes('id="cap-stale-chip"'));
-check('CẤU TRÚC (capacity.js): CAP_STALE_DAYS + quét 2 xưởng + ngày theo giờ máy',
+check('Cáº¤U TRÃšC (capacity.js): CAP_STALE_DAYS + quÃ©t 2 xÆ°á»Ÿng + ngÃ y theo giá» mÃ¡y',
   capJsStale.includes('const CAP_STALE_DAYS = 1') && capJsStale.includes('function capStaleScan(') &&
   capJsStale.includes('capTodayLocalISO'));
-check('CẤU TRÚC (events.js + styles.css): nối toggle panel/chip + CSS banner & bảng chi tiết',
+check('Cáº¤U TRÃšC (events.js + styles.css): ná»‘i toggle panel/chip + CSS banner & báº£ng chi tiáº¿t',
   evJsStale.includes('toggleCapStale') && evJsStale.includes('#cap-stale-toggle') &&
   stylesCss.includes('.cap-stale-panel') && stylesCss.includes('.cap-stale-impact'));
 
-// ─── HIỆU SUẤT CÔNG NHÂN: gia quyền theo giờ, fail-closed khi thiếu liên kết ──
-state.hrEmployees = [{ id: 'eff-worker', name: 'Công nhân kiểm thử' }];
+// â”€â”€â”€ HIá»†U SUáº¤T CÃ”NG NHÃ‚N: gia quyá»n theo giá», fail-closed khi thiáº¿u liÃªn káº¿t â”€â”€
+state.hrEmployees = [{ id: 'eff-worker', name: 'CÃ´ng nhÃ¢n kiá»ƒm thá»­' }];
 state.hrPositions = [
-  { id: 'eff-cut', name: 'Cắt Chọn', department: 'Xưởng 2' },
-  { id: 'eff-boong', name: 'Bổ Ống', department: 'Xưởng 2' }
+  { id: 'eff-cut', name: 'Cáº¯t Chá»n', department: 'XÆ°á»Ÿng 2' },
+  { id: 'eff-boong', name: 'Bá»• á»ng', department: 'XÆ°á»Ÿng 2' }
 ];
-state.hrShifts = [{ id: 'Xưởng 2', type: 'hanhchinh', shifts: [
-  { name: 'Sáng', start: '07:00', end: '11:30' },
-  { name: 'Chiều', start: '13:00', end: '17:30' }
+state.hrShifts = [{ id: 'XÆ°á»Ÿng 2', type: 'hanhchinh', shifts: [
+  { name: 'SÃ¡ng', start: '07:00', end: '11:30' },
+  { name: 'Chiá»u', start: '13:00', end: '17:30' }
 ] }];
 state.hrAssignments = [
-  { id: 'eff-cut-day1', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '07:00', end: '09:00', shiftIdx: 0 },
-  { id: 'eff-boong-day1a', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-boong', start: '09:00', end: '11:30', shiftIdx: 0 },
-  { id: 'eff-boong-day1b', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-boong', start: '13:00', end: '16:30', shiftIdx: 0 },
-  { id: 'eff-cut-day2a', date: '2026-09-11', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '07:00', end: '11:30', shiftIdx: 0 },
-  { id: 'eff-cut-day2b', date: '2026-09-11', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '13:00', end: '16:30', shiftIdx: 0 }
+  { id: 'eff-cut-day1', date: '2026-09-10', employeeId: 'eff-worker', department: 'XÆ°á»Ÿng 2', positionId: 'eff-cut', start: '07:00', end: '09:00', shiftIdx: 0 },
+  { id: 'eff-boong-day1a', date: '2026-09-10', employeeId: 'eff-worker', department: 'XÆ°á»Ÿng 2', positionId: 'eff-boong', start: '09:00', end: '11:30', shiftIdx: 0 },
+  { id: 'eff-boong-day1b', date: '2026-09-10', employeeId: 'eff-worker', department: 'XÆ°á»Ÿng 2', positionId: 'eff-boong', start: '13:00', end: '16:30', shiftIdx: 0 },
+  { id: 'eff-cut-day2a', date: '2026-09-11', employeeId: 'eff-worker', department: 'XÆ°á»Ÿng 2', positionId: 'eff-cut', start: '07:00', end: '11:30', shiftIdx: 0 },
+  { id: 'eff-cut-day2b', date: '2026-09-11', employeeId: 'eff-worker', department: 'XÆ°á»Ÿng 2', positionId: 'eff-cut', start: '13:00', end: '16:30', shiftIdx: 0 }
 ];
 state.x2CapRates = { '2026-09': 1 };
 state.x2BoOngRates = { '2026-09': 100 };
@@ -854,35 +903,35 @@ state.xuong2CutRecords = [
 ];
 state.xuong2BoOngRecords = [{ id: 'eff-boong-rec', date: '2026-09-10', inputOng: 300 }];
 const weightedEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
-check('ĐÁNH GIÁ HS: chọn công đoạn nhiều giờ nhất, không chọn hiệu suất cao nhất',
+check('ÄÃNH GIÃ HS: chá»n cÃ´ng Ä‘oáº¡n nhiá»u giá» nháº¥t, khÃ´ng chá»n hiá»‡u suáº¥t cao nháº¥t',
   !!weightedEfficiency && weightedEfficiency.efficiency === 80 &&
   weightedEfficiency.validHours === 10 && weightedEfficiency.assignedHours === 10 &&
   weightedEfficiency.coverageRate === 100 && weightedEfficiency.stageDetails[0].id === 'cut');
 
 state.hrAssignments = state.hrAssignments.concat([
-  { id: 'eff-unlinked', date: '2026-09-10', employeeId: '', department: 'Xưởng 2', positionId: 'eff-cut', start: '09:00', end: '10:00', shiftIdx: 0 }
+  { id: 'eff-unlinked', date: '2026-09-10', employeeId: '', department: 'XÆ°á»Ÿng 2', positionId: 'eff-cut', start: '09:00', end: '10:00', shiftIdx: 0 }
 ]);
 const incompleteEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
-check('ĐÁNH GIÁ HS: thiếu employeeId làm loại cả ngày công đoạn không khớp giờ nhóm',
+check('ÄÃNH GIÃ HS: thiáº¿u employeeId lÃ m loáº¡i cáº£ ngÃ y cÃ´ng Ä‘oáº¡n khÃ´ng khá»›p giá» nhÃ³m',
   !!incompleteEfficiency && incompleteEfficiency.efficiency === 75 &&
   incompleteEfficiency.validHours === 8 && incompleteEfficiency.assignedHours === 10 && incompleteEfficiency.coverageRate === 80);
 
-state.hrPositions = state.hrPositions.concat([{ id: 'eff-unmatched', name: 'Vị trí chưa ánh xạ', department: 'Xưởng 2' }]);
+state.hrPositions = state.hrPositions.concat([{ id: 'eff-unmatched', name: 'Vá»‹ trÃ­ chÆ°a Ã¡nh xáº¡', department: 'XÆ°á»Ÿng 2' }]);
 state.hrAssignments = state.hrAssignments.filter(a => a.id !== 'eff-unlinked').concat([
-  { id: 'eff-unmatched-record', date: '2026-09-12', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-unmatched', start: '07:00', end: '10:00', shiftIdx: 0 }
+  { id: 'eff-unmatched-record', date: '2026-09-12', employeeId: 'eff-worker', department: 'XÆ°á»Ÿng 2', positionId: 'eff-unmatched', start: '07:00', end: '10:00', shiftIdx: 0 }
 ]);
 const partialEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
-check('ĐÁNH GIÁ HS: vẫn hiển thị hiệu suất tính được dù có phân công chưa nhận diện, kèm chi tiết truy vết',
+check('ÄÃNH GIÃ HS: váº«n hiá»ƒn thá»‹ hiá»‡u suáº¥t tÃ­nh Ä‘Æ°á»£c dÃ¹ cÃ³ phÃ¢n cÃ´ng chÆ°a nháº­n diá»‡n, kÃ¨m chi tiáº¿t truy váº¿t',
   partialEfficiency.efficiency === 80 && partialEfficiency.unmatchedCount === 1 &&
   partialEfficiency.stageDetails.find(stage => stage.selected).id === 'cut' &&
   partialEfficiency.unmatchedAssignments[0].date === '2026-09-12' &&
-  partialEfficiency.unmatchedAssignments[0].reason.includes('chưa được ánh xạ'));
+  partialEfficiency.unmatchedAssignments[0].reason.includes('chÆ°a Ä‘Æ°á»£c Ã¡nh xáº¡'));
 
 state.hrAssignments = state.hrAssignments.filter(a => a.id !== 'eff-unlinked').concat([
-  { id: 'eff-overlap', date: '2026-09-10', employeeId: 'eff-worker', department: 'Xưởng 2', positionId: 'eff-cut', start: '08:00', end: '10:00', shiftIdx: 0 }
+  { id: 'eff-overlap', date: '2026-09-10', employeeId: 'eff-worker', department: 'XÆ°á»Ÿng 2', positionId: 'eff-cut', start: '08:00', end: '10:00', shiftIdx: 0 }
 ]);
 const overlapEfficiency = cap.computeWorkerStageEfficiency('2026-09').get('eff-worker');
-check('ĐÁNH GIÁ HS: loại giờ phân công chồng lấn và không cộng trùng',
+check('ÄÃNH GIÃ HS: loáº¡i giá» phÃ¢n cÃ´ng chá»“ng láº¥n vÃ  khÃ´ng cá»™ng trÃ¹ng',
   !!overlapEfficiency && overlapEfficiency.efficiency === 75 &&
   overlapEfficiency.validHours === 8 && overlapEfficiency.overlapCount === 3 &&
   overlapEfficiency.overlapAssignments.length === 3 &&
@@ -891,9 +940,9 @@ check('ĐÁNH GIÁ HS: loại giờ phân công chồng lấn và không cộng 
 const savedCutRows = cutSt.rows, savedCutRate = cutSt.rateOf;
 const savedBoRows = boongSt.rows, savedBoRate = boongSt.rateOf;
 cutSt.rateOf = boongSt.rateOf = () => 100;
-state.hrEmployees = [{ id: 'one', name: 'Một' }, { id: 'two', name: 'Hai' }];
+state.hrEmployees = [{ id: 'one', name: 'Má»™t' }, { id: 'two', name: 'Hai' }];
 const asg = (id, employeeId, positionId, date, start, end) =>
-  ({ id, employeeId, positionId, date, start, end, department: 'Xưởng 2', shiftIdx: 0 });
+  ({ id, employeeId, positionId, date, start, end, department: 'XÆ°á»Ÿng 2', shiftIdx: 0 });
 const stageRow = (date, hours, qty) => ({ date, hours, qty, qtyKnown: true });
 state.hrAssignments = [
   asg('one-cut-a', 'one', 'eff-cut', '2026-09-10', '07:00', '11:00'),
@@ -904,7 +953,7 @@ state.hrAssignments = [
 cutSt.rows = () => [stageRow('2026-09-10', 8, 800), stageRow('2026-09-11', 2, 100)];
 boongSt.rows = () => [stageRow('2026-09-10', 2, 400)];
 let byPerson = cap.computeWorkerStageEfficiency('2026-09');
-check('ĐÁNH GIÁ HS: người cùng công đoạn chính có thể khác kết quả theo ngày tham gia',
+check('ÄÃNH GIÃ HS: ngÆ°á»i cÃ¹ng cÃ´ng Ä‘oáº¡n chÃ­nh cÃ³ thá»ƒ khÃ¡c káº¿t quáº£ theo ngÃ y tham gia',
   byPerson.get('one').efficiency === 83.3 && byPerson.get('two').efficiency === 100 &&
   byPerson.get('one').stageDetails[0].id === 'cut');
 state.hrAssignments = [
@@ -914,29 +963,29 @@ state.hrAssignments = [
 cutSt.rows = () => [stageRow('2026-09-10', 4, 320)];
 boongSt.rows = () => [stageRow('2026-09-10', 4, 480)];
 let tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: bằng giờ chọn công đoạn có hiệu suất cao hơn',
+check('ÄÃNH GIÃ HS: báº±ng giá» chá»n cÃ´ng Ä‘oáº¡n cÃ³ hiá»‡u suáº¥t cao hÆ¡n',
   tie.efficiency === 120 && tie.stageDetails.find(s => s.selected).id === 'boong' && tie.stageDetails.length === 2);
 boongSt.rows = () => [stageRow('2026-09-10', 4, 320)];
 tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: bằng giờ và hiệu suất giữ cả hai công đoạn đồng chính',
+check('ÄÃNH GIÃ HS: báº±ng giá» vÃ  hiá»‡u suáº¥t giá»¯ cáº£ hai cÃ´ng Ä‘oáº¡n Ä‘á»“ng chÃ­nh',
   tie.efficiency === 80 && tie.stageDetails.filter(s => s.selected).length === 2 &&
   tie.assignedHours === null && tie.coverageRate === null);
 cutSt.rows = () => [stageRow('2026-09-10', 4, 320.016)];
 boongSt.rows = () => [stageRow('2026-09-10', 4, 320.012)];
 tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: so sánh tỷ lệ trước làm tròn khi các số hiển thị bằng nhau',
+check('ÄÃNH GIÃ HS: so sÃ¡nh tá»· lá»‡ trÆ°á»›c lÃ m trÃ²n khi cÃ¡c sá»‘ hiá»ƒn thá»‹ báº±ng nhau',
   tie.efficiency === 80 && tie.stageDetails.filter(s => s.selected).length === 1 &&
   tie.stageDetails.find(s => s.selected).id === 'cut' &&
   tie.stageDetails[0].efficiency === tie.stageDetails[1].efficiency);
 cutSt.rows = () => [{ ...stageRow('2026-09-10', 4, 320), qtyEstimated: true }];
 boongSt.rows = () => [];
 tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: bằng giờ và thiếu một hiệu suất thì chọn số có dữ liệu kèm cảnh báo',
+check('ÄÃNH GIÃ HS: báº±ng giá» vÃ  thiáº¿u má»™t hiá»‡u suáº¥t thÃ¬ chá»n sá»‘ cÃ³ dá»¯ liá»‡u kÃ¨m cáº£nh bÃ¡o',
   tie.efficiency === 80 && tie.tieMissing && tie.stageDetails.find(s => s.selected).id === 'cut' &&
   tie.estimatedHours === 4 && tie.stageDetails.find(s => s.selected).estimatedHours === 4);
 cutSt.rows = () => [];
 tie = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: bằng giờ nhưng cả hai thiếu hiệu suất thì không tạo tỷ lệ',
+check('ÄÃNH GIÃ HS: báº±ng giá» nhÆ°ng cáº£ hai thiáº¿u hiá»‡u suáº¥t thÃ¬ khÃ´ng táº¡o tá»· lá»‡',
   tie.efficiency === null && !tie.tieMissing && tie.stageDetails.length === 2);
 state.hrAssignments = [
   asg('main-cut', 'one', 'eff-cut', '2026-09-10', '07:00', '11:00'),
@@ -944,17 +993,17 @@ state.hrAssignments = [
 ];
 boongSt.rows = () => [stageRow('2026-09-10', 2, 400)];
 let missingMain = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: công đoạn chính thiếu dữ liệu không thay bằng công đoạn hỗ trợ',
+check('ÄÃNH GIÃ HS: cÃ´ng Ä‘oáº¡n chÃ­nh thiáº¿u dá»¯ liá»‡u khÃ´ng thay báº±ng cÃ´ng Ä‘oáº¡n há»— trá»£',
   missingMain.efficiency === null && missingMain.stageDetails[0].id === 'cut');
-state.hrPositions = state.hrPositions.concat([{ id: 'unknown-pos', name: 'Vị trí chưa ánh xạ', department: 'Xưởng 2' }]);
+state.hrPositions = state.hrPositions.concat([{ id: 'unknown-pos', name: 'Vá»‹ trÃ­ chÆ°a Ã¡nh xáº¡', department: 'XÆ°á»Ÿng 2' }]);
 state.hrAssignments.push(asg('unknown', 'one', 'unknown-pos', '2026-09-11', '07:00', '09:00'));
 state.hrPositions = state.hrPositions.concat([
-  { id: 'support-odd-pos', name: 'Hỗ trợ/ Công đoạn lẻ', department: 'Xưởng 2' },
-  { id: 'support-plus-pos', name: 'Hỗ trợ + Công đoạn lẻ', department: 'Xưởng 2' },
-  { id: 'support-pos', name: 'Hỗ trợ', department: 'Xưởng 2' },
-  { id: 'leader-compact-pos', name: 'TT/TP', department: 'Xưởng 2' },
-  { id: 'leader-full-pos', name: 'Tổ trưởng', department: 'Xưởng 2' },
-  { id: 'deputy-full-pos', name: 'Tổ phó', department: 'Xưởng 2' }
+  { id: 'support-odd-pos', name: 'Há»— trá»£/ CÃ´ng Ä‘oáº¡n láº»', department: 'XÆ°á»Ÿng 2' },
+  { id: 'support-plus-pos', name: 'Há»— trá»£ + CÃ´ng Ä‘oáº¡n láº»', department: 'XÆ°á»Ÿng 2' },
+  { id: 'support-pos', name: 'Há»— trá»£', department: 'XÆ°á»Ÿng 2' },
+  { id: 'leader-compact-pos', name: 'TT/TP', department: 'XÆ°á»Ÿng 2' },
+  { id: 'leader-full-pos', name: 'Tá»• trÆ°á»Ÿng', department: 'XÆ°á»Ÿng 2' },
+  { id: 'deputy-full-pos', name: 'Tá»• phÃ³', department: 'XÆ°á»Ÿng 2' }
 ]);
 state.hrAssignments.push(
   asg('support-odd-assignment', 'one', 'support-odd-pos', '2026-09-12', '07:00', '08:00'),
@@ -965,28 +1014,29 @@ state.hrAssignments.push(
   asg('deputy-full-assignment', 'one', 'deputy-full-pos', '2026-09-12', '12:00', '13:00')
 );
 const evaluationAssignments = x2.workerAssignmentsForCapacityMonth('2026-09', { includeUnmatched: true });
-check('ĐÁNH GIÁ HS: bỏ qua Hỗ trợ + Công đoạn lẻ và TT/TP/Tổ trưởng/Tổ phó, không tạo cảnh báo chưa nhận diện',
+check('ÄÃNH GIÃ HS: bá» qua Há»— trá»£ + CÃ´ng Ä‘oáº¡n láº» vÃ  TT/TP/Tá»• trÆ°á»Ÿng/Tá»• phÃ³, khÃ´ng táº¡o cáº£nh bÃ¡o chÆ°a nháº­n diá»‡n',
   !evaluationAssignments.some(assignment =>
     ['support-odd-assignment', 'support-plus-assignment', 'support-assignment', 'leader-compact-assignment', 'leader-full-assignment', 'deputy-full-assignment'].includes(assignment.id)) &&
   evaluationAssignments.some(assignment => assignment.id === 'unknown' &&
-    assignment.unmatchedReason.includes('chưa được ánh xạ')));
+    assignment.unmatchedReason.includes('chÆ°a Ä‘Æ°á»£c Ã¡nh xáº¡')));
 missingMain = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: vẫn cảnh báo vị trí thực sự chưa nhận diện',
+check('ÄÃNH GIÃ HS: váº«n cáº£nh bÃ¡o vá»‹ trÃ­ thá»±c sá»± chÆ°a nháº­n diá»‡n',
   missingMain.efficiency === null && missingMain.unmatchedCount === 1);
 state.hrAssignments = [asg('invalid-time', 'one', 'eff-cut', '2026-09-10', '99:99', '11:00')];
 const invalidTime = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: giờ phân công không hợp lệ không tạo công đoạn chính',
+check('ÄÃNH GIÃ HS: giá» phÃ¢n cÃ´ng khÃ´ng há»£p lá»‡ khÃ´ng táº¡o cÃ´ng Ä‘oáº¡n chÃ­nh',
   invalidTime.efficiency === null && invalidTime.unmatchedCount === 1);
 state.hrAssignments = [
   asg('open-end', 'one', 'eff-cut', '2026-09-10', '07:00', ''),
   asg('overlap-open', 'one', 'eff-boong', '2026-09-10', '13:00', '15:00')
 ];
 const openEnd = cap.computeWorkerStageEfficiency('2026-09').get('one');
-check('ĐÁNH GIÁ HS: phát hiện lịch trùng với phân công kết thúc mặc định hết ca',
+check('ÄÃNH GIÃ HS: phÃ¡t hiá»‡n lá»‹ch trÃ¹ng vá»›i phÃ¢n cÃ´ng káº¿t thÃºc máº·c Ä‘á»‹nh háº¿t ca',
   openEnd.efficiency === null && openEnd.overlapCount === 2);
 cutSt.rows = savedCutRows; cutSt.rateOf = savedCutRate;
 boongSt.rows = savedBoRows; boongSt.rateOf = savedBoRate;
 
-// ─── Tổng kết ───────────────────────────────────────────────────
-console.log(`\nKết quả: ${pass} PASS / ${fail} FAIL`);
+// â”€â”€â”€ Tá»•ng káº¿t â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+console.log(`\nKáº¿t quáº£: ${pass} PASS / ${fail} FAIL`);
 if (fail > 0) process.exit(1);
+

@@ -1,7 +1,7 @@
-// tests/x2-phu-pham.test.mjs — THẺ PHỤ PHẨM & BĂM + CÂN ĐỐI + KIỂM KÊ (18/10/2026)
-// Kiểm thử: NHẬP tự suy ra (ngọn/mắt/ống lỗi băm) · TỒN · doanh thu ·
-// GIÁ THÀNH 1 KG ỐNG ĐẠT · giảm trừ NCC · CÂN ĐỐI khối lượng · KIỂM KÊ bãi
-// (điều chỉnh tồn) · ĐỊNH MỨC TỶ LỆ · render thẻ + nối state/storage/cloud/
+﻿// tests/x2-phu-pham.test.mjs â€” THáºº PHá»¤ PHáº¨M & BÄ‚M + CÃ‚N Äá»I + KIá»‚M KÃŠ (18/10/2026)
+// Kiá»ƒm thá»­: NHáº¬P tá»± suy ra (ngá»n/máº¯t/á»‘ng lá»—i bÄƒm) Â· Tá»’N Â· doanh thu Â·
+// GIÃ THÃ€NH 1 KG á»NG Äáº T Â· giáº£m trá»« NCC Â· CÃ‚N Äá»I khá»‘i lÆ°á»£ng Â· KIá»‚M KÃŠ bÃ£i
+// (Ä‘iá»u chá»‰nh tá»“n) Â· Äá»ŠNH Má»¨C Tá»¶ Lá»† Â· render tháº» + ná»‘i state/storage/cloud/
 // history/main/index/report/export/suppliers.
 'use strict';
 import fs from 'node:fs';
@@ -69,16 +69,16 @@ const { state } = await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.activeView = 'kanban-view';
 state.materialRecords = [
-  { id: 'm1', type: 'Luồng cây xô', supplier: 'Nhà Tế',    location: 'xuong-2', weight: 10000, unitPrice: 2000, totalAmount: 20000000, date: '2026-10-18', createdAt: '2026-10-18T01:00:00.000Z' },
-  { id: 'm2', type: 'Luồng ống',    supplier: 'Nhà Tế',    location: 'xuong-2', weight: 5000,  unitPrice: 2200, totalAmount: 11000000, date: '2026-10-18', createdAt: '2026-10-18T02:00:00.000Z' },
-  { id: 'm3', type: 'Luồng cây khô', supplier: 'Nhà Trung', location: 'xuong-2', weight: 5000,  unitPrice: 1800, totalAmount: 9000000,  date: '2026-10-18', createdAt: '2026-10-18T03:00:00.000Z' }
+  { id: 'm1', type: 'Luá»“ng cÃ¢y xÃ´', supplier: 'NhÃ  Táº¿',    location: 'xuong-2', weight: 10000, unitPrice: 2000, totalAmount: 20000000, date: '2026-10-18', createdAt: '2026-10-18T01:00:00.000Z' },
+  { id: 'm2', type: 'Luá»“ng á»‘ng',    supplier: 'NhÃ  Táº¿',    location: 'xuong-2', weight: 5000,  unitPrice: 2200, totalAmount: 11000000, date: '2026-10-18', createdAt: '2026-10-18T02:00:00.000Z' },
+  { id: 'm3', type: 'Luá»“ng cÃ¢y khÃ´', supplier: 'NhÃ  Trung', location: 'xuong-2', weight: 5000,  unitPrice: 1800, totalAmount: 9000000,  date: '2026-10-18', createdAt: '2026-10-18T03:00:00.000Z' }
 ];
 state.xuong2BoluongRecords = [
-  { id: 'b1', date: '2026-10-18', tickets: [{ materialId: 'm1', kg: 10000 }], inputWeight: 10000, qty: 8000, carts: 13, kgPerCart: 615.38, ngonKg: 2000, ngonEst: true, materialType: 'Luồng cây xô', supplier: 'Nhà Tế', supplierLabel: 'Nhà Tế' }
+  { id: 'b1', date: '2026-10-18', tickets: [{ materialId: 'm1', kg: 10000 }], inputWeight: 10000, qty: 8000, carts: 13, kgPerCart: 615.38, ngonKg: 2000, ngonEst: true, materialType: 'Luá»“ng cÃ¢y xÃ´', supplier: 'NhÃ  Táº¿', supplierLabel: 'NhÃ  Táº¿' }
 ];
 state.xuong2CutRecords = [
-  { id: 'c1', date: '2026-10-18', inputKind: 'cart', carts: 10, kgPerCart: 600, inputWeight: 6000, klOngLuong: 5000, klOngLoi: 300, klMatLuong: 200, klNgonOngLoai: 500, rejectRoute: 'bam', supplierLabel: 'Nhiều nguồn (xe bốc)', supplier: '' },
-  { id: 'c2', date: '2026-10-18', inputKind: 'ong', tickets: [{ materialId: 'm2', kg: 5000 }], inputWeight: 5000, klOngLuong: 4600, klOngLoi: 400, klMatLuong: 0, klNgonOngLoai: 0, returnedKg: 400, rejectRoute: 'tra_ncc', supplier: 'Nhà Tế', supplierLabel: 'Nhà Tế' }
+  { id: 'c1', date: '2026-10-18', inputKind: 'cart', carts: 10, kgPerCart: 600, inputWeight: 6000, klOngLuong: 5000, klOngLoi: 300, klMatLuong: 200, klNgonOngLoai: 500, rejectRoute: 'bam', supplierLabel: 'Nhiá»u nguá»“n (xe bá»‘c)', supplier: '' },
+  { id: 'c2', date: '2026-10-18', inputKind: 'ong', tickets: [{ materialId: 'm2', kg: 5000 }], inputWeight: 5000, klOngLuong: 4600, klOngLoi: 400, klMatLuong: 0, klNgonOngLoai: 0, returnedKg: 400, rejectRoute: 'tra_ncc', supplier: 'NhÃ  Táº¿', supplierLabel: 'NhÃ  Táº¿' }
 ];
 state.xuong2BoOngRecords = [
   { id: 'o1', date: '2026-10-18', cutId: '', poolMode: true, inputOng: 4000, klOngLoai: 100, klOngBo: 3900 }
@@ -88,7 +88,7 @@ state.x2Stocktakes = [];
 state.x2YieldRates = { cay: { ongDat: 88, ongLoi: 3, mat: 3 }, ong: { ongDat: 95, ongLoi: 5 } };
 state.xuong2HoTroRecords = [];
 state.hrEmployees = []; state.hrPositions = []; state.hrAssignments = [];
-state.suppliers = [{ id: 's1', name: 'Nhà Tế', code: 'NCC01' }];
+state.suppliers = [{ id: 's1', name: 'NhÃ  Táº¿', code: 'NCC01' }];
 
 const pp = await import('../js/x2-phu-pham.js');
 const pool = await import('../js/x2-pool.js');
@@ -96,30 +96,30 @@ const x2 = await import('../js/xuong2.js');
 const specs = await import('../js/report-specs.js');
 const xlsx = await import('../js/export-xlsx.js');
 
-// ─── A. NHẬP TỰ SUY RA + TỒN ────────────────────────────────────
+// â”€â”€â”€ A. NHáº¬P Tá»° SUY RA + Tá»’N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const inRows = pp.x2PhuPhamInRows();
-check('A1: NHẬP tự suy ra: ngọn 2.000 kg (Bốc) + mắt 200 + ống lỗi băm 300 (Cắt)',
+check('A1: NHáº¬P tá»± suy ra: ngá»n 2.000 kg (Bá»‘c) + máº¯t 200 + á»‘ng lá»—i bÄƒm 300 (Cáº¯t)',
   inRows.length === 3 &&
   inRows.find(r => r.kind === 'ngon').kg === 2000 &&
   inRows.find(r => r.kind === 'mat').kg === 200 &&
   inRows.find(r => r.kind === 'ong_loi').kg === 300);
-check('A2: ống lỗi TRẢ NCC KHÔNG vào phụ phẩm (đi sổ giảm trừ)',
+check('A2: á»‘ng lá»—i TRáº¢ NCC KHÃ”NG vÃ o phá»¥ pháº©m (Ä‘i sá»• giáº£m trá»«)',
   !inRows.some(r => r.kind === 'ong_loi' && r.kg === 400));
-check('A3: tồn ban đầu = 2.000 + 200 + 300 = 2.500 kg',
+check('A3: tá»“n ban Ä‘áº§u = 2.000 + 200 + 300 = 2.500 kg',
   pp.x2PhuPhamStockTotal() === 2500);
-check('A4: mỗi nguồn có tồn riêng (ngọn 2.000 · mắt 200 · ống lỗi 300)',
+check('A4: má»—i nguá»“n cÃ³ tá»“n riÃªng (ngá»n 2.000 Â· máº¯t 200 Â· á»‘ng lá»—i 300)',
   pp.x2PhuPhamStock('ngon') === 2000 && pp.x2PhuPhamStock('mat') === 200 && pp.x2PhuPhamStock('ong_loi') === 300);
 state.x2PhuPhamRecords = [
   { id: 'legacy-raw', date: '2026-10-18', kind: 'ngon', form: 'raw', outType: 'sale', kg: 0, price: 500, amount: 0 },
   { id: 'legacy-chipped', date: '2026-10-18', kind: 'ong_loi', form: 'chipped', outType: 'sale', kg: 0, price: 500, amount: 0 }
 ];
 const legacyForms = pp.x2PhuPhamOutRows();
-check('A5: dữ liệu cũ Bán nguyên/Băm hiển thị thành Cọc/Rác băm',
+check('A5: dá»¯ liá»‡u cÅ© BÃ¡n nguyÃªn/BÄƒm hiá»ƒn thá»‹ thÃ nh Cá»c/RÃ¡c bÄƒm',
   legacyForms.find(r => r.id === 'legacy-raw').form === 'coc' &&
   legacyForms.find(r => r.id === 'legacy-chipped').form === 'rac_bam');
 state.x2PhuPhamRecords = [];
 
-// ─── B. GHI BÁN / TIÊU HỦY (handler thật) ─────────────────────
+// â”€â”€â”€ B. GHI BÃN / TIÃŠU Há»¦Y (handler tháº­t) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const g = id => document.getElementById(id);
 g('x2-pp-date').value = '2026-10-18';
 g('x2-pp-out-form').value = 'coc';
@@ -127,30 +127,30 @@ g('x2-pp-out-type').value = 'sale';
 g('x2-pp-scale-in').value = '5000';
 g('x2-pp-scale-out').value = '6000';
 g('x2-pp-price').value = '500';
-g('x2-pp-party').value = 'Trại nấm';
-g('x2-pp-note').value = 'bán ngọn';
+g('x2-pp-party').value = 'Tráº¡i náº¥m';
+g('x2-pp-note').value = 'bÃ¡n ngá»n';
 pp.onX2PhuPhamCalc();
-check('B1: cân thực tự tính = cân ra 6.000 − cân vào 5.000 = 1.000 kg',
+check('B1: cÃ¢n thá»±c tá»± tÃ­nh = cÃ¢n ra 6.000 âˆ’ cÃ¢n vÃ o 5.000 = 1.000 kg',
   g('x2-pp-kg').value === '1000');
-check('B2: dòng tự tính thành tiền = 1.000 × 500 = 500.000 đ',
+check('B2: dÃ²ng tá»± tÃ­nh thÃ nh tiá»n = 1.000 Ã— 500 = 500.000 Ä‘',
   String(g('x2-pp-amount').textContent).includes('500.000'));
 pp.handleX2PhuPhamSubmit({ preventDefault(){} });
 const sale = state.x2PhuPhamRecords[0];
-check('B3: lưu lượt bán cùng hai chỉ số cân và KL thực tính được',
+check('B3: lÆ°u lÆ°á»£t bÃ¡n cÃ¹ng hai chá»‰ sá»‘ cÃ¢n vÃ  KL thá»±c tÃ­nh Ä‘Æ°á»£c',
   !!sale && sale.scaleInKg === 5000 && sale.scaleOutKg === 6000 &&
-  sale.kg === 1000 && sale.price === 500 && sale.amount === 500000 && sale.party === 'Trại nấm');
-check('B4: bán không chọn nguồn và trừ vào tồn gộp còn 1.500 kg',
+  sale.kg === 1000 && sale.price === 500 && sale.amount === 500000 && sale.party === 'Tráº¡i náº¥m');
+check('B4: bÃ¡n khÃ´ng chá»n nguá»“n vÃ  trá»« vÃ o tá»“n gá»™p cÃ²n 1.500 kg',
   sale.kind === 'all' && pp.x2PhuPhamStockTotal() === 1500);
-check('B5: doanh thu tháng = 500.000 đ', pp.x2PhuPhamRevenue('2026-10-01', '2026-10-31') === 500000);
+check('B5: doanh thu thÃ¡ng = 500.000 Ä‘', pp.x2PhuPhamRevenue('2026-10-01', '2026-10-31') === 500000);
 pp.editX2PhuPham(sale.id);
-check('B6: sửa lượt bán nạp lại chỉ số cân vào/ra và KL thực',
+check('B6: sá»­a lÆ°á»£t bÃ¡n náº¡p láº¡i chá»‰ sá»‘ cÃ¢n vÃ o/ra vÃ  KL thá»±c',
   g('x2-pp-scale-in').value === '5000' && g('x2-pp-scale-out').value === '6000' &&
   g('x2-pp-kg').value === '1000');
 g('x2-pp-scale-out').value = '4000';
 pp.onX2PhuPhamCalc();
 const saleCount = state.x2PhuPhamRecords.length;
 pp.handleX2PhuPhamSubmit({ preventDefault(){} });
-check('B7: cân ra thấp hơn cân vào cho KL âm và không lưu lượt sửa',
+check('B7: cÃ¢n ra tháº¥p hÆ¡n cÃ¢n vÃ o cho KL Ã¢m vÃ  khÃ´ng lÆ°u lÆ°á»£t sá»­a',
   g('x2-pp-kg').value === '-1000' && state.x2PhuPhamRecords.length === saleCount &&
   sale.kg === 1000);
 pp.resetX2PhuPhamForm();
@@ -158,63 +158,63 @@ g('x2-pp-scale-in').value = '5000';
 pp.onX2PhuPhamCalc();
 const incompleteCount = state.x2PhuPhamRecords.length;
 pp.handleX2PhuPhamSubmit({ preventDefault(){} });
-check('B8: thiếu một chỉ số cân thì không lưu lượt mới',
+check('B8: thiáº¿u má»™t chá»‰ sá»‘ cÃ¢n thÃ¬ khÃ´ng lÆ°u lÆ°á»£t má»›i',
   state.x2PhuPhamRecords.length === incompleteCount);
 pp.resetX2PhuPhamForm();
-// Thêm 1 lượt TIÊU HỦY 100 kg (giá 0)
+// ThÃªm 1 lÆ°á»£t TIÃŠU Há»¦Y 100 kg (giÃ¡ 0)
 state.x2PhuPhamRecords.push({ id: 'pp-dispose', date: '2026-10-18', kind: 'ngon', form: 'chipped', outType: 'dispose', kg: 100, price: 0, amount: 0, party: '', note: '' });
-check('B9: tiêu hủy 100 kg → tổng tồn còn 1.400 kg · doanh thu KHÔNG đổi',
+check('B9: tiÃªu há»§y 100 kg â†’ tá»•ng tá»“n cÃ²n 1.400 kg Â· doanh thu KHÃ”NG Ä‘á»•i',
   pp.x2PhuPhamStockTotal() === 1400 && pp.x2PhuPhamRevenue('2026-10-01', '2026-10-31') === 500000);
 
 
-// ─── C. GIÁ THÀNH 1 KG ỐNG ĐẠT ─────────────────────────────────
+// â”€â”€â”€ C. GIÃ THÃ€NH 1 KG á»NG Äáº T â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const cost = pp.x2CostingData('2026-10-01', '2026-10-31');
-check('C1: tiền nguyên liệu = 10.000×2.000 + 5.000×2.200 = 31.000.000 đ',
+check('C1: tiá»n nguyÃªn liá»‡u = 10.000Ã—2.000 + 5.000Ã—2.200 = 31.000.000 Ä‘',
   cost.materialCost === 31000000);
-check('C2: doanh thu 500.000 · giảm trừ NCC 880.000 · chi phí thực 29.620.000 đ',
+check('C2: doanh thu 500.000 Â· giáº£m trá»« NCC 880.000 Â· chi phÃ­ thá»±c 29.620.000 Ä‘',
   cost.revenue === 500000 && cost.credit === 880000 && cost.netCost === 29620000);
-check('C3: ống đạt 9.600 kg · giá thành 1 kg = 29.620.000 ÷ 9.600 = 3.085,42 đ/kg',
+check('C3: á»‘ng Ä‘áº¡t 9.600 kg Â· giÃ¡ thÃ nh 1 kg = 29.620.000 Ã· 9.600 = 3.085,42 Ä‘/kg',
   cost.ongDat === 9600 && cost.costPerKg === 3085.42);
 
-// ─── D. GIẢM TRỪ NHÀ CUNG CẤP (ống lỗi trả lại) ─────────────────
+// â”€â”€â”€ D. GIáº¢M TRá»ª NHÃ€ CUNG Cáº¤P (á»‘ng lá»—i tráº£ láº¡i) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const credits = pp.x2SupplierCreditRows('2026-10-01', '2026-10-31');
-check('D1: 1 phiếu trả NCC: 400 kg × 2.200 = 880.000 đ',
+check('D1: 1 phiáº¿u tráº£ NCC: 400 kg Ã— 2.200 = 880.000 Ä‘',
   credits.length === 1 && credits[0].kg === 400 && credits[0].price === 2200 && credits[0].amount === 880000);
-check('D2: tổng giảm trừ NCC = 880.000 đ', pp.x2SupplierCreditTotal('2026-10-01', '2026-10-31') === 880000);
+check('D2: tá»•ng giáº£m trá»« NCC = 880.000 Ä‘', pp.x2SupplierCreditTotal('2026-10-01', '2026-10-31') === 880000);
 
-// ─── E. CÂN ĐỐI KHỐI LƯỢNG ────────────────────────────────────
+// â”€â”€â”€ E. CÃ‚N Äá»I KHá»I LÆ¯á»¢NG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const bal = pp.x2MassBalanceData('2026-10-01', '2026-10-31');
-check('E1: nhập bãi 15.000 kg luồng cây + 5.000 kg luồng ống',
+check('E1: nháº­p bÃ£i 15.000 kg luá»“ng cÃ¢y + 5.000 kg luá»“ng á»‘ng',
   bal.intakeCay === 15000 && bal.intakeOng === 5000);
-check('E2: Bốc 10.000 kg vào · 8.000 kg lên xe · 2.000 kg ngọn/hao hụt',
+check('E2: Bá»‘c 10.000 kg vÃ o Â· 8.000 kg lÃªn xe Â· 2.000 kg ngá»n/hao há»¥t',
   bal.boc.in === 10000 && bal.boc.out === 8000 && bal.boc.loss === 2000);
-check('E3: Cắt xe 6.000 kg → đạt 5.000 · lỗi 300 · mắt 200 · hao 500',
+check('E3: Cáº¯t xe 6.000 kg â†’ Ä‘áº¡t 5.000 Â· lá»—i 300 Â· máº¯t 200 Â· hao 500',
   bal.cart.in === 6000 && bal.cart.dat === 5000 && bal.cart.loi === 300 && bal.cart.mat === 200 && bal.cart.loss === 500);
-check('E4: Cắt ống 5.000 kg → đạt 4.600 · lỗi 400',
+check('E4: Cáº¯t á»‘ng 5.000 kg â†’ Ä‘áº¡t 4.600 Â· lá»—i 400',
   bal.ong.in === 5000 && bal.ong.dat === 4600 && bal.ong.loi === 400);
-check('E5: Bổ 4.000 kg → đạt 3.900 · loại 100',
+check('E5: Bá»• 4.000 kg â†’ Ä‘áº¡t 3.900 Â· loáº¡i 100',
   bal.bo.in === 4000 && bal.bo.dat === 3900 && bal.bo.loi === 100);
-check('E6: tỷ lệ thực tế — cắt xe ống đạt 83,3% · cắt ống ống lỗi 8%',
+check('E6: tá»· lá»‡ thá»±c táº¿ â€” cáº¯t xe á»‘ng Ä‘áº¡t 83,3% Â· cáº¯t á»‘ng á»‘ng lá»—i 8%',
   Math.round(bal.yields.cart.ongDat * 10) / 10 === 83.3 &&
   Math.round(bal.yields.ong.ongLoi * 10) / 10 === 8);
 
-// ─── F. KIỂM KÊ BÃI (Admin) — điều chỉnh tồn ──────────────────
+// â”€â”€â”€ F. KIá»‚M KÃŠ BÃƒI (Admin) â€” Ä‘iá»u chá»‰nh tá»“n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 g('x2-pp-st-date').value = '2026-10-18';
 g('x2-pp-st-pool').value = 'phu_pham';
 g('x2-pp-st-actual').value = '1200';
-g('x2-pp-st-note').value = 'kiểm kê cuối tuần';
+g('x2-pp-st-note').value = 'kiá»ƒm kÃª cuá»‘i tuáº§n';
 pp.handleX2StocktakeSubmit({ preventDefault(){} });
 const st1 = state.x2Stocktakes[0];
-check('F1: phiếu kiểm kê phụ phẩm: sổ 1.400 → thực 1.200 · lệch −200',
+check('F1: phiáº¿u kiá»ƒm kÃª phá»¥ pháº©m: sá»• 1.400 â†’ thá»±c 1.200 Â· lá»‡ch âˆ’200',
   !!st1 && st1.bookKg === 1400 && st1.actualKg === 1200 && st1.diffKg === -200);
-check('F2: tồn phụ phẩm sau điều chỉnh = 1.200 kg', pp.x2PhuPhamStockTotal() === 1200);
+check('F2: tá»“n phá»¥ pháº©m sau Ä‘iá»u chá»‰nh = 1.200 kg', pp.x2PhuPhamStockTotal() === 1200);
 g('x2-pp-st-pool').value = 'cay';
 g('x2-pp-st-actual').value = '4800';
 pp.handleX2StocktakeSubmit({ preventDefault(){} });
-check('F3: kiểm kê bãi luồng cây: sổ 5.000 → thực 4.800 · tồn nhóm = 4.800 kg',
+check('F3: kiá»ƒm kÃª bÃ£i luá»“ng cÃ¢y: sá»• 5.000 â†’ thá»±c 4.800 Â· tá»“n nhÃ³m = 4.800 kg',
   state.x2Stocktakes.length === 2 && pool.x2TicketTotals('cay').kg === 4800);
 
-// ─── G. ƯỚC TÍNH MÙN TỪ NHẬT KÝ CÔNG ĐOẠN ───────────────────
+// â”€â”€â”€ G. Æ¯á»šC TÃNH MÃ™N Tá»ª NHáº¬T KÃ CÃ”NG ÄOáº N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.xuong2BoOngRecords.push({
   id: 'bo-rough', date: '2026-10-18', poolMode: true, inputOng: 2000, klOngLoai: 0, klOngBo: 2000
 });
@@ -240,14 +240,14 @@ state.xuong2BaoTinhRecords = [
     inQty: 100, qtyOk: 90, qtyErr: 10, outDims: [1200, 16, 5]
   }
 ];
-const estimatedMùn = pp.x2PhuPhamInRows('2026-10-01', '2026-10-31')
+const estimatedMÃ¹n = pp.x2PhuPhamInRows('2026-10-01', '2026-10-31')
   .filter(r => r.kind === 'mun_tuoi' || r.kind === 'mun_kho');
-check('G1: Mùn tươi = 2.000 kg ống vào − 1.512 kg thanh lý thuyết = 488 kg',
-  estimatedMùn.find(r => r.kind === 'mun_tuoi').kg === 488);
-check('G2: Mùn khô suy ra theo thể tích hao hụt của Bào tinh + Hạ cấp',
-  estimatedMùn.filter(r => r.kind === 'mun_kho').reduce((s, r) => s + r.kg, 0) === 61.2 &&
-  !estimatedMùn.some(r => r.id === 'in-btinh-planing-run'));
-check('G3: mùn tự suy ra được cộng vào tồn phụ phẩm ước tính gộp',
+check('G1: MÃ¹n tÆ°Æ¡i = 2.000 kg á»‘ng vÃ o âˆ’ 1.512 kg thanh lÃ½ thuyáº¿t = 488 kg',
+  estimatedMÃ¹n.find(r => r.kind === 'mun_tuoi').kg === 488);
+check('G2: MÃ¹n khÃ´ suy ra theo thá»ƒ tÃ­ch hao há»¥t cá»§a BÃ o tinh + Háº¡ cáº¥p',
+  estimatedMÃ¹n.filter(r => r.kind === 'mun_kho').reduce((s, r) => s + r.kg, 0) === 61.2 &&
+  !estimatedMÃ¹n.some(r => r.id === 'in-btinh-planing-run'));
+check('G3: mÃ¹n tá»± suy ra Ä‘Æ°á»£c cá»™ng vÃ o tá»“n phá»¥ pháº©m Æ°á»›c tÃ­nh gá»™p',
   pp.x2PhuPhamStockTotal() === 1749.2);
 const totalBeforeInvalidEstimate = pp.x2PhuPhamStockTotal();
 state.xuong2BoOngRecords.push({
@@ -262,47 +262,47 @@ state.xuong2ChonNanThoRecords.push({
   quantity: 100, unitVol: 0.001, volume: 0.1, cls: 'A'
 });
 const invalidEstimate = pp.x2PhuPhamInRows().find(r => r.id === 'in-bt-rough-negative');
-check('G4: khối lượng lý thuyết vượt đầu vào được cảnh báo, không tính mùn âm',
+check('G4: khá»‘i lÆ°á»£ng lÃ½ thuyáº¿t vÆ°á»£t Ä‘áº§u vÃ o Ä‘Æ°á»£c cáº£nh bÃ¡o, khÃ´ng tÃ­nh mÃ¹n Ã¢m',
   !!invalidEstimate && invalidEstimate.warning === true && invalidEstimate.kg === 0 &&
-  invalidEstimate.note.includes('cần kiểm tra'));
-check('G5: ước tính bất hợp lý không làm đổi tồn gộp',
+  invalidEstimate.note.includes('cáº§n kiá»ƒm tra'));
+check('G5: Æ°á»›c tÃ­nh báº¥t há»£p lÃ½ khÃ´ng lÃ m Ä‘á»•i tá»“n gá»™p',
   pp.x2PhuPhamStockTotal() === totalBeforeInvalidEstimate);
 
-// ─── H. ĐỊNH MỨC TỶ LỆ (Admin) ───────────────────────────────
+// â”€â”€â”€ H. Äá»ŠNH Má»¨C Tá»¶ Lá»† (Admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 g('x2-pp-y-cay-ongdat').value = '90';
 g('x2-pp-y-cay-ongloi').value = '2';
 g('x2-pp-y-cay-mat').value = '2';
 g('x2-pp-y-ong-ongdat').value = '96';
 g('x2-pp-y-ong-ongloi').value = '4';
 pp.handleX2YieldRateSave();
-check('H1: lưu định mức tỷ lệ: xe 90/2/2 · ống 96/4',
+check('H1: lÆ°u Ä‘á»‹nh má»©c tá»· lá»‡: xe 90/2/2 Â· á»‘ng 96/4',
   state.x2YieldRates.cay.ongDat === 90 && state.x2YieldRates.cay.mat === 2 &&
   state.x2YieldRates.ong.ongDat === 96 && state.x2YieldRates.ong.ongLoi === 4);
-check('H2: định mức được ghi xuống localStorage',
+check('H2: Ä‘á»‹nh má»©c Ä‘Æ°á»£c ghi xuá»‘ng localStorage',
   JSON.parse(localStorage.getItem('bamboo_tracker_x2_yield_rate_v1') || '{}').cay.ongDat === 90);
 
-// ─── I. RENDER THẺ THẬT ───────────────────────────────────────
+// â”€â”€â”€ I. RENDER THáºº THáº¬T â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 pp.setPpMonth('2026-10');
 pp.renderX2PhuPhamCard();
-check('I1: thanh tồn chỉ hiện tổng gộp, không hiện chip từng nguồn',
-  String(g('x2-pp-stock-bar').innerHTML).includes('Tồn phụ phẩm') &&
-  !String(g('x2-pp-stock-bar').innerHTML).includes('Ngọn'));
-check('I2: khối giá thành hiện "Giá thành 1 kg ống đạt"',
-  String(g('x2-pp-cost').innerHTML).includes('Giá thành 1 kg ống đạt'));
-check('I3: khối cân đối hiện "Cân đối khối lượng"',
-  String(g('x2-pp-balance').innerHTML).includes('Cân đối khối lượng'));
-check('I4: lịch sử giữ nguồn tự tính, hiển thị mùn và lượt bán',
-  String(g('x2-pp-day-cards').innerHTML).includes('Nhập ước tính') &&
-  String(g('x2-pp-day-cards').innerHTML).includes('Trại nấm') &&
-  String(g('x2-pp-day-cards').innerHTML).includes('Mùn tươi') &&
-  String(g('x2-pp-day-cards').innerHTML).includes('Mùn khô'));
-check('I5: sổ giảm trừ NCC hiện "Nhà Tế"',
-  String(g('x2-pp-credit').innerHTML).includes('Nhà Tế'));
-check('I6: mở thẻ x2-phu-pham-card không lỗi',
+check('I1: thanh tá»“n chá»‰ hiá»‡n tá»•ng gá»™p, khÃ´ng hiá»‡n chip tá»«ng nguá»“n',
+  String(g('x2-pp-stock-bar').innerHTML).includes('Tá»“n phá»¥ pháº©m') &&
+  !String(g('x2-pp-stock-bar').innerHTML).includes('Ngá»n'));
+check('I2: khá»‘i giÃ¡ thÃ nh hiá»‡n "GiÃ¡ thÃ nh 1 kg á»‘ng Ä‘áº¡t"',
+  String(g('x2-pp-cost').innerHTML).includes('GiÃ¡ thÃ nh 1 kg á»‘ng Ä‘áº¡t'));
+check('I3: khá»‘i cÃ¢n Ä‘á»‘i hiá»‡n "CÃ¢n Ä‘á»‘i khá»‘i lÆ°á»£ng"',
+  String(g('x2-pp-balance').innerHTML).includes('CÃ¢n Ä‘á»‘i khá»‘i lÆ°á»£ng'));
+check('I4: lá»‹ch sá»­ giá»¯ nguá»“n tá»± tÃ­nh, hiá»ƒn thá»‹ mÃ¹n vÃ  lÆ°á»£t bÃ¡n',
+  String(g('x2-pp-day-cards').innerHTML).includes('Nháº­p Æ°á»›c tÃ­nh') &&
+  String(g('x2-pp-day-cards').innerHTML).includes('Tráº¡i náº¥m') &&
+  String(g('x2-pp-day-cards').innerHTML).includes('MÃ¹n tÆ°Æ¡i') &&
+  String(g('x2-pp-day-cards').innerHTML).includes('MÃ¹n khÃ´'));
+check('I5: sá»• giáº£m trá»« NCC hiá»‡n "NhÃ  Táº¿"',
+  String(g('x2-pp-credit').innerHTML).includes('NhÃ  Táº¿'));
+check('I6: má»Ÿ tháº» x2-phu-pham-card khÃ´ng lá»—i',
   x2.x2OpenCard('x2-phu-pham-card') === true);
 
 
-// ─── J. CẤU TRÚC + NỐI 6 CHỖ + BÁO CÁO/XUẤT EXCEL ─────────────
+// â”€â”€â”€ J. Cáº¤U TRÃšC + Ná»I 6 CHá»– + BÃO CÃO/XUáº¤T EXCEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const stSrc = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8');
 const stgSrc = fs.readFileSync(new URL('../js/storage.js', import.meta.url), 'utf8');
 const cloudSrc = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
@@ -316,30 +316,30 @@ const supSrc = fs.readFileSync(new URL('../js/suppliers.js', import.meta.url), '
 const rcSrc = fs.readFileSync(new URL('../js/report-center.js', import.meta.url), 'utf8');
 const x2Src = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
 
-check('J1: state.js có 3 key + 3 trường dữ liệu mới',
+check('J1: state.js cÃ³ 3 key + 3 trÆ°á»ng dá»¯ liá»‡u má»›i',
   stSrc.includes("STORAGE_KEY_X2_PHU_PHAM = 'bamboo_tracker_x2_phu_pham_v1'") &&
   stSrc.includes("STORAGE_KEY_X2_STOCKTAKE = 'bamboo_tracker_x2_stocktake_v1'") &&
   stSrc.includes("STORAGE_KEY_X2_YIELD_RATE = 'bamboo_tracker_x2_yield_rate_v1'") &&
   stSrc.includes('x2PhuPhamRecords:') && stSrc.includes('x2Stocktakes:') && stSrc.includes('x2YieldRates:'));
-check('J2: storage.js có 3 hàm khôi phục + ghi vào file/backup + export',
+check('J2: storage.js cÃ³ 3 hÃ m khÃ´i phá»¥c + ghi vÃ o file/backup + export',
   stgSrc.includes('function restoreX2PhuPham') && stgSrc.includes('function restoreX2Stocktakes') &&
   stgSrc.includes('function restoreX2YieldRates') && stgSrc.includes('x2PhuPhamRecords:') &&
   stgSrc.includes('x2Stocktakes:') && stgSrc.includes('x2YieldRates:') &&
   stgSrc.includes('restoreX2PhuPham,'));
-check('J3: cloud.js có snapshot/core/merge/persist/apply + RATE_DOMAINS',
+check('J3: cloud.js cÃ³ snapshot/core/merge/persist/apply + RATE_DOMAINS',
   (cloudSrc.match(/x2PhuPhamRecords:/g) || []).length >= 2 &&
   (cloudSrc.match(/x2PhuPhamRecords\)/g) || []).length >= 2 &&
   cloudSrc.includes("STORAGE_KEY_X2_PHU_PHAM") &&
   cloudSrc.includes("'x2YieldRates'") &&
   cloudSrc.includes('if (data.x2PhuPhamRecords)'));
-check('J4: history.js + main.js đã nối 3 miền',
+check('J4: history.js + main.js Ä‘Ã£ ná»‘i 3 miá»n',
   histSrc.includes('x2PhuPhamRecords:') && histSrc.includes('x2Stocktakes:') &&
   mainSrc.includes('loadX2PhuPham()') && mainSrc.includes('loadX2Stocktakes()') && mainSrc.includes('loadX2YieldRates()'));
 const ppFormStart = idx.indexOf('<form id="x2-pp-form">');
 const ppFirstRowStart = idx.indexOf('<div class="x2-form-row">', ppFormStart);
 const ppSecondRowStart = idx.indexOf('<div class="x2-form-row">', ppFirstRowStart + 1);
 const ppFirstRow = idx.slice(ppFirstRowStart, ppSecondRowStart);
-check('J5: index.html có mini card + form gọn, cân vào/ra ở hàng đầu + các vùng',
+check('J5: index.html cÃ³ mini card + form gá»n, cÃ¢n vÃ o/ra á»Ÿ hÃ ng Ä‘áº§u + cÃ¡c vÃ¹ng',
   idx.includes('data-x2-card="x2-phu-pham-card"') && idx.includes('id="x2-phu-pham-card"') &&
   idx.includes('id="x2-pp-form"') && idx.includes('id="x2-pp-st-form"') &&
   idx.includes('id="x2-pp-scale-in"') && idx.includes('id="x2-pp-scale-out"') &&
@@ -349,39 +349,40 @@ check('J5: index.html có mini card + form gọn, cân vào/ra ở hàng đầu 
   /<input[^>]*id="x2-pp-kg"[^>]*readonly/i.test(idx) &&
   idx.includes('id="x2-pp-stock-bar"') && idx.includes('id="x2-pp-cost"') &&
   idx.includes('id="x2-pp-balance"') && idx.includes('id="x2-pp-credit"') &&
-  !idx.includes('id="x2-pp-kind"') && idx.includes('<option value="coc">Cọc</option>') &&
-  idx.includes('<option value="rac_bam">Rác băm</option>') &&
-  idx.includes('<option value="mun_tuoi">Mùn tươi</option>') &&
-  idx.includes('<option value="mun_kho">Mùn khô</option>'));
-check('J6: events.js nối form + kiểm kê + định mức + tháng + sửa/xóa',
+  !idx.includes('id="x2-pp-kind"') && idx.includes('<option value="coc">Cá»c</option>') &&
+  idx.includes('<option value="rac_bam">RÃ¡c bÄƒm</option>') &&
+  idx.includes('<option value="mun_tuoi">MÃ¹n tÆ°Æ¡i</option>') &&
+  idx.includes('<option value="mun_kho">MÃ¹n khÃ´</option>'));
+check('J6: events.js ná»‘i form + kiá»ƒm kÃª + Ä‘á»‹nh má»©c + thÃ¡ng + sá»­a/xÃ³a',
   evSrc.includes('handleX2PhuPhamSubmit') && evSrc.includes('handleX2StocktakeSubmit') &&
   evSrc.includes("'x2-pp-scale-in'") && evSrc.includes("'x2-pp-scale-out'") &&
   evSrc.includes('handleX2YieldRateSave') && evSrc.includes("'x2-pp-month'") &&
   evSrc.includes('data-x2-pp-edit') && evSrc.includes('data-x2-pp-st-del'));
-check('J7: sw.js cache v456 + nạp js/x2-phu-pham.js',
-  /nha-may-ngoc-son-v456/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
-check('J8: styles.css có khối .x2-pp-* + bảng supplier thêm cột Giảm Trừ',
+check('J7: sw.js cache v486 + náº¡p js/x2-phu-pham.js',
+  /nha-may-ngoc-son-v486/.test(sw) && sw.includes("./js/x2-phu-pham.js"));
+check('J8: styles.css cÃ³ khá»‘i .x2-pp-* + báº£ng supplier thÃªm cá»™t Giáº£m Trá»«',
   css.includes('.x2-pp-chip') && css.includes('.x2-pp-yield-chip') &&
-  idx.includes('Giảm Trừ (đ)') && supSrc.includes('x2SupplierCreditRows'));
-check('J9: thẻ Xử lý lỗi gộp 2 thẻ cũ, danh mục có nguồn xuất đủ',
+  idx.includes('Giáº£m Trá»« (Ä‘)') && supSrc.includes('x2SupplierCreditRows'));
+check('J9: tháº» Xá»­ lÃ½ lá»—i gá»™p 2 tháº» cÅ©, danh má»¥c cÃ³ nguá»“n xuáº¥t Ä‘á»§',
   xlsx.X2_EXPORT_SOURCES.length === 24 &&
   xlsx.X2_EXPORT_SOURCES.some(s => s.id === 'phupham') &&
   xlsx.X2_EXPORT_SOURCES.some(s => s.id === 'xulyloi') &&
   xlsx.X2_EXPORT_SOURCES.some(s => s.id === 'x1nanplan'));
-check('J10: danh mục báo cáo cập nhật sau gộp thẻ (47 báo cáo)',
+check('J10: danh má»¥c bÃ¡o cÃ¡o cáº­p nháº­t sau gá»™p tháº» (47 bÃ¡o cÃ¡o)',
   specs.REPORT_SPECS.length === 47 &&
   specs.REPORT_SPECS.some(r => r.id === 'phupham') &&
   specs.REPORT_SPECS.some(r => r.kind === 'massBalance') &&
   specs.REPORT_SPECS.some(r => r.kind === 'costing'));
-check('J11: report-center có 2 builder cân đối + giá thành',
+check('J11: report-center cÃ³ 2 builder cÃ¢n Ä‘á»‘i + giÃ¡ thÃ nh',
   rcSrc.includes('buildMassBalanceReport') && rcSrc.includes('buildCostingReport') &&
   rcSrc.includes("spec.kind === 'massBalance'") && rcSrc.includes("spec.kind === 'costing'"));
-check('J12: Bào Thô/Bào Tinh được đọc qua adapter, không tạo key nhập mùn riêng',
+check('J12: BÃ o ThÃ´/BÃ o Tinh Ä‘Æ°á»£c Ä‘á»c qua adapter, khÃ´ng táº¡o key nháº­p mÃ¹n riÃªng',
   x2Src.includes('setX2PhuPhamStageDataReader') &&
   x2Src.includes('baoThoDisplay(r)') && x2Src.includes('baoTinhDisplay(r)') &&
-  pp.PP_KIND_SHORT.mun_tuoi === 'Mùn tươi' && pp.PP_FORM_LABEL.mun_kho === 'Mùn khô');
-check('J13: report-center nhận dữ liệu Bào Thô/Bào Tinh làm nguồn phụ phẩm',
+  pp.PP_KIND_SHORT.mun_tuoi === 'MÃ¹n tÆ°Æ¡i' && pp.PP_FORM_LABEL.mun_kho === 'MÃ¹n khÃ´');
+check('J13: report-center nháº­n dá»¯ liá»‡u BÃ o ThÃ´/BÃ o Tinh lÃ m nguá»“n phá»¥ pháº©m',
   rcSrc.includes('state.xuong2BaoThoRecords') && rcSrc.includes('state.xuong2BaoTinhRecords'));
 
-console.log(`\nKẾT QUẢ PHỤ PHẨM & CÂN ĐỐI: ${pass} PASS / ${fail} FAIL`);
+console.log(`\nKáº¾T QUáº¢ PHá»¤ PHáº¨M & CÃ‚N Äá»I: ${pass} PASS / ${fail} FAIL`);
 if (fail > 0) process.exit(1);
+

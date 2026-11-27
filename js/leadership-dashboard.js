@@ -446,8 +446,11 @@ function reportCapacityForPeriod(capacityRows, source, range) {
       let carts = 0;
       let estimated = false;
       rows.forEach(row => {
-        const rowWeight = Number(row.inputWeight) || 0;
+        const rowWeight = stage.id === 'boluong'
+          ? (Number(row.qty) || Number(row.inputWeight) || 0)
+          : (Number(row.inputWeight) || 0);
         const rowCarts = Number(row.cartsEq) || 0;
+        if (row.cartsEst) estimated = true;
         if (rowWeight > 0) weight += rowWeight;
         else if (rowCarts > 0) {
           weight += rowCarts * 600;
@@ -456,9 +459,15 @@ function reportCapacityForPeriod(capacityRows, source, range) {
         carts += rowCarts;
       });
       if (!rows.length && Number(stage.quantity) > 0) {
-        weight = Number(stage.quantity) * 600;
-        carts = Number(stage.quantity);
-        estimated = true;
+        if (stage.quantityUnit === 'kg') {
+          weight = Number(stage.quantity);
+          carts = 0;
+          estimated = !!stage.estimated;
+        } else {
+          weight = Number(stage.quantity) * 600;
+          carts = Number(stage.quantity);
+          estimated = true;
+        }
       }
       const kgPerCart = carts > 0 ? weight / carts : 600;
       return {
@@ -467,7 +476,7 @@ function reportCapacityForPeriod(capacityRows, source, range) {
         quantityKnown: true,
         quantityUnit: 'kg',
         unit: 'kg/h',
-        capacity: stage.capacity == null ? null : stage.capacity * kgPerCart,
+        capacity: stage.capacity,
         estimated: estimated || stage.estimated
       };
     })

@@ -1,16 +1,16 @@
-// tests/xuong2-ho-tro.test.mjs — Kiểm thử THẺ "HỖ TRỢ + CÔNG ĐOẠN LẺ" (tab Công Đoạn, Xưởng 2):
-// thẻ CHỈ CÓ 2 VÙNG (① nhập liệu · ② bảng lịch sử theo ngày) — công việc PHÁT SINH nên
-// KHÔNG thanh tồn / thống kê / định mức (KHÔNG công suất · KHÔNG hiệu suất).
-//   • form: Ngày · Nội dung công việc (điền tay) · Người thực hiện (CHỌN TỪNG NGƯỜI —
-//     CHỈ người đang bố trí vị trí "Hỗ Trợ + Công Đoạn Lẻ" (Xưởng 2) trong Bảng bố trí
-//     theo ngày ở tab Nhân Sự — 1 việc chọn NHIỀU người) · Mô tả (điền tay)
-//   • GIỜ LÀM từng công việc = tổng khung giờ của ĐÚNG những người được chọn (tách HC/TC);
-//     đọc SỐNG khi bố trí còn, mất bố trí → SNAPSHOT lưu lúc ghi.
-//   • lưu/sửa/xóa (tombstone) + nối state/storage/cloud/history/main/events/export + sw v232.
+﻿// tests/xuong2-ho-tro.test.mjs â€” Kiá»ƒm thá»­ THáºº "Há»– TRá»¢ + CÃ”NG ÄOáº N Láºº" (tab CÃ´ng Äoáº¡n, XÆ°á»Ÿng 2):
+// tháº» CHá»ˆ CÃ“ 2 VÃ™NG (â‘  nháº­p liá»‡u Â· â‘¡ báº£ng lá»‹ch sá»­ theo ngÃ y) â€” cÃ´ng viá»‡c PHÃT SINH nÃªn
+// KHÃ”NG thanh tá»“n / thá»‘ng kÃª / Ä‘á»‹nh má»©c (KHÃ”NG cÃ´ng suáº¥t Â· KHÃ”NG hiá»‡u suáº¥t).
+//   â€¢ form: NgÃ y Â· Ná»™i dung cÃ´ng viá»‡c (Ä‘iá»n tay) Â· NgÆ°á»i thá»±c hiá»‡n (CHá»ŒN Tá»ªNG NGÆ¯á»œI â€”
+//     CHá»ˆ ngÆ°á»i Ä‘ang bá»‘ trÃ­ vá»‹ trÃ­ "Há»— Trá»£ + CÃ´ng Äoáº¡n Láº»" (XÆ°á»Ÿng 2) trong Báº£ng bá»‘ trÃ­
+//     theo ngÃ y á»Ÿ tab NhÃ¢n Sá»± â€” 1 viá»‡c chá»n NHIá»€U ngÆ°á»i) Â· MÃ´ táº£ (Ä‘iá»n tay)
+//   â€¢ GIá»œ LÃ€M tá»«ng cÃ´ng viá»‡c = tá»•ng khung giá» cá»§a ÄÃšNG nhá»¯ng ngÆ°á»i Ä‘Æ°á»£c chá»n (tÃ¡ch HC/TC);
+//     Ä‘á»c Sá»NG khi bá»‘ trÃ­ cÃ²n, máº¥t bá»‘ trÃ­ â†’ SNAPSHOT lÆ°u lÃºc ghi.
+//   â€¢ lÆ°u/sá»­a/xÃ³a (tombstone) + ná»‘i state/storage/cloud/history/main/events/export + sw v232.
 'use strict';
 import fs from 'node:fs';
 
-// ─── Stubs môi trường (giống xuong2-boc-luong.test.mjs) ────────────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng xuong2-boc-luong.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -81,25 +81,25 @@ const { state, STORAGE_KEY_XUONG2_HO_TRO } = await import('../js/state.js');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 state.activeView = 'kanban-view';
 
-// ─── Dữ liệu Nhân Sự mẫu — Bảng bố trí theo ngày (tab Nhân Sự) ─────────
+// â”€â”€â”€ Dá»¯ liá»‡u NhÃ¢n Sá»± máº«u â€” Báº£ng bá»‘ trÃ­ theo ngÃ y (tab NhÃ¢n Sá»±) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 state.hrEmployees = [
-  { id: 'empA', name: 'Nguyễn Văn A', quitDate: '' },
-  { id: 'empB', name: 'Nguyễn Văn B', quitDate: '' },
-  { id: 'empC', name: 'Trần Văn C', quitDate: '' }
+  { id: 'empA', name: 'Nguyá»…n VÄƒn A', quitDate: '' },
+  { id: 'empB', name: 'Nguyá»…n VÄƒn B', quitDate: '' },
+  { id: 'empC', name: 'Tráº§n VÄƒn C', quitDate: '' }
 ];
 state.hrPositions = [
-  { id: 'pht',  name: 'Hỗ Trợ + Công Đoạn Lẻ', department: 'Xưởng 2' },
-  { id: 'pcat', name: 'Cắt Chọn', department: 'Xưởng 2' },
-  { id: 'pbl',  name: 'Bốc Luồng', department: 'Xưởng 2' },
-  { id: 'pqc',  name: 'Kiểm chất', department: 'QC' }
+  { id: 'pht',  name: 'Há»— Trá»£ + CÃ´ng Äoáº¡n Láº»', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pcat', name: 'Cáº¯t Chá»n', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pbl',  name: 'Bá»‘c Luá»“ng', department: 'XÆ°á»Ÿng 2' },
+  { id: 'pqc',  name: 'Kiá»ƒm cháº¥t', department: 'QC' }
 ];
 state.hrAssignments = [
-  { id: 'asg-1', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pht',  employeeId: 'empA', start: '07:00', end: '12:00' },
-  { id: 'asg-2', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pht',  employeeId: 'empB', start: '13:00', end: '19:00' },
+  { id: 'asg-1', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'pht',  employeeId: 'empA', start: '07:00', end: '12:00' },
+  { id: 'asg-2', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'pht',  employeeId: 'empB', start: '13:00', end: '19:00' },
   { id: 'asg-3', date: '2026-09-10', department: 'QC',       positionId: 'pqc',  employeeId: 'empC', start: '07:30', end: '16:30' },
-  { id: 'asg-4', date: '2026-09-11', department: 'Xưởng 2', positionId: 'pht',  employeeId: 'empA', start: '07:00', end: '17:30' },
-  // Người ở vị trí CẮT CHỌN cùng ngày → PHẢI BỊ LOẠI khỏi ô chọn Hỗ trợ
-  { id: 'asg-5', date: '2026-09-10', department: 'Xưởng 2', positionId: 'pcat', employeeId: 'empC', start: '08:00', end: '17:00' }
+  { id: 'asg-4', date: '2026-09-11', department: 'XÆ°á»Ÿng 2', positionId: 'pht',  employeeId: 'empA', start: '07:00', end: '17:30' },
+  // NgÆ°á»i á»Ÿ vá»‹ trÃ­ Cáº®T CHá»ŒN cÃ¹ng ngÃ y â†’ PHáº¢I Bá»Š LOáº I khá»i Ã´ chá»n Há»— trá»£
+  { id: 'asg-5', date: '2026-09-10', department: 'XÆ°á»Ÿng 2', positionId: 'pcat', employeeId: 'empC', start: '08:00', end: '17:00' }
 ];
 state.xuong2HoTroRecords = [];
 state.x2HoTroEditId = null;
@@ -109,56 +109,56 @@ const x2 = await import('../js/xuong2.js');
 const fmtGio = v => (Number(v) || 0).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtRatio = v => (Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
 
-// ─── A. THẺ LAUNCHER + MỞ/ĐÓNG POP-UP ────────────────────────────────
+// â”€â”€â”€ A. THáºº LAUNCHER + Má»ž/ÄÃ“NG POP-UP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.renderXuong2Cards();
-check('A1: chưa ghi việc nào → chip mini card = "Chưa ghi"',
-  document.getElementById('x2-mini-count-ho-tro').textContent === 'Chưa ghi');
-check('A2: KHÔNG còn cờ soon (đã bật chức năng)',
+check('A1: chÆ°a ghi viá»‡c nÃ o â†’ chip mini card = "ChÆ°a ghi"',
+  document.getElementById('x2-mini-count-ho-tro').textContent === 'ChÆ°a ghi');
+check('A2: KHÃ”NG cÃ²n cá» soon (Ä‘Ã£ báº­t chá»©c nÄƒng)',
   !x2.X2_CARD_DEFS['x2-ho-tro-card'].soon);
-check('A3: x2OpenCard trả về true lần đầu', x2.x2OpenCard('x2-ho-tro-card') === true);
-check('A4: pop-up bật (overlay show)',
+check('A3: x2OpenCard tráº£ vá» true láº§n Ä‘áº§u', x2.x2OpenCard('x2-ho-tro-card') === true);
+check('A4: pop-up báº­t (overlay show)',
   document.getElementById('x2-detail-overlay').classList.contains('show'));
-check('A5: bấm lại → false (đóng)',
+check('A5: báº¥m láº¡i â†’ false (Ä‘Ã³ng)',
   x2.x2OpenCard('x2-ho-tro-card') === false &&
   !document.getElementById('x2-detail-overlay').classList.contains('show'));
 x2.x2OpenCard('x2-ho-tro-card');
 
-// ─── B. Ô CHỌN NGƯỜI = CHỈ BỐ TRÍ VỊ TRÍ "HỖ TRỢ + CÔNG ĐOẠN LẺ" ─────
+// â”€â”€â”€ B. Ã” CHá»ŒN NGÆ¯á»œI = CHá»ˆ Bá» TRÃ Vá»Š TRÃ "Há»– TRá»¢ + CÃ”NG ÄOáº N Láºº" â”€â”€â”€â”€â”€
 const dateEl = document.getElementById('x2-ht-date');
 dateEl.value = '2026-09-10';
 x2.fillXuong2HoTroWorkers([]);
 const sel = document.getElementById('x2-ht-workers');
-check('B1: ngày 10/09 có 5 lượt bố trí nhưng CHỈ 2 lượt vị trí "Hỗ Trợ + Công Đoạn Lẻ" lọt vào danh sách',
+check('B1: ngÃ y 10/09 cÃ³ 5 lÆ°á»£t bá»‘ trÃ­ nhÆ°ng CHá»ˆ 2 lÆ°á»£t vá»‹ trÃ­ "Há»— Trá»£ + CÃ´ng Äoáº¡n Láº»" lá»t vÃ o danh sÃ¡ch',
   (state.hrAssignments || []).length === 5 &&
   (sel.innerHTML.match(/<option/g) || []).length === 2);
-check('B2: option ghi tên · vị trí Hỗ Trợ + Công Đoạn Lẻ · bộ phận · khung giờ',
-  sel.innerHTML.includes('Nguyễn Văn A — Hỗ Trợ + Công Đoạn Lẻ (Xưởng 2)') &&
-  sel.innerHTML.includes('07:00–12:00') &&
-  sel.innerHTML.includes('07:30–16:30') === false); // Trần Văn C (QC — Kiểm chất) KHÔNG lọt
-check('B2b: KHÔNG liệt kê người ở vị trí khác (Cắt Chọn) hay bộ phận khác (QC)',
-  !sel.innerHTML.includes('Cắt Chọn') && !sel.innerHTML.includes('Kiểm chất') &&
-  !sel.innerHTML.includes('Trần Văn C'));
-check('B2c: isHoTraPos khớp mềm (bỏ dấu/hoa thường) — "Hỗ trợ", "ho tro + cong doan le"…',
-  x2.isHoTroPos('Hỗ Trợ + Công Đoạn Lẻ') && x2.isHoTroPos('HỖ TRỢ') &&
-  x2.isHoTroPos('ho tro') && !x2.isHoTroPos('Cắt Chọn') && !x2.isHoTroPos('Kiểm chất'));
-check('B3: chưa chọn người → ô tự tính "Chưa chọn người thực hiện"',
-  document.getElementById('x2-ht-calc').innerHTML.includes('Chưa chọn người thực hiện'));
-check('B4: chọn người → ô tự tính hiện N người + giờ HC/TC',
+check('B2: option ghi tÃªn Â· vá»‹ trÃ­ Há»— Trá»£ + CÃ´ng Äoáº¡n Láº» Â· bá»™ pháº­n Â· khung giá»',
+  sel.innerHTML.includes('Nguyá»…n VÄƒn A â€” Há»— Trá»£ + CÃ´ng Äoáº¡n Láº» (XÆ°á»Ÿng 2)') &&
+  sel.innerHTML.includes('07:00â€“12:00') &&
+  sel.innerHTML.includes('07:30â€“16:30') === false); // Tráº§n VÄƒn C (QC â€” Kiá»ƒm cháº¥t) KHÃ”NG lá»t
+check('B2b: KHÃ”NG liá»‡t kÃª ngÆ°á»i á»Ÿ vá»‹ trÃ­ khÃ¡c (Cáº¯t Chá»n) hay bá»™ pháº­n khÃ¡c (QC)',
+  !sel.innerHTML.includes('Cáº¯t Chá»n') && !sel.innerHTML.includes('Kiá»ƒm cháº¥t') &&
+  !sel.innerHTML.includes('Tráº§n VÄƒn C'));
+check('B2c: isHoTraPos khá»›p má»m (bá» dáº¥u/hoa thÆ°á»ng) â€” "Há»— trá»£", "ho tro + cong doan le"â€¦',
+  x2.isHoTroPos('Há»— Trá»£ + CÃ´ng Äoáº¡n Láº»') && x2.isHoTroPos('Há»– TRá»¢') &&
+  x2.isHoTroPos('ho tro') && !x2.isHoTroPos('Cáº¯t Chá»n') && !x2.isHoTroPos('Kiá»ƒm cháº¥t'));
+check('B3: chÆ°a chá»n ngÆ°á»i â†’ Ã´ tá»± tÃ­nh "ChÆ°a chá»n ngÆ°á»i thá»±c hiá»‡n"',
+  document.getElementById('x2-ht-calc').innerHTML.includes('ChÆ°a chá»n ngÆ°á»i thá»±c hiá»‡n'));
+check('B4: chá»n ngÆ°á»i â†’ Ã´ tá»± tÃ­nh hiá»‡n N ngÆ°á»i + giá» HC/TC',
   (() => {
     sel.options = [{ value: 'asg-1', selected: true, disabled: false }, { value: 'asg-2', selected: true, disabled: false }];
     x2.updateXuong2HoTroCalc();
     const t = document.getElementById('x2-ht-calc').innerHTML;
-    return t.includes('2 người') && t.includes('h HC') && t.includes('Nguyễn Văn A, Nguyễn Văn B');
+    return t.includes('2 ngÆ°á»i') && t.includes('h HC') && t.includes('Nguyá»…n VÄƒn A, Nguyá»…n VÄƒn B');
   })());
-check('B5: ngày không có ai ở vị trí Hỗ Trợ → placeholder dẫn sang tab Nhân Sự',
+check('B5: ngÃ y khÃ´ng cÃ³ ai á»Ÿ vá»‹ trÃ­ Há»— Trá»£ â†’ placeholder dáº«n sang tab NhÃ¢n Sá»±',
   (() => {
     dateEl.value = '2026-09-25';
     x2.fillXuong2HoTroWorkers([]);
-    return document.getElementById('x2-ht-workers').innerHTML.includes('chưa có ai ở vị trí');
+    return document.getElementById('x2-ht-workers').innerHTML.includes('chÆ°a cÃ³ ai á»Ÿ vá»‹ trÃ­');
   })());
 dateEl.value = '2026-09-10';
 x2.fillXuong2HoTroWorkers([]);
-check('B6: nút Chọn tất cả / Bỏ chọn hoạt động',
+check('B6: nÃºt Chá»n táº¥t cáº£ / Bá» chá»n hoáº¡t Ä‘á»™ng',
   (() => {
     sel.options = [
       { value: 'asg-1', selected: false, disabled: false },
@@ -170,141 +170,141 @@ check('B6: nút Chọn tất cả / Bỏ chọn hoạt động',
     return allOn && sel.options.filter(o => o.selected).length === 0;
   })());
 
-// ─── C. CHẶN LƯU KHI THIẾU TRƯỜNG ─────────────────────────────────────
+// â”€â”€â”€ C. CHáº¶N LÆ¯U KHI THIáº¾U TRÆ¯á»œNG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const workEl = document.getElementById('x2-ht-work');
 const descEl = document.getElementById('x2-ht-desc');
 sel.options = [];
 dateEl.value = '';
-workEl.value = 'Xóa rác khuôn';
+workEl.value = 'XÃ³a rÃ¡c khuÃ´n';
 x2.handleXuong2HoTroSubmit({ preventDefault(){} });
-check('C1: thiếu Ngày → không ghi', (state.xuong2HoTroRecords || []).length === 0);
+check('C1: thiáº¿u NgÃ y â†’ khÃ´ng ghi', (state.xuong2HoTroRecords || []).length === 0);
 dateEl.value = '2026-09-10';
 workEl.value = '';
 x2.handleXuong2HoTroSubmit({ preventDefault(){} });
-check('C2: thiếu Nội Dung Công Việc → không ghi', (state.xuong2HoTroRecords || []).length === 0);
-workEl.value = 'Xóa rác khuôn';
+check('C2: thiáº¿u Ná»™i Dung CÃ´ng Viá»‡c â†’ khÃ´ng ghi', (state.xuong2HoTroRecords || []).length === 0);
+workEl.value = 'XÃ³a rÃ¡c khuÃ´n';
 sel.options = [];
 x2.handleXuong2HoTroSubmit({ preventDefault(){} });
-check('C3: thiếu Người Thực Hiện → không ghi', (state.xuong2HoTroRecords || []).length === 0);
+check('C3: thiáº¿u NgÆ°á»i Thá»±c Hiá»‡n â†’ khÃ´ng ghi', (state.xuong2HoTroRecords || []).length === 0);
 
-// ─── D. LƯU 1 VIỆC = NHIỀU NGƯỜI ──────────────────────────────────────
+// â”€â”€â”€ D. LÆ¯U 1 VIá»†C = NHIá»€U NGÆ¯á»œI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 sel.options = [
   { value: 'asg-1', selected: true, disabled: false },
   { value: 'asg-2', selected: true, disabled: false }
 ];
-descEl.value = 'Dọn dẹp khu vực máy ép';
+descEl.value = 'Dá»n dáº¹p khu vá»±c mÃ¡y Ã©p';
 x2.handleXuong2HoTroSubmit({ preventDefault(){} });
 const list = state.xuong2HoTroRecords || [];
-check('D1: đã ghi 1 công việc + localStorage đã ghi',
+check('D1: Ä‘Ã£ ghi 1 cÃ´ng viá»‡c + localStorage Ä‘Ã£ ghi',
   list.length === 1 &&
   JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_HO_TRO) || '[]').length === 1);
 const rec = list[0];
-check('D2: bản ghi đủ trường Ngày · Nội dung · Mô tả · tuần',
-  rec.date === '2026-09-10' && rec.workName === 'Xóa rác khuôn' &&
-  rec.desc === 'Dọn dẹp khu vực máy ép' && String(rec.week || '').startsWith('2026-W'));
-check('D3: 1 việc = NHIỀU NGƯỜI (asgIds 2 lượt bố trí + snapshot tên)',
+check('D2: báº£n ghi Ä‘á»§ trÆ°á»ng NgÃ y Â· Ná»™i dung Â· MÃ´ táº£ Â· tuáº§n',
+  rec.date === '2026-09-10' && rec.workName === 'XÃ³a rÃ¡c khuÃ´n' &&
+  rec.desc === 'Dá»n dáº¹p khu vá»±c mÃ¡y Ã©p' && String(rec.week || '').startsWith('2026-W'));
+check('D3: 1 viá»‡c = NHIá»€U NGÆ¯á»œI (asgIds 2 lÆ°á»£t bá»‘ trÃ­ + snapshot tÃªn)',
   Array.isArray(rec.asgIds) && rec.asgIds.length === 2 &&
-  rec.worker === 'Nguyễn Văn A, Nguyễn Văn B');
-check('D4: giờ HC/TC snapshot = HC + TC (07:00–12:00 + 13:00–19:00, CẢ 2 > 0)',
+  rec.worker === 'Nguyá»…n VÄƒn A, Nguyá»…n VÄƒn B');
+check('D4: giá» HC/TC snapshot = HC + TC (07:00â€“12:00 + 13:00â€“19:00, Cáº¢ 2 > 0)',
   rec.workHoursHC > 0 && rec.workHoursTC > 0 &&
   Math.abs(rec.workHours - (rec.workHoursHC + rec.workHoursTC)) < 1e-9);
-check('D5: snapshot asgSnap giữ khung giờ từng người (phòng mất bố trí)',
+check('D5: snapshot asgSnap giá»¯ khung giá» tá»«ng ngÆ°á»i (phÃ²ng máº¥t bá»‘ trÃ­)',
   Array.isArray(rec.asgSnap) && rec.asgSnap.length === 2 &&
   rec.asgSnap[0].start === '07:00' && rec.asgSnap[1].start === '13:00');
-check('D6: form reset về ghi mới (x2HoTroEditId = null)',
+check('D6: form reset vá» ghi má»›i (x2HoTroEditId = null)',
   state.x2HoTroEditId === null);
 
-// ─── E. BẢNG LỊCH SỬ — THẺ NGÀY (KHÔNG công suất / hiệu suất) ────────
-check('E1: đếm "1 công việc" ở thanh tiêu đề bảng',
-  document.getElementById('x2-ht-table-count').textContent === '1 công việc');
+// â”€â”€â”€ E. Báº¢NG Lá»ŠCH Sá»¬ â€” THáºº NGÃ€Y (KHÃ”NG cÃ´ng suáº¥t / hiá»‡u suáº¥t) â”€â”€â”€â”€â”€â”€â”€â”€
+check('E1: Ä‘áº¿m "1 cÃ´ng viá»‡c" á»Ÿ thanh tiÃªu Ä‘á» báº£ng',
+  document.getElementById('x2-ht-table-count').textContent === '1 cÃ´ng viá»‡c');
 const dayHtml = document.getElementById('x2-ht-day-cards').innerHTML;
-check('E2: thẻ ngày có nhãn Ngày · Người thực hiện · Giờ làm + số việc',
-  dayHtml.includes('10/09/26') && dayHtml.includes('Nguyễn Văn A') &&
-  dayHtml.includes('Giờ làm:') && dayHtml.includes('1 công việc'));
-check('E3: KHÔNG có Công suất / Hiệu suất (việc phát sinh — đúng yêu cầu)',
-  !dayHtml.includes('Công suất') && !dayHtml.includes('Hiệu suất'));
-check('E4: bảng dòng đủ cột Ngày · Nội dung · Người · Mô tả · Giờ HC · Giờ TC',
-  dayHtml.includes('Nội Dung Công Việc') && dayHtml.includes('Người Thực Hiện') &&
-  dayHtml.includes('Mô Tả') && dayHtml.includes('Giờ HC (h)') && dayHtml.includes('Giờ TC (h)'));
-check('E5: dòng công việc hiện đúng nội dung + mô tả + giờ',
-  dayHtml.includes('Xóa rác khuôn') && dayHtml.includes('Dọn dẹp khu vực máy ép') &&
+check('E2: tháº» ngÃ y cÃ³ nhÃ£n NgÃ y Â· NgÆ°á»i thá»±c hiá»‡n Â· Giá» lÃ m + sá»‘ viá»‡c',
+  dayHtml.includes('10/09/26') && dayHtml.includes('Nguyá»…n VÄƒn A') &&
+  dayHtml.includes('Giá» lÃ m:') && dayHtml.includes('1 cÃ´ng viá»‡c'));
+check('E3: KHÃ”NG cÃ³ CÃ´ng suáº¥t / Hiá»‡u suáº¥t (viá»‡c phÃ¡t sinh â€” Ä‘Ãºng yÃªu cáº§u)',
+  !dayHtml.includes('CÃ´ng suáº¥t') && !dayHtml.includes('Hiá»‡u suáº¥t'));
+check('E4: báº£ng dÃ²ng Ä‘á»§ cá»™t NgÃ y Â· Ná»™i dung Â· NgÆ°á»i Â· MÃ´ táº£ Â· Giá» HC Â· Giá» TC',
+  dayHtml.includes('Ná»™i Dung CÃ´ng Viá»‡c') && dayHtml.includes('NgÆ°á»i Thá»±c Hiá»‡n') &&
+  dayHtml.includes('MÃ´ Táº£') && dayHtml.includes('Giá» HC (h)') && dayHtml.includes('Giá» TC (h)'));
+check('E5: dÃ²ng cÃ´ng viá»‡c hiá»‡n Ä‘Ãºng ná»™i dung + mÃ´ táº£ + giá»',
+  dayHtml.includes('XÃ³a rÃ¡c khuÃ´n') && dayHtml.includes('Dá»n dáº¹p khu vá»±c mÃ¡y Ã©p') &&
   dayHtml.includes(fmtGio(rec.workHoursHC)));
-check('E6: chip mini card = "1 việc"', document.getElementById('x2-mini-count-ho-tro').textContent === '1 việc');
+check('E6: chip mini card = "1 viá»‡c"', document.getElementById('x2-mini-count-ho-tro').textContent === '1 viá»‡c');
 
-// ─── F. GIỜ ĐỌC SỐNG TỪ BẢNG BỐ TRÍ (sửa bố trí → bảng tự đổi) ───────
-// Kỳ vọng = tổng CẢ 2 lượt bố trí của việc (asg-1 07:00–12:00 + asg-2 13:00–19:00)
-const hcA1Old = hr.hrSplitHoursHCDate('Xưởng 2', '2026-09-10', '07:00', '12:00', 0).hc;
-const hcA2 = hr.hrSplitHoursHCDate('Xưởng 2', '2026-09-10', '13:00', '19:00', 0).hc;
+// â”€â”€â”€ F. GIá»œ Äá»ŒC Sá»NG Tá»ª Báº¢NG Bá» TRÃ (sá»­a bá»‘ trÃ­ â†’ báº£ng tá»± Ä‘á»•i) â”€â”€â”€â”€â”€â”€â”€
+// Ká»³ vá»ng = tá»•ng Cáº¢ 2 lÆ°á»£t bá»‘ trÃ­ cá»§a viá»‡c (asg-1 07:00â€“12:00 + asg-2 13:00â€“19:00)
+const hcA1Old = hr.hrSplitHoursHCDate('XÆ°á»Ÿng 2', '2026-09-10', '07:00', '12:00', 0).hc;
+const hcA2 = hr.hrSplitHoursHCDate('XÆ°á»Ÿng 2', '2026-09-10', '13:00', '19:00', 0).hc;
 const expHcOld = (hcA1Old + hcA2) / 60;
-const liveNew = (hr.hrSplitHoursHCDate('Xưởng 2', '2026-09-10', '07:00', '16:00', 0).hc + hcA2) / 60;
+const liveNew = (hr.hrSplitHoursHCDate('XÆ°á»Ÿng 2', '2026-09-10', '07:00', '16:00', 0).hc + hcA2) / 60;
 state.hrAssignments[0].end = '16:00';
 x2.renderXuong2HoTroTable();
-check('F1: đổi giờ bố trí (12:00 → 16:00) → bảng đọc SỐNG, giờ HC đổi theo',
+check('F1: Ä‘á»•i giá» bá»‘ trÃ­ (12:00 â†’ 16:00) â†’ báº£ng Ä‘á»c Sá»NG, giá» HC Ä‘á»•i theo',
   liveNew > expHcOld &&
   document.getElementById('x2-ht-day-cards').innerHTML.includes(fmtGio(liveNew)));
-check('F2: snapshot GIỮ NGUYÊN giờ lúc ghi (không bị sửa theo bố trí)',
+check('F2: snapshot GIá»® NGUYÃŠN giá» lÃºc ghi (khÃ´ng bá»‹ sá»­a theo bá»‘ trÃ­)',
   Math.abs(rec.workHoursHC - expHcOld) < 1e-9 &&
   Math.abs(rec.workHours - (rec.workHoursHC + rec.workHoursTC)) < 1e-9);
 
-// ─── G. MẤT BỐ TRÍ → VẪN HIỂN THỊ TÊN + GIỜ TỪ SNAPSHOT ─────────────
+// â”€â”€â”€ G. Máº¤T Bá» TRÃ â†’ VáºªN HIá»‚N THá»Š TÃŠN + GIá»œ Tá»ª SNAPSHOT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const backupAsg = state.hrAssignments;
 state.hrAssignments = [];
 x2.renderXuong2HoTroTable();
 const snapHtml = document.getElementById('x2-ht-day-cards').innerHTML;
-check('G1: mất Bảng bố trí → vẫn hiện người từ snapshot',
-  snapHtml.includes('Nguyễn Văn A') && snapHtml.includes('Nguyễn Văn B'));
-check('G2: vẫn hiện giờ HC từ snapshot', snapHtml.includes(fmtGio(rec.workHoursHC)));
+check('G1: máº¥t Báº£ng bá»‘ trÃ­ â†’ váº«n hiá»‡n ngÆ°á»i tá»« snapshot',
+  snapHtml.includes('Nguyá»…n VÄƒn A') && snapHtml.includes('Nguyá»…n VÄƒn B'));
+check('G2: váº«n hiá»‡n giá» HC tá»« snapshot', snapHtml.includes(fmtGio(rec.workHoursHC)));
 state.hrAssignments = backupAsg;
 x2.renderXuong2HoTroTable();
 
-// ─── H. ĐẦU THẺ NGÀY KHÔNG CỘP TRÙNG GIỜ (2 việc cùng 1 người) ───────
+// â”€â”€â”€ H. Äáº¦U THáºº NGÃ€Y KHÃ”NG Cá»˜P TRÃ™NG GIá»œ (2 viá»‡c cÃ¹ng 1 ngÆ°á»i) â”€â”€â”€â”€â”€â”€â”€
 (state.xuong2HoTroRecords || []).push({
   id: 'x2ht-test-dup', date: '2026-09-10', week: '2026-W37',
-  workName: 'Kiểm tra PCCC', desc: '', asgIds: ['asg-1'],
-  asgSnap: rec.asgSnap.slice(0, 1), worker: 'Nguyễn Văn A', workTime: '07:00–16:00',
+  workName: 'Kiá»ƒm tra PCCC', desc: '', asgIds: ['asg-1'],
+  asgSnap: rec.asgSnap.slice(0, 1), worker: 'Nguyá»…n VÄƒn A', workTime: '07:00â€“16:00',
   workHours: rec.workHoursHC, workHoursHC: rec.workHoursHC, workHoursTC: 0,
   createdAt: '2026-09-10T08:00:00.000Z'
 });
 x2.renderXuong2HoTroTable();
 const dupHtml = document.getElementById('x2-ht-day-cards').innerHTML;
-// Giờ đầu thẻ ngày = CẢ 2 lượt bố trí (asg-1 đã sửa → 07:00–16:00 + asg-2 13:00–19:00),
-// gộp theo lượt bố trí nên 2 việc cùng người chỉ tính 1 LẦN.
-const expDayHc = fmtRatio((hr.hrSplitHoursHCDate('Xưởng 2', '2026-09-10', '07:00', '16:00', 0).hc + hcA2) / 60);
-const expDayTc = fmtRatio((hr.hrSplitHoursHCDate('Xưởng 2', '2026-09-10', '07:00', '16:00', 0).tc +
-  hr.hrSplitHoursHCDate('Xưởng 2', '2026-09-10', '13:00', '19:00', 0).tc) / 60);
-check('H1: 2 việc cùng ngày cùng người → giờ đầu thẻ = 1 LẦN (không cộng trùng)',
-  dupHtml.includes(`Giờ làm: <span class="x2-hours-hc">${expDayHc}h HC</span><span class="x2-hours-tc">${expDayTc}h TC</span>`));
-check('H2: đầu thẻ ghi "2 công việc"', dupHtml.includes('2 công việc'));
-check('H3: chip mini = "2 việc"',
-  (() => { x2.renderXuong2Cards(); return document.getElementById('x2-mini-count-ho-tro').textContent === '2 việc'; })());
+// Giá» Ä‘áº§u tháº» ngÃ y = Cáº¢ 2 lÆ°á»£t bá»‘ trÃ­ (asg-1 Ä‘Ã£ sá»­a â†’ 07:00â€“16:00 + asg-2 13:00â€“19:00),
+// gá»™p theo lÆ°á»£t bá»‘ trÃ­ nÃªn 2 viá»‡c cÃ¹ng ngÆ°á»i chá»‰ tÃ­nh 1 Láº¦N.
+const expDayHc = fmtRatio((hr.hrSplitHoursHCDate('XÆ°á»Ÿng 2', '2026-09-10', '07:00', '16:00', 0).hc + hcA2) / 60);
+const expDayTc = fmtRatio((hr.hrSplitHoursHCDate('XÆ°á»Ÿng 2', '2026-09-10', '07:00', '16:00', 0).tc +
+  hr.hrSplitHoursHCDate('XÆ°á»Ÿng 2', '2026-09-10', '13:00', '19:00', 0).tc) / 60);
+check('H1: 2 viá»‡c cÃ¹ng ngÃ y cÃ¹ng ngÆ°á»i â†’ giá» Ä‘áº§u tháº» = 1 Láº¦N (khÃ´ng cá»™ng trÃ¹ng)',
+  dupHtml.includes(`Giá» lÃ m: <span class="x2-hours-hc">${expDayHc}h HC</span><span class="x2-hours-tc">${expDayTc}h TC</span>`));
+check('H2: Ä‘áº§u tháº» ghi "2 cÃ´ng viá»‡c"', dupHtml.includes('2 cÃ´ng viá»‡c'));
+check('H3: chip mini = "2 viá»‡c"',
+  (() => { x2.renderXuong2Cards(); return document.getElementById('x2-mini-count-ho-tro').textContent === '2 viá»‡c'; })());
 
-// ─── I. SỬA CÔNG VIỆC (nạp lại form + banner) ─────────────────────────
+// â”€â”€â”€ I. Sá»¬A CÃ”NG VIá»†C (náº¡p láº¡i form + banner) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.editXuong2HoTro(rec.id);
-check('I1: vào chế độ sửa + banner hiện + form nạp đúng',
+check('I1: vÃ o cháº¿ Ä‘á»™ sá»­a + banner hiá»‡n + form náº¡p Ä‘Ãºng',
   state.x2HoTroEditId === rec.id &&
   document.getElementById('x2-ht-edit-banner').style.display === '' &&
-  workEl.value === 'Xóa rác khuôn' && descEl.value === 'Dọn dẹp khu vực máy ép');
-check('I2: chọn lại ĐÚNG 2 người của lượt đang sửa',
+  workEl.value === 'XÃ³a rÃ¡c khuÃ´n' && descEl.value === 'Dá»n dáº¹p khu vá»±c mÃ¡y Ã©p');
+check('I2: chá»n láº¡i ÄÃšNG 2 ngÆ°á»i cá»§a lÆ°á»£t Ä‘ang sá»­a',
   sel.options.filter(o => o.selected).length === 2);
-descEl.value = 'Dọn dẹp + lau chùi máy ép';
+descEl.value = 'Dá»n dáº¹p + lau chÃ¹i mÃ¡y Ã©p';
 x2.handleXuong2HoTroSubmit({ preventDefault(){} });
-check('I3: lưu SỬA → cập nhật mô tả, vẫn 2 việc, về ghi mới',
-  rec.desc === 'Dọn dẹp + lau chùi máy ép' &&
+check('I3: lÆ°u Sá»¬A â†’ cáº­p nháº­t mÃ´ táº£, váº«n 2 viá»‡c, vá» ghi má»›i',
+  rec.desc === 'Dá»n dáº¹p + lau chÃ¹i mÃ¡y Ã©p' &&
   (state.xuong2HoTroRecords || []).length === 2 &&
   state.x2HoTroEditId === null);
 
-// ─── J. XÓA (tombstone) ───────────────────────────────────────────────
+// â”€â”€â”€ J. XÃ“A (tombstone) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.deleteXuong2HoTro('x2ht-test-dup');
-check('J1: đã xóa 1 việc (còn 1) + ghi tombstone',
+check('J1: Ä‘Ã£ xÃ³a 1 viá»‡c (cÃ²n 1) + ghi tombstone',
   (state.xuong2HoTroRecords || []).length === 1 &&
   !!(state.deletedIds && state.deletedIds.xuong2HoTroRecords && state.deletedIds.xuong2HoTroRecords['x2ht-test-dup']));
 x2.deleteXuong2HoTro(rec.id);
-check('J2: xóa hết → chip "Chưa ghi" + rỗng + localStorage rỗng',
+check('J2: xÃ³a háº¿t â†’ chip "ChÆ°a ghi" + rá»—ng + localStorage rá»—ng',
   (state.xuong2HoTroRecords || []).length === 0 &&
   JSON.parse(localStorage.getItem(STORAGE_KEY_XUONG2_HO_TRO) || '[]').length === 0 &&
-  document.getElementById('x2-mini-count-ho-tro').textContent === 'Chưa ghi');
+  document.getElementById('x2-mini-count-ho-tro').textContent === 'ChÆ°a ghi');
 
-// ─── K. NỐI 6 CHỖ + CẤU TRÚC ─────────────────────────────────────────
+// â”€â”€â”€ K. Ná»I 6 CHá»– + Cáº¤U TRÃšC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const jsState = fs.readFileSync('js/state.js', 'utf8');
 const jsStorage = fs.readFileSync('js/storage.js', 'utf8');
 const jsCloud = fs.readFileSync('js/cloud.js', 'utf8');
@@ -319,7 +319,7 @@ const swJs = fs.readFileSync('sw.js', 'utf8');
 check('K1 (state): key + state fields + export',
   jsState.includes('bamboo_tracker_xuong2_ho_tro_v1') &&
   jsState.includes('xuong2HoTroRecords: []') && jsState.includes('x2HoTroEditId: null'));
-check('K2 (storage): restore + 2 đường nạp file + 2 snapshot + import + export',
+check('K2 (storage): restore + 2 Ä‘Æ°á»ng náº¡p file + 2 snapshot + import + export',
   jsStorage.includes('function restoreXuong2HoTro') &&
   (jsStorage.match(/restoreXuong2HoTro\(/g) || []).length >= 4 &&
   (jsStorage.match(/xuong2HoTroRecords: state/g) || []).length >= 2);
@@ -329,9 +329,9 @@ check('K3 (cloud): snapshot + core + merge + persistAllLocal + applyFireSnapshot
   jsCloud.includes('remote.xuong2HoTroRecords') &&
   jsCloud.includes('STORAGE_KEY_XUONG2_HO_TRO') &&
   jsCloud.includes('data.xuong2HoTroRecords'));
-check('K4 (history): vùng dữ liệu tab kanban', jsHist.includes('xuong2HoTroRecords'));
-check('K5 (main): nạp lúc boot', jsMain.includes('loadXuong2HoTro()'));
-check('K6 (events): wire submit + hủy + đổi ngày + chọn người + thu gọn + sửa/xóa ủy quyền',
+check('K4 (history): vÃ¹ng dá»¯ liá»‡u tab kanban', jsHist.includes('xuong2HoTroRecords'));
+check('K5 (main): náº¡p lÃºc boot', jsMain.includes('loadXuong2HoTro()'));
+check('K6 (events): wire submit + há»§y + Ä‘á»•i ngÃ y + chá»n ngÆ°á»i + thu gá»n + sá»­a/xÃ³a á»§y quyá»n',
   jsEvents.includes("safeOn('x2-ht-form', 'submit'") &&
   jsEvents.includes("safeOn('btn-cancel-x2-ht'") &&
   jsEvents.includes("safeOn('x2-ht-date', 'change'") &&
@@ -340,23 +340,24 @@ check('K6 (events): wire submit + hủy + đổi ngày + chọn người + thu g
   jsEvents.includes("safeOn('btn-toggle-x2ht-table'") &&
   jsEvents.includes("closest('[data-x2-ht-edit]')") &&
   jsEvents.includes("closest('[data-x2-ht-delete]')"));
-check('K7 (index.html): form đủ 4 trường + vùng lịch sử + nút thu gọn',
+check('K7 (index.html): form Ä‘á»§ 4 trÆ°á»ng + vÃ¹ng lá»‹ch sá»­ + nÃºt thu gá»n',
   idxHtml.includes('id="x2-ht-form"') && idxHtml.includes('id="x2-ht-date"') &&
   idxHtml.includes('id="x2-ht-work"') && idxHtml.includes('id="x2-ht-workers"') &&
   idxHtml.includes('id="x2-ht-desc"') && idxHtml.includes('id="x2-ht-day-cards"') &&
   idxHtml.includes('id="btn-toggle-x2ht-table"'));
-check('K8 (index.html): đã gỡ placeholder ".x2-soon-note" của thẻ Hỗ trợ',
-  !idxHtml.includes('Chức năng đang được bổ sung') && !idxHtml.includes('id="x2-ho-tro-card"') === false &&
+check('K8 (index.html): Ä‘Ã£ gá»¡ placeholder ".x2-soon-note" cá»§a tháº» Há»— trá»£',
+  !idxHtml.includes('Chá»©c nÄƒng Ä‘ang Ä‘Æ°á»£c bá»• sung') && !idxHtml.includes('id="x2-ho-tro-card"') === false &&
   idxHtml.slice(idxHtml.indexOf('id="x2-ho-tro-card"'), idxHtml.indexOf('id="x1-cat-ong-card"')).includes('x2-zone'));
-check('K9 (styles.css): khối CSS riêng (.x2-ht-worker-tools + #x2-ht-workers + .x2-ht-calc)',
+check('K9 (styles.css): khá»‘i CSS riÃªng (.x2-ht-worker-tools + #x2-ht-workers + .x2-ht-calc)',
   cssCss.includes('.x2-ht-worker-tools') && cssCss.includes('#x2-ht-workers') &&
   cssCss.includes('.x2-ht-calc'));
-check('K10 (export-xlsx): nguồn "hotro" + nhánh cột Ngày/Nội dung/Người/Mô tả/Giờ',
+check('K10 (export-xlsx): nguá»“n "hotro" + nhÃ¡nh cá»™t NgÃ y/Ná»™i dung/NgÆ°á»i/MÃ´ táº£/Giá»',
   jsXlsx.includes("id: 'hotro'") && jsXlsx.includes('state.xuong2HoTroRecords') &&
   jsXlsx.includes("source === 'hotro'"));
-check('K11 (sw.js): đã tăng CACHE_NAME v456', /nha-may-ngoc-son-v456/.test(swJs));
-check('K12 (index.html): gợi ý ô người nêu rõ CHỈ vị trí "Hỗ Trợ + Công Đoạn Lẻ" (Xưởng 2)',
-  idxHtml.includes('Chỉ hiện người đang bố trí vị trí <b>"Hỗ Trợ + Công Đoạn Lẻ"</b>'));
+check('K11 (sw.js): Ä‘Ã£ tÄƒng CACHE_NAME v486', /nha-may-ngoc-son-v486/.test(swJs));
+check('K12 (index.html): gá»£i Ã½ Ã´ ngÆ°á»i nÃªu rÃµ CHá»ˆ vá»‹ trÃ­ "Há»— Trá»£ + CÃ´ng Äoáº¡n Láº»" (XÆ°á»Ÿng 2)',
+  idxHtml.includes('Chá»‰ hiá»‡n ngÆ°á»i Ä‘ang bá»‘ trÃ­ vá»‹ trÃ­ <b>"Há»— Trá»£ + CÃ´ng Äoáº¡n Láº»"</b>'));
 
-console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
+console.log(`\nKáº¾T QUáº¢: ${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);
+

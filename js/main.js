@@ -48,6 +48,7 @@ import { initializeCoreStorage, restoreCoreStorage } from './storage-adapter.js'
 setWorkerEvaluationEfficiencyProvider(computeWorkerStageEfficiency);
 
 let pwaInstallPrompt = null;
+let viewSwitchRequestId = 0;
 
 // ─── NHÓM LOAD SONG SONG (không phụ thuộc lẫn nhau) ────────────────────
 // Giữ nguyên TẤT CẢ import ở đầu file (để test pass), nhưng chạy load*() song song
@@ -320,7 +321,15 @@ function yieldBootFrame() {
       initVnDateInputs();
       if (typeof MutationObserver === 'function') {
         let vnDateMoTimer = null;
-        const vnDateMo = new MutationObserver(() => {
+        const vnDateMo = new MutationObserver((mutations) => {
+          const hasAddedDateInput = mutations.some(record =>
+            Array.from(record.addedNodes || []).some(node =>
+              node && node.nodeType === 1 &&
+              (node.matches && node.matches('input[type="date"]') ||
+               node.querySelector && node.querySelector('input[type="date"]'))
+            )
+          );
+          if (!hasAddedDateInput) return;
           clearTimeout(vnDateMoTimer);
           vnDateMoTimer = setTimeout(() => initVnDateInputs(), 200);
         });
@@ -464,26 +473,29 @@ function yieldBootFrame() {
   }
 
   async function switchViewCore(targetViewId) {
+    const requestId = ++viewSwitchRequestId;
+
+    if (targetViewId === 'leadership-view' && !canAccessLeadershipDashboard()) {
+      showToast('Chỉ Ban Quản Lý và Admin được xem tổng hợp lãnh đạo.', 'error');
+      targetViewId = 'dashboard-view';
+    }
+
     // Đảm bảo mọi render đang chờ hoàn thành trước khi rời tab — tránh hiển thị
     // số liệu cũ trên tab mới sau 1 frame rAF.
-    flushRenderAll();
-    
+
+    // Giai đoạn 2: Lazy-load module cho tab đích (nếu chưa nạp)
+    // Chờ module nạp xong rồi mới render để tránh lỗi "function not found"
+    await loadModulesForView(targetViewId);
+
+    if (requestId !== viewSwitchRequestId) return;
+
     // Giai đoạn 3: Cleanup tài nguyên của tab trước khi chuyển tab
     // Điều này giải phóng Chart.js, event listeners, intervals, observers, etc.
     // giúp tránh memory leak trên Edge/Chrome khi chuyển tab nhiều lần
     if (state.activeView && state.activeView !== targetViewId) {
       cleanupByPrefix(state.activeView.replace('-view', '-'));
     }
-    
-    if (targetViewId === 'leadership-view' && !canAccessLeadershipDashboard()) {
-      showToast('Chỉ Ban Quản Lý và Admin được xem tổng hợp lãnh đạo.', 'error');
-      targetViewId = 'dashboard-view';
-    }
-    
-    // Giai đoạn 2: Lazy-load module cho tab đích (nếu chưa nạp)
-    // Chờ module nạp xong rồi mới render để tránh lỗi "function not found"
-    await loadModulesForView(targetViewId);
-    
+
     const prevView = state.activeView;
     state.activeView = targetViewId;
     // Chỉ đặt lại vị trí về TUẦN HIỆN TẠI khi CHUYỂN TỪ TAB KHÁC sang tab Kế hoạch

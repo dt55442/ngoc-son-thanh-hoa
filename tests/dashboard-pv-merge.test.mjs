@@ -228,7 +228,7 @@ check('CẤU TRÚC (dashboard.js): nạp chế độ đã nhớ trước khi v�
 check('CẤU TRÚC (press.js): hiệu ứng trượt cửa sổ tuần Khả Năng dùng khung MỚI (#pv-chart-box-cap)',
   jsPress.includes("document.getElementById('pv-chart-box-cap')"));
 check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME (PWA không dùng cache cũ)',
-  /nha-may-ngoc-son-v456/.test(swJs));
+  /nha-may-ngoc-son-v486/.test(swJs));
 
 // ─── 8. TRỢ GIÚP DASHBOARD: ẩn ghi chú + tooltip + nút "?" + modal ───
 console.log('--- 8. TRỢ GIÚP DASHBOARD ---');
@@ -260,7 +260,9 @@ check('CẤU TRÚC (events.js): wire 4 nút ? + đóng bằng nút ✕ / Đã Hi
   ['btn-help-capacity', 'btn-help-pv', 'btn-help-material', 'btn-help-zone-advanced', 'btn-close-dash-help', 'btn-dash-help-ok']
     .every(id => jsEvents.includes(`safeOn('${id}'`)) &&
   jsEvents.includes('if (e.target === dashHelpOv) closeDashHelp();') &&
-  jsEvents.includes("if (e.key !== 'Escape') return;"));
+  jsEvents.includes("if (e.key === 'Escape')") &&
+  jsEvents.includes("if (e.key !== 'Tab') return;") &&
+  jsEvents.includes('last.focus();') && jsEvents.includes('first.focus();'));
 check('CẤU TRÚC (main.js): window.app.openDashHelp cho onclick của thẻ biểu đồ tùy chỉnh',
   jsMain.includes('openDashHelp,') && jsMain.includes('import { deleteCustomChart, openChartBuilderModal, openDashHelp,'));
 
@@ -289,3 +291,4 @@ check('HÀNH VI: key lạ / thẻ biểu đồ không tồn tại → KHÔNG m�
 
 console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
+

@@ -1,13 +1,13 @@
-// tests/qc-press.test.mjs — THẺ "NHẬT KÝ THEO DÕI ÉP VÁN" (tab QC — js/qc-press.js).
-// Bao phủ: tên/số lượng ƯU TIÊN ô Ván Thô → fallback ô Thành Phẩm · đổi keo/phụ
-// gia KG → GAM · tỷ lệ trong thẻ chuẩn hóa theo 100g keo · độ phủ = (keo + phụ gia) ÷ SL ·
-// verdict PASS/Fail 1-1 (ghi đè) + lưu localStorage · lọc PASS/Fail/chưa kiểm ·
-// tìm nhanh · render thẻ ngày (nhãn PASS NGHIÊNG + 2 nút ✅/❌) · mini card ·
-// cấu trúc (index.html · qc.js · events.js · state/storage/cloud/history/main ·
-// sw.js v226 · styles.css · package.json).
+﻿// tests/qc-press.test.mjs â€” THáºº "NHáº¬T KÃ THEO DÃ•I Ã‰P VÃN" (tab QC â€” js/qc-press.js).
+// Bao phá»§: tÃªn/sá»‘ lÆ°á»£ng Æ¯U TIÃŠN Ã´ VÃ¡n ThÃ´ â†’ fallback Ã´ ThÃ nh Pháº©m Â· Ä‘á»•i keo/phá»¥
+// gia KG â†’ GAM Â· tá»· lá»‡ trong tháº» chuáº©n hÃ³a theo 100g keo Â· Ä‘á»™ phá»§ = (keo + phá»¥ gia) Ã· SL Â·
+// verdict PASS/Fail 1-1 (ghi Ä‘Ã¨) + lÆ°u localStorage Â· lá»c PASS/Fail/chÆ°a kiá»ƒm Â·
+// tÃ¬m nhanh Â· render tháº» ngÃ y (nhÃ£n PASS NGHIÃŠNG + 2 nÃºt âœ…/âŒ) Â· mini card Â·
+// cáº¥u trÃºc (index.html Â· qc.js Â· events.js Â· state/storage/cloud/history/main Â·
+// sw.js v226 Â· styles.css Â· package.json).
 'use strict';
 
-// ─── Stubs môi trường (giống qc-final.test.mjs) ──────────────────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng qc-final.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -70,26 +70,26 @@ function check(name, cond) {
 }
 const approx = (a, b) => Math.abs(a - b) < 1e-6;
 
-// ─── IMPORT MODULES (sau khi stub xong) ────────────────────────────────
+// â”€â”€â”€ IMPORT MODULES (sau khi stub xong) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const { state, STORAGE_KEY_QC_PRESS } = await import('../js/state.js');
 const qcp = await import('../js/qc-press.js');
 const fsMod = await import('node:fs');
 
-// ─── DỮ LIỆU GIẢ ───────────────────────────────────────────────
-state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true, fullname: 'Quản Trị' };
+// â”€â”€â”€ Dá»® LIá»†U GIáº¢ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true, fullname: 'Quáº£n Trá»‹' };
 state.pressRecords = [
-  // p1: chỉ điền Thành Phẩm (ván thô qty=0 → fallback Thành phẩm)
-  { id: 'p1', date: '2026-09-22', productId: 'sp1', productName: 'Ván 1220x2440x9', fpDim: '1220x2440x9',
+  // p1: chá»‰ Ä‘iá»n ThÃ nh Pháº©m (vÃ¡n thÃ´ qty=0 â†’ fallback ThÃ nh pháº©m)
+  { id: 'p1', date: '2026-09-22', productId: 'sp1', productName: 'VÃ¡n 1220x2440x9', fpDim: '1220x2440x9',
     finishedQty: 300, vanTho: [{ vtDim: '1220x2440x9', vtQty: 0 }], sticks: [],
-    forceH: 18, forceV: 22, tempC: 120, pressMin: 25, glue: 2.5, additive: 0.25, glueName: 'Keo UF', additiveName: 'Bột mì' },
-  // p2: CÓ ván thô > 0 → PHẢI ưu tiên ván thô (kể cả khi có thành phẩm)
-  { id: 'p2', date: '2026-09-24', productId: 'sp1', productName: 'Ván 1220x2440x9', fpDim: '1220x2440x9',
+    forceH: 18, forceV: 22, tempC: 120, pressMin: 25, glue: 2.5, additive: 0.25, glueName: 'Keo UF', additiveName: 'Bá»™t mÃ¬' },
+  // p2: CÃ“ vÃ¡n thÃ´ > 0 â†’ PHáº¢I Æ°u tiÃªn vÃ¡n thÃ´ (ká»ƒ cáº£ khi cÃ³ thÃ nh pháº©m)
+  { id: 'p2', date: '2026-09-24', productId: 'sp1', productName: 'VÃ¡n 1220x2440x9', fpDim: '1220x2440x9',
     finishedQty: 200, vanTho: [{ vtDim: '1200x600x12', vtQty: 150 }], sticks: [],
-    forceH: 20, forceV: 24, tempC: 125, pressMin: 30, glue: 0.1, additive: 0.012, glueName: 'Keo UF', additiveName: 'Bột mì' },
-  // p3: không ván thô → Thành phẩm (thiếu thông số/keo → hiện "—")
+    forceH: 20, forceV: 24, tempC: 125, pressMin: 30, glue: 0.1, additive: 0.012, glueName: 'Keo UF', additiveName: 'Bá»™t mÃ¬' },
+  // p3: khÃ´ng vÃ¡n thÃ´ â†’ ThÃ nh pháº©m (thiáº¿u thÃ´ng sá»‘/keo â†’ hiá»‡n "â€”")
   { id: 'p3', date: '2026-09-30', productId: 'sp2', productName: 'Bullig 1200x300x50', fpDim: '',
     finishedQty: 120, vanTho: [], sticks: [], forceH: 0, forceV: 0, tempC: 0, pressMin: 0, glue: 0, additive: 0 },
-  // p4: cùng ngày p3 (gom thẻ ngày) + chỉ có ván thô
+  // p4: cÃ¹ng ngÃ y p3 (gom tháº» ngÃ y) + chá»‰ cÃ³ vÃ¡n thÃ´
   { id: 'p4', date: '2026-09-30', productId: 'sp2', productName: '', fpDim: '',
     finishedQty: 0, vanTho: [{ vtDim: '1220x2440x9', vtQty: 80 }], sticks: [],
     forceH: 16, forceV: 20, tempC: 118, pressMin: 22, glue: 0.1, additive: 0.012, glueName: '', additiveName: '' }
@@ -97,145 +97,145 @@ state.pressRecords = [
 state.qcPressLogs = [];
 qcp.loadQcPressLogs();
 
-// ═══ A. TÊN + SỐ LƯỢNG ƯU TIÊN VÁN THÔ ═══
-console.log('--- A. TÊN + SỐ LƯỢNG (ưu tiên Ván Thô) ---');
-check('TÊN: p2 CÓ ván thô > 0 → lấy ván thô "1200x600x12" (150), KHÔNG lấy thành phẩm',
+// â•â•â• A. TÃŠN + Sá» LÆ¯á»¢NG Æ¯U TIÃŠN VÃN THÃ” â•â•â•
+console.log('--- A. TÃŠN + Sá» LÆ¯á»¢NG (Æ°u tiÃªn VÃ¡n ThÃ´) ---');
+check('TÃŠN: p2 CÃ“ vÃ¡n thÃ´ > 0 â†’ láº¥y vÃ¡n thÃ´ "1200x600x12" (150), KHÃ”NG láº¥y thÃ nh pháº©m',
   (() => { const d = qcp.qcPressNameQtyOf(state.pressRecords[1]); return d.source === 'vanTho' && d.name === '1200x600x12' && d.qty === 150; })());
-check('TÊN: p1 ván thô qty=0 → fallback Thành Phẩm (300)',
+check('TÃŠN: p1 vÃ¡n thÃ´ qty=0 â†’ fallback ThÃ nh Pháº©m (300)',
   (() => { const d = qcp.qcPressNameQtyOf(state.pressRecords[0]); return d.source === 'thanhPham' && d.qty === 300; })());
-check('TÊN: p3 không ván thô → Thành Phẩm "Bullig 1200x300x50" (120)',
+check('TÃŠN: p3 khÃ´ng vÃ¡n thÃ´ â†’ ThÃ nh Pháº©m "Bullig 1200x300x50" (120)',
   (() => { const d = qcp.qcPressNameQtyOf(state.pressRecords[2]); return d.source === 'thanhPham' && d.name === 'Bullig 1200x300x50'; })());
-check('TÊN: p4 chỉ có ván thô → ván thô "1220x2440x9" (80)',
+check('TÃŠN: p4 chá»‰ cÃ³ vÃ¡n thÃ´ â†’ vÃ¡n thÃ´ "1220x2440x9" (80)',
   (() => { const d = qcp.qcPressNameQtyOf(state.pressRecords[3]); return d.source === 'vanTho' && d.qty === 80; })());
 
-// ═══ B. ĐƠN VỊ: KG → GAM · TỶ LỆ · ĐỘ PHỦ ═══
-console.log('--- B. GAM · TỶ LỆ PHA TRỘN · ĐỘ PHỦ ---');
+// â•â•â• B. ÄÆ N Vá»Š: KG â†’ GAM Â· Tá»¶ Lá»† Â· Äá»˜ PHá»¦ â•â•â•
+console.log('--- B. GAM Â· Tá»¶ Lá»† PHA TRá»˜N Â· Äá»˜ PHá»¦ ---');
 const d2 = qcp.qcPressDisplay(state.pressRecords[1]);
-check('GAM: keo 0.1kg → 100g · phụ gia 0.012kg → 12g', d2.glueG === 100 && d2.additiveG === 12);
-check('TỶ LỆ BÁO CÁO: giữ dạng "100g - 12g"', d2.mixText === '100g - 12g');
-check('TỶ LỆ THẺ QC: 26.000g keo + 3.120g phụ gia quy về "100g-12g"',
+check('GAM: keo 0.1kg â†’ 100g Â· phá»¥ gia 0.012kg â†’ 12g', d2.glueG === 100 && d2.additiveG === 12);
+check('Tá»¶ Lá»† BÃO CÃO: giá»¯ dáº¡ng "100g - 12g"', d2.mixText === '100g - 12g');
+check('Tá»¶ Lá»† THáºº QC: 26.000g keo + 3.120g phá»¥ gia quy vá» "100g-12g"',
   qcp.qcPressDisplay({ glue: 26, additive: 3.12 }).cardMixText === '100g-12g');
-check('TỶ LỆ THẺ QC: số phụ gia được chuẩn hóa theo 100g keo',
+check('Tá»¶ Lá»† THáºº QC: sá»‘ phá»¥ gia Ä‘Æ°á»£c chuáº©n hÃ³a theo 100g keo',
   qcp.qcPressDisplay({ glue: 26, additive: 3.25 }).cardMixText === '100g-12,5g');
-check('TỶ LỆ THẺ QC: báo cáo vẫn giữ tổng lượng thực tế',
+check('Tá»¶ Lá»† THáºº QC: bÃ¡o cÃ¡o váº«n giá»¯ tá»•ng lÆ°á»£ng thá»±c táº¿',
   qcp.qcPressDisplay({ glue: 26, additive: 3.12 }).mixText === '26.000g - 3.120g');
-check('TỶ LỆ THẺ QC: không có keo thì không thể chuẩn hóa',
-  qcp.qcPressDisplay({ glue: 0, additive: 0.012 }).cardMixText === '—');
-check('ĐỘ PHỦ: (100+12)g ÷ 150 thanh ván thô', approx(d2.coverage, 112 / 150));
-check('ĐỘ PHỦ p4: (100+12) ÷ 80 = 1,4 g/tấm', approx(qcp.qcPressDisplay(state.pressRecords[3]).coverage, 1.4));
+check('Tá»¶ Lá»† THáºº QC: khÃ´ng cÃ³ keo thÃ¬ khÃ´ng thá»ƒ chuáº©n hÃ³a',
+  qcp.qcPressDisplay({ glue: 0, additive: 0.012 }).cardMixText === 'â€”');
+check('Äá»˜ PHá»¦: (100+12)g Ã· 150 thanh vÃ¡n thÃ´', approx(d2.coverage, 112 / 150));
+check('Äá»˜ PHá»¦ p4: (100+12) Ã· 80 = 1,4 g/táº¥m', approx(qcp.qcPressDisplay(state.pressRecords[3]).coverage, 1.4));
 const d3 = qcp.qcPressDisplay(state.pressRecords[2]);
-check('THIẾU keo/phụ gia → tỷ lệ thẻ "—" · độ phủ null',
-  d3.cardMixText === '—' && d3.coverage === null);
-check('THÔNG SỐ KT: p1 đọc đủ lực ép ngang/đứng · nhiệt độ · thời gian',
+check('THIáº¾U keo/phá»¥ gia â†’ tá»· lá»‡ tháº» "â€”" Â· Ä‘á»™ phá»§ null',
+  d3.cardMixText === 'â€”' && d3.coverage === null);
+check('THÃ”NG Sá» KT: p1 Ä‘á»c Ä‘á»§ lá»±c Ã©p ngang/Ä‘á»©ng Â· nhiá»‡t Ä‘á»™ Â· thá»i gian',
   (() => { const d = qcp.qcPressDisplay(state.pressRecords[0]); return d.forceH === 18 && d.forceV === 22 && d.tempC === 120 && d.pressMin === 25; })());
-// LỰC ÉP DẠNG KHOẢNG "8-10" MPa (19/10/2026): lưu forceH=8 + forceHMax=10.
-// forceH/forceV vẫn là SỐ (tương thích số liệu cũ) — thêm forceHText/forceVText để hiển thị.
+// Lá»°C Ã‰P Dáº NG KHOáº¢NG "8-10" MPa (19/10/2026): lÆ°u forceH=8 + forceHMax=10.
+// forceH/forceV váº«n lÃ  Sá» (tÆ°Æ¡ng thÃ­ch sá»‘ liá»‡u cÅ©) â€” thÃªm forceHText/forceVText Ä‘á»ƒ hiá»ƒn thá»‹.
 const dRange = qcp.qcPressDisplay({
   id: 'p-range', date: '2026-09-25', forceH: 8, forceHMax: 10, forceV: 20, forceVMax: 24,
   tempC: 120, pressMin: 25, glue: 0, additive: 0,
   vanTho: [{ vtDim: '1200x600x12', vtQty: 10 }]
 });
-check('LỰC ÉP KHOẢNG: forceH 8 + forceHMax 10 → hiện "8-10", forceH vẫn là số 8',
+check('Lá»°C Ã‰P KHOáº¢NG: forceH 8 + forceHMax 10 â†’ hiá»‡n "8-10", forceH váº«n lÃ  sá»‘ 8',
   dRange.forceHText === '8-10' && dRange.forceH === 8);
-check('LỰC ÉP KHOẢNG: cận đứng 20 + 24 → hiện "20-24"',
+check('Lá»°C Ã‰P KHOáº¢NG: cáº­n Ä‘á»©ng 20 + 24 â†’ hiá»‡n "20-24"',
   dRange.forceVText === '20-24' && dRange.forceV === 20);
-check('LỰC ÉP 1 SỐ: p1 (18 · 22) → text "18" / "22" (không đổi số liệu cũ)',
+check('Lá»°C Ã‰P 1 Sá»: p1 (18 Â· 22) â†’ text "18" / "22" (khÃ´ng Ä‘á»•i sá»‘ liá»‡u cÅ©)',
   (() => { const d = qcp.qcPressDisplay(state.pressRecords[0]); return d.forceHText === '18' && d.forceVText === '22'; })());
-check('BÁO CÁO EXCEL: cột lực ép ưu tiên forceHText/forceVText (xuất "8-10" thay vì rỗng)',
+check('BÃO CÃO EXCEL: cá»™t lá»±c Ã©p Æ°u tiÃªn forceHText/forceVText (xuáº¥t "8-10" thay vÃ¬ rá»—ng)',
   (() => {
     const rcSrc = fsMod.readFileSync(new URL('../js/report-center.js', import.meta.url), 'utf8');
     return rcSrc.includes('d.forceHText || d.forceH') && rcSrc.includes('d.forceVText || d.forceV');
   })());
 
-// ═══ C. VERDICT 1-1 (ghi đè) + LƯU ═══
-console.log('--- C. VERDICT PASS/FAIL 1-1 + LƯU ---');
-check('CHẤM PASS: tạo 1 log mới + ghi localStorage', (() => {
+// â•â•â• C. VERDICT 1-1 (ghi Ä‘Ã¨) + LÆ¯U â•â•â•
+console.log('--- C. VERDICT PASS/FAIL 1-1 + LÆ¯U ---');
+check('CHáº¤M PASS: táº¡o 1 log má»›i + ghi localStorage', (() => {
   const ok = qcp.setQcPressVerdict('p2', 'pass');
   return ok && state.qcPressLogs.length === 1 && state.qcPressLogs[0].verdict === 'pass' &&
     JSON.parse(storeBacking.get(STORAGE_KEY_QC_PRESS) || '[]').length === 1;
 })());
-check('MINI CARD: "1/4 đã kiểm"', qcp.qcPressCardCount() === '1/4 đã kiểm');
-check('CHẤM LẠI: vẫn 1 log (1 lượt 1 kết quả) → ghi đè thành fail', (() => {
+check('MINI CARD: "1/4 Ä‘Ã£ kiá»ƒm"', qcp.qcPressCardCount() === '1/4 Ä‘Ã£ kiá»ƒm');
+check('CHáº¤M Láº I: váº«n 1 log (1 lÆ°á»£t 1 káº¿t quáº£) â†’ ghi Ä‘Ã¨ thÃ nh fail', (() => {
   qcp.setQcPressVerdict('p2', 'fail');
   return state.qcPressLogs.length === 1 && qcp.qcPressVerdictOf('p2') === 'fail';
 })());
-check('LƯỢT ÉP KHÔNG TỒN TẠI → chặn + không tạo log', (() => {
+check('LÆ¯á»¢T Ã‰P KHÃ”NG Tá»’N Táº I â†’ cháº·n + khÃ´ng táº¡o log', (() => {
   const n = state.qcPressLogs.length;
   return qcp.setQcPressVerdict('p999', 'pass') === false && state.qcPressLogs.length === n;
 })());
-check('CHẤM PASS p1 → 2 log, p3 chưa kiểm', (() => {
+check('CHáº¤M PASS p1 â†’ 2 log, p3 chÆ°a kiá»ƒm', (() => {
   qcp.setQcPressVerdict('p1', 'pass');
   return state.qcPressLogs.length === 2 && qcp.qcPressVerdictOf('p1') === 'pass' && qcp.qcPressVerdictOf('p3') === '';
 })());
-check('NGƯỜI KIỂM snapshot vào log (checkedBy = fullname + checkedAt)',
-  state.qcPressLogs.every(l => l.checkedBy === 'Quản Trị' && !!l.checkedAt));
-check('LƯU: localStorage khớp state.qcPressLogs',
+check('NGÆ¯á»œI KIá»‚M snapshot vÃ o log (checkedBy = fullname + checkedAt)',
+  state.qcPressLogs.every(l => l.checkedBy === 'Quáº£n Trá»‹' && !!l.checkedAt));
+check('LÆ¯U: localStorage khá»›p state.qcPressLogs',
   JSON.parse(storeBacking.get(STORAGE_KEY_QC_PRESS) || '[]').length === state.qcPressLogs.length);
 
-// ═══ D. LỌC + TÌM NHANH ═══
-console.log('--- D. LỌC PASS/FAIL/CHƯA KIỂM + TÌM ---');
-check('LỌC mặc định: đủ 4 lượt ép', qcp.qcPressRowsFiltered().length === 4);
-check('LỌC "unchecked": chỉ p3 + p4', (() => {
+// â•â•â• D. Lá»ŒC + TÃŒM NHANH â•â•â•
+console.log('--- D. Lá»ŒC PASS/FAIL/CHÆ¯A KIá»‚M + TÃŒM ---');
+check('Lá»ŒC máº·c Ä‘á»‹nh: Ä‘á»§ 4 lÆ°á»£t Ã©p', qcp.qcPressRowsFiltered().length === 4);
+check('Lá»ŒC "unchecked": chá»‰ p3 + p4', (() => {
   qcp.setQcPressFilter('unchecked');
   const ids = qcp.qcPressRowsFiltered().map(r => r.id).sort().join(',');
   qcp.setQcPressFilter('all');
   return ids === 'p3,p4';
 })());
-check('LỌC "pass": chỉ p1', (() => {
+check('Lá»ŒC "pass": chá»‰ p1', (() => {
   qcp.setQcPressFilter('pass');
   const ids = qcp.qcPressRowsFiltered().map(r => r.id).join(',');
   qcp.setQcPressFilter('all');
   return ids === 'p1';
 })());
-check('TÌM "bullig" → chỉ 1 dòng (bỏ hoa/thường + dấu)', (() => {
+check('TÃŒM "bullig" â†’ chá»‰ 1 dÃ²ng (bá» hoa/thÆ°á»ng + dáº¥u)', (() => {
   qcp.setQcPressSearchQ('BULLIG');
   const n = qcp.qcPressRowsFiltered().length;
   qcp.setQcPressSearchQ('');
   return n === 1;
 })());
 
-// ═══ E. RENDER THẺ NGÀY + NHÃN PASS ═══
-console.log('--- E. RENDER: thẻ ngày · nhãn PASS nghiêng · nút ✅/❌ ---');
+// â•â•â• E. RENDER THáºº NGÃ€Y + NHÃƒN PASS â•â•â•
+console.log('--- E. RENDER: tháº» ngÃ y Â· nhÃ£n PASS nghiÃªng Â· nÃºt âœ…/âŒ ---');
 qcp.renderQcPressCard();
 const statsHtml = document.getElementById('qcp-stats').innerHTML;
-check('THỐNG KÊ: Lượt ép · Đã kiểm · PASS · Fail · Chưa kiểm',
-  statsHtml.includes('Lượt ép') && statsHtml.includes('Đã kiểm') && statsHtml.includes('PASS') &&
-  statsHtml.includes('Fail') && statsHtml.includes('Chưa kiểm'));
-check('ĐẾM: chip đầu bảng "4/4 lượt ép"', document.getElementById('qcp-day-count').textContent === '4/4 lượt ép');
+check('THá»NG KÃŠ: LÆ°á»£t Ã©p Â· ÄÃ£ kiá»ƒm Â· PASS Â· Fail Â· ChÆ°a kiá»ƒm',
+  statsHtml.includes('LÆ°á»£t Ã©p') && statsHtml.includes('ÄÃ£ kiá»ƒm') && statsHtml.includes('PASS') &&
+  statsHtml.includes('Fail') && statsHtml.includes('ChÆ°a kiá»ƒm'));
+check('Äáº¾M: chip Ä‘áº§u báº£ng "4/4 lÆ°á»£t Ã©p"', document.getElementById('qcp-day-count').textContent === '4/4 lÆ°á»£t Ã©p');
 const dayHtml = document.getElementById('qcp-day-cards').innerHTML;
-check('THẺ NGÀY: gom theo ngày + đếm PASS/Fail trong ngày',
+check('THáºº NGÃ€Y: gom theo ngÃ y + Ä‘áº¿m PASS/Fail trong ngÃ y',
   dayHtml.includes('x2-day-card') && dayHtml.includes('PASS: <strong>1</strong>') && dayHtml.includes('Fail: <strong>1</strong>'));
-check('BẢNG: hiện tỷ lệ chuẩn hóa "100g-12g" + cột Độ phủ "g/tấm"',
-  dayHtml.includes('100g-12g') && dayHtml.includes('g/tấm'));
-check('BẢNG: đủ tiêu đề (Lực ép ngang/đứng đơn vị MPa · Nhiệt độ · Thời gian ép · QC kiểm)',
-  dayHtml.includes('Lực ép ngang (MPa)') && dayHtml.includes('Lực ép đứng (MPa)') && dayHtml.includes('Nhiệt độ') &&
-  dayHtml.includes('Thời gian ép') && dayHtml.includes('QC kiểm'));
-check('NHÃN: PASS nghiêng (.qcp-stamp-pass) trên dòng đã chấm',
+check('Báº¢NG: hiá»‡n tá»· lá»‡ chuáº©n hÃ³a "100g-12g" + cá»™t Äá»™ phá»§ "g/táº¥m"',
+  dayHtml.includes('100g-12g') && dayHtml.includes('g/táº¥m'));
+check('Báº¢NG: Ä‘á»§ tiÃªu Ä‘á» (Lá»±c Ã©p ngang/Ä‘á»©ng Ä‘Æ¡n vá»‹ MPa Â· Nhiá»‡t Ä‘á»™ Â· Thá»i gian Ã©p Â· QC kiá»ƒm)',
+  dayHtml.includes('Lá»±c Ã©p ngang (MPa)') && dayHtml.includes('Lá»±c Ã©p Ä‘á»©ng (MPa)') && dayHtml.includes('Nhiá»‡t Ä‘á»™') &&
+  dayHtml.includes('Thá»i gian Ã©p') && dayHtml.includes('QC kiá»ƒm'));
+check('NHÃƒN: PASS nghiÃªng (.qcp-stamp-pass) trÃªn dÃ²ng Ä‘Ã£ cháº¥m',
   dayHtml.includes('qcp-stamp-pass') && dayHtml.includes('>PASS</span>'));
-check('NHÃN: Fail + 2 nút ✅/❌ (data-qcp-verdict) bọc data-perm="qc"',
+check('NHÃƒN: Fail + 2 nÃºt âœ…/âŒ (data-qcp-verdict) bá»c data-perm="qc"',
   dayHtml.includes('qcp-stamp-fail') && dayHtml.includes('data-qcp-verdict="pass"') &&
   dayHtml.includes('data-qcp-verdict="fail"') && dayHtml.includes('data-perm="qc"'));
-check('CHƯA KIỂM: dòng p3/p4 hiện "Chưa kiểm"',
-  dayHtml.includes('qcp-stamp-none') && dayHtml.includes('Chưa kiểm'));
-check('CHIP NGUỒN: "Ván thô" (ưu tiên) + "TP" (fallback Thành phẩm)',
+check('CHÆ¯A KIá»‚M: dÃ²ng p3/p4 hiá»‡n "ChÆ°a kiá»ƒm"',
+  dayHtml.includes('qcp-stamp-none') && dayHtml.includes('ChÆ°a kiá»ƒm'));
+check('CHIP NGUá»’N: "VÃ¡n thÃ´" (Æ°u tiÃªn) + "TP" (fallback ThÃ nh pháº©m)',
   dayHtml.includes('qcp-src-tag') && dayHtml.includes('qcp-src-fp'));
-check('RỖNG: xóa hết lượt ép → hướng dẫn nhập ở Ép Ván', (() => {
+check('Rá»–NG: xÃ³a háº¿t lÆ°á»£t Ã©p â†’ hÆ°á»›ng dáº«n nháº­p á»Ÿ Ã‰p VÃ¡n', (() => {
   const keep = state.pressRecords.slice();
   state.pressRecords = [];
   qcp.renderQcPressTable();
-  const empty = document.getElementById('qcp-day-cards').innerHTML.includes('Chưa có lượt ép nào');
+  const empty = document.getElementById('qcp-day-cards').innerHTML.includes('ChÆ°a cÃ³ lÆ°á»£t Ã©p nÃ o');
   state.pressRecords = keep;
   qcp.renderQcPressTable();
   return empty;
 })());
-check('ỦY QUYỀN: click nút ✅/❌ trong bảng → onQcPressTableClick trả về true', (() => {
+check('á»¦Y QUYá»€N: click nÃºt âœ…/âŒ trong báº£ng â†’ onQcPressTableClick tráº£ vá» true', (() => {
   const ev = { target: { closest: (sel) => sel === '[data-qcp-verdict]'
     ? { getAttribute: (a) => a === 'data-qcp-id' ? 'p3' : 'pass' } : null } };
   return qcp.onQcPressTableClick(ev) === true && qcp.qcPressVerdictOf('p3') === 'pass';
 })());
 
-// ═══ F. CẤU TRÚC CÁC FILE ═══
-console.log('--- F. CẤU TRÚC (index · qc · events · 6 chỗ nối · sw · css · package) ---');
+// â•â•â• F. Cáº¤U TRÃšC CÃC FILE â•â•â•
+console.log('--- F. Cáº¤U TRÃšC (index Â· qc Â· events Â· 6 chá»— ná»‘i Â· sw Â· css Â· package) ---');
 const idxHtml = fsMod.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const qcJs = fsMod.readFileSync(new URL('../js/qc.js', import.meta.url), 'utf8');
 const evJs = fsMod.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
@@ -247,37 +247,38 @@ const mnJs = fsMod.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8
 const swJs = fsMod.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const cssHtml = fsMod.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 const pkgJson = fsMod.readFileSync(new URL('../package.json', import.meta.url), 'utf8');
-check('index.html: launcher qc-press-card + thẻ (qcp-stats · qcp-day-cards · qcp-search · qcp-filter)',
+check('index.html: launcher qc-press-card + tháº» (qcp-stats Â· qcp-day-cards Â· qcp-search Â· qcp-filter)',
   idxHtml.includes('data-qc-card="qc-press-card"') && idxHtml.includes('id="qc-press-card"') &&
   idxHtml.includes('id="qcp-stats"') && idxHtml.includes('id="qcp-day-cards"') &&
   idxHtml.includes('id="qcp-search"') && idxHtml.includes('id="qcp-filter"') &&
   idxHtml.includes('id="qc-mini-count-press"'));
-check('qc.js: import qc-press + QC_CARD_DEFS có qc-press-card + render trong renderQcView',
+check('qc.js: import qc-press + QC_CARD_DEFS cÃ³ qc-press-card + render trong renderQcView',
   qcJs.includes("from './qc-press.js'") && qcJs.includes("'qc-press-card':") && qcJs.includes('renderQcPressCard();'));
-check('events.js: wire ô tìm + phễu + ủy quyền nút PASS/Fail',
+check('events.js: wire Ã´ tÃ¬m + phá»…u + á»§y quyá»n nÃºt PASS/Fail',
   evJs.includes("safeOn('qcp-search', 'input'") && evJs.includes("safeOn('qcp-filter', 'change'") &&
   evJs.includes('onQcPressTableClick'));
 check('state.js: key bamboo_tracker_qc_press_v1 + state.qcPressLogs + export',
   stJs.includes('bamboo_tracker_qc_press_v1') && stJs.includes('qcPressLogs: []') &&
   stJs.includes('STORAGE_KEY_QC_PRESS,'));
-check('storage.js: restoreQcPressLogs (gộp file/backup) + snapshot 2 đường + export',
+check('storage.js: restoreQcPressLogs (gá»™p file/backup) + snapshot 2 Ä‘Æ°á»ng + export',
   stoJs.includes('function restoreQcPressLogs') && stoJs.includes('restoreQcPressLogs(loaded.qcPressLogs)') &&
   stoJs.includes('restoreQcPressLogs(imported.qcPressLogs)') && stoJs.includes('qcPressLogs: state.qcPressLogs') &&
   stoJs.includes('restoreQcPressLogs,'));
-check('cloud.js: snapshot + cloudCore + gộp khi nhận + persistAllLocal + applyFireSnapshot',
+check('cloud.js: snapshot + cloudCore + gá»™p khi nháº­n + persistAllLocal + applyFireSnapshot',
   clJs.includes('qcPressLogs: state.qcPressLogs') && clJs.includes('qcPressLogs: obj.qcPressLogs') &&
   clJs.includes('state.qcPressLogs = m(') && clJs.includes('STORAGE_KEY_QC_PRESS') &&
   clJs.includes("state.qcPressLogs = clean('qcPressLogs'"));
-check('history.js: miền qcPressLogs thuộc tab qc',
-  hiJs.includes('qcPressLogs:') && hiJs.includes("label: 'Nhật ký ép ván (QC kiểm)'"));
-check('main.js: loadQcPressLogs lúc boot', mnJs.includes('loadQcPressLogs'));
-check('sw.js: CACHE_NAME v456 + js/qc-press.js vào APP_SHELL',
-  /nha-may-ngoc-son-v456/.test(swJs) && swJs.includes("'./js/qc-press.js'"));
-check('styles.css: launcher hồng + stamp PASS NGHIÊNG (font-style: italic) + nút ✅/❌',
+check('history.js: miá»n qcPressLogs thuá»™c tab qc',
+  hiJs.includes('qcPressLogs:') && hiJs.includes("label: 'Nháº­t kÃ½ Ã©p vÃ¡n (QC kiá»ƒm)'"));
+check('main.js: loadQcPressLogs lÃºc boot', mnJs.includes('loadQcPressLogs'));
+check('sw.js: CACHE_NAME v486 + js/qc-press.js vÃ o APP_SHELL',
+  /nha-may-ngoc-son-v486/.test(swJs) && swJs.includes("'./js/qc-press.js'"));
+check('styles.css: launcher há»“ng + stamp PASS NGHIÃŠNG (font-style: italic) + nÃºt âœ…/âŒ',
   cssHtml.includes('qc-press-card') && cssHtml.includes('.qcp-stamp-pass') &&
   cssHtml.includes('font-style: italic') && cssHtml.includes('.qcp-check-pass') &&
   cssHtml.includes('.qcp-check-fail'));
-check('package.json: có trong chuỗi npm test', pkgJson.includes('tests/qc-press.test.mjs'));
+check('package.json: cÃ³ trong chuá»—i npm test', pkgJson.includes('tests/qc-press.test.mjs'));
 
-console.log(`\nKẾT QUẢ: ${passed} pass, ${failed} fail`);
+console.log(`\nKáº¾T QUáº¢: ${passed} pass, ${failed} fail`);
 if (failed > 0) process.exit(1);
+

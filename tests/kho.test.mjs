@@ -1,19 +1,19 @@
-// tests/kho.test.mjs — Kiểm thử THẺ "KHO NAN" (tab Công Đoạn):
-// 1. TỒN KHO THỰC theo LẦN NHẬP: tồn lô = (số lần nhập kho × quantity) − phiếu xuất
-//    ĐÃ DUYỆT; 1 lô ra/vào kho nhiều lần (quay lại Sấy 2) vẫn chỉ 1 dòng tồn.
-// 2. PHIẾU KHO: Tổ trưởng gửi phiếu xuất (mục đích Sấy 2 / Bào Tinh / Bullig / Khác)
-//    → 'cho_duyet' KHÔNG trừ tồn → Ban lãnh đạo (Admin/Ban Quản Lý) duyệt → trừ tồn;
-//    chặn xuất vượt tồn (lúc gửi + lúc duyệt); từ chối có lý do.
-// 3. PHIẾU XỬ LÝ LỖI: tiêu hủy / tái chế thanh lỗi Bào Tinh · thanh lỗi Chọn thanh
-//    Bullig (tồn MỚI có sổ) · nan "Loại hẳn" — chặn vượt tồn lỗi theo cỡ.
-// 4. PHIẾU BÙ dữ liệu cũ: sinh phiếu ĐÃ DUYỆT từ số hệ thống suy ra, chạy 2 lần
-//    không sinh trùng; planning.js getNanStockEvents trừ tồn theo phiếu ĐÃ DUYỆT
-//    (bỏ qua purpose 'say2').
-// 5. CẤU TRÚC: id trong index.html · 5 nơi nối dữ liệu · sw.js v185 · npm test.
+﻿// tests/kho.test.mjs â€” Kiá»ƒm thá»­ THáºº "KHO NAN" (tab CÃ´ng Äoáº¡n):
+// 1. Tá»’N KHO THá»°C theo Láº¦N NHáº¬P: tá»“n lÃ´ = (sá»‘ láº§n nháº­p kho Ã— quantity) âˆ’ phiáº¿u xuáº¥t
+//    ÄÃƒ DUYá»†T; 1 lÃ´ ra/vÃ o kho nhiá»u láº§n (quay láº¡i Sáº¥y 2) váº«n chá»‰ 1 dÃ²ng tá»“n.
+// 2. PHIáº¾U KHO: Tá»• trÆ°á»Ÿng gá»­i phiáº¿u xuáº¥t (má»¥c Ä‘Ã­ch Sáº¥y 2 / BÃ o Tinh / Bullig / KhÃ¡c)
+//    â†’ 'cho_duyet' KHÃ”NG trá»« tá»“n â†’ Ban lÃ£nh Ä‘áº¡o (Admin/Ban Quáº£n LÃ½) duyá»‡t â†’ trá»« tá»“n;
+//    cháº·n xuáº¥t vÆ°á»£t tá»“n (lÃºc gá»­i + lÃºc duyá»‡t); tá»« chá»‘i cÃ³ lÃ½ do.
+// 3. PHIáº¾U Xá»¬ LÃ Lá»–I: tiÃªu há»§y / tÃ¡i cháº¿ thanh lá»—i BÃ o Tinh Â· thanh lá»—i Chá»n thanh
+//    Bullig (tá»“n Má»šI cÃ³ sá»•) Â· nan "Loáº¡i háº³n" â€” cháº·n vÆ°á»£t tá»“n lá»—i theo cá»¡.
+// 4. PHIáº¾U BÃ™ dá»¯ liá»‡u cÅ©: sinh phiáº¿u ÄÃƒ DUYá»†T tá»« sá»‘ há»‡ thá»‘ng suy ra, cháº¡y 2 láº§n
+//    khÃ´ng sinh trÃ¹ng; planning.js getNanStockEvents trá»« tá»“n theo phiáº¿u ÄÃƒ DUYá»†T
+//    (bá» qua purpose 'say2').
+// 5. Cáº¤U TRÃšC: id trong index.html Â· 5 nÆ¡i ná»‘i dá»¯ liá»‡u Â· sw.js v185 Â· npm test.
 'use strict';
 import fs from 'node:fs';
 
-// ─── Stubs môi trường (giống than-hoa.test.mjs) ─────────────────
+// â”€â”€â”€ Stubs mÃ´i trÆ°á»ng (giá»‘ng than-hoa.test.mjs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makeEl(id) {
   const el = {
     id: id || '', value: '', checked: false, disabled: false, hidden: false,
@@ -89,39 +89,39 @@ state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvan
 state.activeView = 'kanban-view';
 
 
-// ─── Dữ liệu mẫu: 3 lô ở Kho (k2 ra/vào kho 2 lần) + 1 lô Sấy 1 ──
+// â”€â”€â”€ Dá»¯ liá»‡u máº«u: 3 lÃ´ á»Ÿ Kho (k2 ra/vÃ o kho 2 láº§n) + 1 lÃ´ Sáº¥y 1 â”€â”€
 state.batches = [
-  { id: 'k1', code: '260910-01', stage: 'kho', date: '2026-09-10', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 600, volume: 0.0945, bambooType: 'A', useFor: 'Ván', location: 'K11', stageHistory: [{ stage: 'kho', date: '2026-09-10' }] },
+  { id: 'k1', code: '260910-01', stage: 'kho', date: '2026-09-10', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 600, volume: 0.0945, bambooType: 'A', useFor: 'VÃ¡n', location: 'K11', stageHistory: [{ stage: 'kho', date: '2026-09-10' }] },
   { id: 'k2', code: '260911-01', stage: 'kho', date: '2026-09-14', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 400, volume: 0.063, bambooType: 'A1', useFor: 'Bullig', location: 'K12', say2Date: '2026-09-13', stageHistory: [{ stage: 'kho', date: '2026-09-11' }, { stage: 'say2', date: '2026-09-13' }, { stage: 'kho', date: '2026-09-14' }] },
-  { id: 'k3', code: '260912-01', stage: 'kho', date: '2026-09-12', week: '2026-W37', length: 1300, width: 20, thickness: 8, quantity: 800, volume: 0.1664, bambooType: 'B', useFor: 'Ván', location: 'K13', stageHistory: [{ stage: 'kho', date: '2026-09-12' }] },
-  { id: 'k4', code: '260912-02', stage: 'say1', date: '2026-09-12', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.0788, bambooType: 'A', useFor: 'Ván', location: 'LS1', stageHistory: [{ stage: 'say1', date: '2026-09-12' }] }
+  { id: 'k3', code: '260912-01', stage: 'kho', date: '2026-09-12', week: '2026-W37', length: 1300, width: 20, thickness: 8, quantity: 800, volume: 0.1664, bambooType: 'B', useFor: 'VÃ¡n', location: 'K13', stageHistory: [{ stage: 'kho', date: '2026-09-12' }] },
+  { id: 'k4', code: '260912-02', stage: 'say1', date: '2026-09-12', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.0788, bambooType: 'A', useFor: 'VÃ¡n', location: 'LS1', stageHistory: [{ stage: 'say1', date: '2026-09-12' }] }
 ];
 
 const utils = await import('../js/utils.js');
 const x2 = await import('../js/xuong2.js');
 const batchModals = await import('../js/batch-modals.js');
 
-// ─── A5. TRẠNG THÁI SẤY (14/11/2026) — nhãn chuẩn Kanban + LỌC NGUỒN theo mục đích ───
-// Lô mẫu: k1/k3 chỉ nhập thẳng Kho ("Chưa sấy") · k2 qua Sấy 2 · thêm k5 (khai
-// dryStage 'say2') và k6 (khai dryStage 'say1') để kiểm nhánh lô nhập thẳng Kho.
+// â”€â”€â”€ A5. TRáº NG THÃI Sáº¤Y (14/11/2026) â€” nhÃ£n chuáº©n Kanban + Lá»ŒC NGUá»’N theo má»¥c Ä‘Ã­ch â”€â”€â”€
+// LÃ´ máº«u: k1/k3 chá»‰ nháº­p tháº³ng Kho ("ChÆ°a sáº¥y") Â· k2 qua Sáº¥y 2 Â· thÃªm k5 (khai
+// dryStage 'say2') vÃ  k6 (khai dryStage 'say1') Ä‘á»ƒ kiá»ƒm nhÃ¡nh lÃ´ nháº­p tháº³ng Kho.
 state.batches.push(
-  { id: 'k5', code: '260913-01', stage: 'kho', date: '2026-09-13', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 300, volume: 0.047, bambooType: 'A', useFor: 'Ván', location: 'K15', dryStage: 'say2', stageHistory: [{ stage: 'kho', date: '2026-09-13' }] },
-  { id: 'k6', code: '260913-02', stage: 'kho', date: '2026-09-13', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 250, volume: 0.039, bambooType: 'B', useFor: 'Ván', location: 'K16', dryStage: 'say1', stageHistory: [{ stage: 'kho', date: '2026-09-13' }] }
+  { id: 'k5', code: '260913-01', stage: 'kho', date: '2026-09-13', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 300, volume: 0.047, bambooType: 'A', useFor: 'VÃ¡n', location: 'K15', dryStage: 'say2', stageHistory: [{ stage: 'kho', date: '2026-09-13' }] },
+  { id: 'k6', code: '260913-02', stage: 'kho', date: '2026-09-13', week: '2026-W37', length: 1250, width: 18, thickness: 7, quantity: 250, volume: 0.039, bambooType: 'B', useFor: 'VÃ¡n', location: 'K16', dryStage: 'say1', stageHistory: [{ stage: 'kho', date: '2026-09-13' }] }
 );
-const lotsWithDry = state.batches.slice();   // ảnh chụp để trả lại sau khối này
+const lotsWithDry = state.batches.slice();   // áº£nh chá»¥p Ä‘á»ƒ tráº£ láº¡i sau khá»‘i nÃ y
 const lotById = id => state.batches.find(b => b.id === id);
-check('TRẠNG THÁI SẤY: k1/k3 (chỉ nhập kho) = "Chưa sấy" · k2/k5 = "Sấy 2" · k6 = "Sấy 1"', (() => {
+check('TRáº NG THÃI Sáº¤Y: k1/k3 (chá»‰ nháº­p kho) = "ChÆ°a sáº¥y" Â· k2/k5 = "Sáº¥y 2" Â· k6 = "Sáº¥y 1"', (() => {
   const s = id => x2.khoLotDryStatusOf(lotById(id)).label;
-  return s('k1') === 'Chưa sấy' && s('k3') === 'Chưa sấy' &&
-    s('k2') === 'Sấy 2' && s('k5') === 'Sấy 2' && s('k6') === 'Sấy 1';
+  return s('k1') === 'ChÆ°a sáº¥y' && s('k3') === 'ChÆ°a sáº¥y' &&
+    s('k2') === 'Sáº¥y 2' && s('k5') === 'Sáº¥y 2' && s('k6') === 'Sáº¥y 1';
 })());
-check('TRẠNG THÁI SẤY: chip dùng ĐÚNG nhãn + màu chuẩn Kanban (dry-say1 / dry-say2 / dry-chua)', (() => {
+check('TRáº NG THÃI Sáº¤Y: chip dÃ¹ng ÄÃšNG nhÃ£n + mÃ u chuáº©n Kanban (dry-say1 / dry-say2 / dry-chua)', (() => {
   const chip = id => { const m = x2.khoDryChipHtml ? x2.khoDryChipHtml(lotById(id)) : ''; return m; };
-  return chip('k2').includes('dry-say2') && chip('k2').includes('Sấy 2') &&
-    chip('k6').includes('dry-say1') && chip('k6').includes('Sấy 1') &&
-    chip('k1').includes('dry-chua') && chip('k1').includes('Chưa sấy');
+  return chip('k2').includes('dry-say2') && chip('k2').includes('Sáº¥y 2') &&
+    chip('k6').includes('dry-say1') && chip('k6').includes('Sáº¥y 1') &&
+    chip('k1').includes('dry-chua') && chip('k1').includes('ChÆ°a sáº¥y');
 })());
-check('TRẠNG THÁI SẤY: chip hiện ở CẢ 2 nơi — thẻ lô gắn phiếu VÀ bảng Tồn theo từng lô', (() => {
+check('TRáº NG THÃI Sáº¤Y: chip hiá»‡n á»Ÿ Cáº¢ 2 nÆ¡i â€” tháº» lÃ´ gáº¯n phiáº¿u VÃ€ báº£ng Tá»“n theo tá»«ng lÃ´', (() => {
   document.getElementById('x2-kho-purpose').value = 'khac';
   x2.renderX2KhoLotsList();
   x2.renderX2KhoStockTable();
@@ -130,64 +130,64 @@ check('TRẠNG THÁI SẤY: chip hiện ở CẢ 2 nơi — thẻ lô gắn phi�
   return lots.includes('dry-say2') && lots.includes('dry-say1') && lots.includes('dry-chua') &&
     stock.includes('dry-say2') && stock.includes('dry-say1') && stock.includes('dry-chua');
 })());
-check('LỌC: mục đích Bào Tinh → chỉ còn lô ĐÃ SẤY 2 (k2, k5) — ẩn lô Sấy 1 + Chưa sấy', (() => {
+check('Lá»ŒC: má»¥c Ä‘Ã­ch BÃ o Tinh â†’ chá»‰ cÃ²n lÃ´ ÄÃƒ Sáº¤Y 2 (k2, k5) â€” áº©n lÃ´ Sáº¥y 1 + ChÆ°a sáº¥y', (() => {
   document.getElementById('x2-kho-purpose').value = 'baotinh';
   x2.renderX2KhoLotsList();
   const h = document.getElementById('x2-kho-lots-list').innerHTML;
   return h.includes(lotById('k2').code) && h.includes(lotById('k5').code) &&
     ['k1', 'k3', 'k6'].every(id => h.includes(lotById(id).code) === false);
 })());
-check('LỌC: dòng trống nêu rõ "chỉ nhận lô Sấy 1" + hiện dòng "Đang lọc"', (() => {
+check('Lá»ŒC: dÃ²ng trá»‘ng nÃªu rÃµ "chá»‰ nháº­n lÃ´ Sáº¥y 1" + hiá»‡n dÃ²ng "Äang lá»c"', (() => {
   state.batches = state.batches.filter(b => ['k2', 'k5'].includes(b.id));
-  document.getElementById('x2-kho-purpose').value = 'say2';   // phiếu Sấy 2 → chỉ nhận lô Sấy 1
+  document.getElementById('x2-kho-purpose').value = 'say2';   // phiáº¿u Sáº¥y 2 â†’ chá»‰ nháº­n lÃ´ Sáº¥y 1
   x2.renderX2KhoLotsList();
   const h = document.getElementById('x2-kho-lots-list').innerHTML;
   state.batches = lotsWithDry.slice();
   document.getElementById('x2-kho-purpose').value = 'khac';
-  return h.includes('al-filter-note') && h.includes('Đang lọc') &&
-    h.includes('chỉ nhận lô Sấy 1') && h.includes('Không có lô Sấy 1');
+  return h.includes('al-filter-note') && h.includes('Äang lá»c') &&
+    h.includes('chá»‰ nháº­n lÃ´ Sáº¥y 1') && h.includes('KhÃ´ng cÃ³ lÃ´ Sáº¥y 1');
 })());
-check('LỌC: mục đích "Khác" → hiện ĐỦ mọi lô (k1, k3, k6) — đường thoát khi cần xuất lô chưa rõ', (() => {
+check('Lá»ŒC: má»¥c Ä‘Ã­ch "KhÃ¡c" â†’ hiá»‡n Äá»¦ má»i lÃ´ (k1, k3, k6) â€” Ä‘Æ°á»ng thoÃ¡t khi cáº§n xuáº¥t lÃ´ chÆ°a rÃµ', (() => {
   x2.renderX2KhoLotsList();
   const h = document.getElementById('x2-kho-lots-list').innerHTML;
   return ['k1', 'k3', 'k6'].every(id => h.includes(lotById(id).code));
 })());
-check('LỌC: khoPurposeDryNeed bám đúng ô Mục Đích Xuất (baotinh/bullig=say2 · say2=say1 · khac=rỗng)', (() => {
+check('Lá»ŒC: khoPurposeDryNeed bÃ¡m Ä‘Ãºng Ã´ Má»¥c ÄÃ­ch Xuáº¥t (baotinh/bullig=say2 Â· say2=say1 Â· khac=rá»—ng)', (() => {
   const purposeEl = document.getElementById('x2-kho-purpose');
   const val = v => { purposeEl.value = v; return x2.khoPurposeDryNeed(); };
   return val('baotinh') === 'say2' && val('bullig') === 'say2' &&
     val('say2') === 'say1' && val('khac') === '';
 })());
-check('ĐỔI MỤC ĐÍCH: chọn lô Chưa sấy ở mục đích "Khác" → đổi sang Bào Tinh thì lô bị bỏ (không chọn nhầm)', (() => {
+check('Äá»”I Má»¤C ÄÃCH: chá»n lÃ´ ChÆ°a sáº¥y á»Ÿ má»¥c Ä‘Ã­ch "KhÃ¡c" â†’ Ä‘á»•i sang BÃ o Tinh thÃ¬ lÃ´ bá»‹ bá» (khÃ´ng chá»n nháº§m)', (() => {
   x2.renderX2KhoLotsList();
   x2.khoPickLot('k1');
   const countEl = document.getElementById('x2-kho-picked-count');
-  if (!countEl || countEl.textContent !== '1 đã chọn') return false;
+  if (!countEl || countEl.textContent !== '1 Ä‘Ã£ chá»n') return false;
   document.getElementById('x2-kho-purpose').value = 'baotinh';
   x2.khoOnPurposeChange();
-  return countEl.textContent === 'Chưa chọn';
+  return countEl.textContent === 'ChÆ°a chá»n';
 })());
-check('ĐỔI MỤC ĐÍCH: helper đọc đúng lô đang Ở công đoạn Sấy 1 / Sấy 2 (không lệch)', (() => {
+check('Äá»”I Má»¤C ÄÃCH: helper Ä‘á»c Ä‘Ãºng lÃ´ Ä‘ang á»ž cÃ´ng Ä‘oáº¡n Sáº¥y 1 / Sáº¥y 2 (khÃ´ng lá»‡ch)', (() => {
   const lot1 = { id: 'x1', stage: 'say1', stageHistory: [{ stage: 'say1', date: '2026-09-01' }] };
   const lot2 = { id: 'x2', stage: 'say2', stageHistory: [{ stage: 'say1', date: '2026-09-01' }, { stage: 'say2', date: '2026-09-05' }] };
   return x2.khoLotDryStatusOf(lot1).key === 'say1' && x2.khoLotDryStatusOf(lot2).key === 'say2';
 })());
-// trả lại đúng 4 lô mẫu cho các mục kiểm thử phía dưới
+// tráº£ láº¡i Ä‘Ãºng 4 lÃ´ máº«u cho cÃ¡c má»¥c kiá»ƒm thá»­ phÃ­a dÆ°á»›i
 state.batches = lotsWithDry.filter(b => ['k1', 'k2', 'k3', 'k4'].includes(b.id));
 x2.resetX2KhoNoteForm(true);
 document.getElementById('x2-kho-purpose').value = 'khac';
 
 const quickPaste = x2.parseKhoBulkPaste([
-  'Dài (mm)\tRộng\tDày\tA\tA1\tB',
+  'DÃ i (mm)\tRá»™ng\tDÃ y\tA\tA1\tB',
   '1250\t22\t9\t5\t\t',
   '1250\t18\t8\t\t3\t',
   '1250\t22\t9\t5\t\t'
 ].join('\r\n'));
-check('NHẬP NHANH: dán nhiều dòng nhận tiêu đề và chiều dài lặp',
+check('NHáº¬P NHANH: dÃ¡n nhiá»u dÃ²ng nháº­n tiÃªu Ä‘á» vÃ  chiá»u dÃ i láº·p',
   !quickPaste.error && quickPaste.rows.length === 3 && quickPaste.items.length === 3 &&
   quickPaste.items[0].length === 1250 && quickPaste.items[1].length === 1250 &&
   quickPaste.items[0].width !== quickPaste.items[1].width);
-check('NHẬP NHANH: dòng trùng hoàn toàn vẫn được giữ thành lô riêng',
+check('NHáº¬P NHANH: dÃ²ng trÃ¹ng hoÃ n toÃ n váº«n Ä‘Æ°á»£c giá»¯ thÃ nh lÃ´ riÃªng',
   quickPaste.items.length === 3 &&
   JSON.stringify(quickPaste.items[0]) === JSON.stringify(quickPaste.items[2]));
 function makeBulkPasteRow() {
@@ -223,7 +223,7 @@ try {
     clipboardData: { getData: () => '1250\t22\t9\t5\t\t\n1250\t18\t8\t\t3\t' },
     preventDefault() { pastePrevented = true; }
   });
-  check('NHẬP NHANH: dán trực tiếp tạo thêm dòng và điền đúng các cột',
+  check('NHáº¬P NHANH: dÃ¡n trá»±c tiáº¿p táº¡o thÃªm dÃ²ng vÃ  Ä‘iá»n Ä‘Ãºng cÃ¡c cá»™t',
     pastePrevented && bulkPasteBody.rows.length === 2 &&
     bulkPasteBody.rows[0].querySelector('[data-x2-kho-bulk-qty="A"]').value === '5' &&
     bulkPasteBody.rows[1].querySelector('[data-x2-kho-bulk-dim="length"]').value === '1250' &&
@@ -239,39 +239,39 @@ try {
   const pastedValuesAfterError = bulkPasteBody.rows.map(row =>
     ['length', 'width', 'thickness'].map(key => row.querySelector(`[data-x2-kho-bulk-dim="${key}"]`).value)
       .concat(['A', 'A1', 'B'].map(type => row.querySelector(`[data-x2-kho-bulk-qty="${type}"]`).value)));
-  check('NHẬP NHANH: dữ liệu lỗi không ghi đè một phần bảng kê',
+  check('NHáº¬P NHANH: dá»¯ liá»‡u lá»—i khÃ´ng ghi Ä‘Ã¨ má»™t pháº§n báº£ng kÃª',
     JSON.stringify(pastedValuesAfterError) === JSON.stringify(pastedValuesBeforeError));
 } finally {
   document.getElementById = originalGetElementById;
   global.setTimeout = originalSetTimeout;
 }
 const invalidQuickPaste = x2.parseKhoBulkPaste([
-  'Dài (mm)\tRộng\tDày\tA\tA1\tB',
+  'DÃ i (mm)\tRá»™ng\tDÃ y\tA\tA1\tB',
   '1250\t22\t9\t1.5\t\t'
 ].join('\n'));
-check('NHẬP NHANH: báo đúng dòng khi số lượng dán không nguyên',
-  invalidQuickPaste.error.includes('Dòng 2') && invalidQuickPaste.error.includes('số nguyên'));
+check('NHáº¬P NHANH: bÃ¡o Ä‘Ãºng dÃ²ng khi sá»‘ lÆ°á»£ng dÃ¡n khÃ´ng nguyÃªn',
+  invalidQuickPaste.error.includes('DÃ²ng 2') && invalidQuickPaste.error.includes('sá»‘ nguyÃªn'));
 const x2EventsSource = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
 const indexSource = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-check('NHẬP NHANH: giao diện hướng dẫn dán từ ô Dài và sự kiện paste được nối',
-  indexSource.includes('chọn ô Dài rồi dán bảng') &&
+check('NHáº¬P NHANH: giao diá»‡n hÆ°á»›ng dáº«n dÃ¡n tá»« Ã´ DÃ i vÃ  sá»± kiá»‡n paste Ä‘Æ°á»£c ná»‘i',
+  indexSource.includes('chá»n Ã´ DÃ i rá»“i dÃ¡n báº£ng') &&
   x2EventsSource.includes("safeOn('x2-kho-bulk-rows', 'paste', khoBulkOnPaste)"));
 
-// ─── A. TỒN KHO THEO LẦN NHẬP (chưa có phiếu nào) ───────────────
-check('TỒN: số lần NHẬP kho — k1=1 · k2=2 (ra/vào 1 lần) · k3=1',
+// â”€â”€â”€ A. Tá»’N KHO THEO Láº¦N NHáº¬P (chÆ°a cÃ³ phiáº¿u nÃ o) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('Tá»’N: sá»‘ láº§n NHáº¬P kho â€” k1=1 Â· k2=2 (ra/vÃ o 1 láº§n) Â· k3=1',
   utils.khoInCountOf(state.batches[0]) === 1 && utils.khoInCountOf(state.batches[1]) === 2 &&
   utils.khoInCountOf(state.batches[2]) === 1);
-check('TỒN: số lần RA KHỎI kho — k2=1 (say2 sau kho) · k1=0',
+check('Tá»’N: sá»‘ láº§n RA KHá»ŽI kho â€” k2=1 (say2 sau kho) Â· k1=0',
   utils.khoOutRoundCountOf(state.batches[1]) === 1 && utils.khoOutRoundCountOf(state.batches[0]) === 0);
-check('TỒN: không phiếu → tồn kho 2.200 (k2 nhập 2 lần × 400) · toàn nhóm 2.700 (500 đang sấy + 2.200 tồn kho) · không lô hết',
+check('Tá»’N: khÃ´ng phiáº¿u â†’ tá»“n kho 2.200 (k2 nháº­p 2 láº§n Ã— 400) Â· toÃ n nhÃ³m 2.700 (500 Ä‘ang sáº¥y + 2.200 tá»“n kho) Â· khÃ´ng lÃ´ háº¿t',
   utils.khoStockSummary().remainingThanh === 2200 && utils.khoStockSummary().poolThanh === 2700 &&
   utils.khoStockSummary().usedUpLots === 0 && utils.khoStockSummary().liveLots === 3);
-check('TỒN: bản đồ ẩn/hiện — không lô nào bị ẩn, tồn từng lô đúng',
+check('Tá»’N: báº£n Ä‘á»“ áº©n/hiá»‡n â€” khÃ´ng lÃ´ nÃ o bá»‹ áº©n, tá»“n tá»«ng lÃ´ Ä‘Ãºng',
   utils.khoVisibilityMap().hide.size === 0 && utils.khoVisibilityMap().remain.get('k1') === 600);
 
-// ─── B. PHIẾU XUẤT: chờ duyệt KHÔNG trừ tồn → duyệt mới trừ (FIFO) ──
-// PHIẾU XUẤT KHÔNG CÒN Ô SỐ LƯỢNG: tổng = Σ thanh của các THẺ LÔ đã gắn.
-// Helper: reset form → set ngày/mục đích → gắn thẻ lô (kèm số nếu muốn).
+// â”€â”€â”€ B. PHIáº¾U XUáº¤T: chá» duyá»‡t KHÃ”NG trá»« tá»“n â†’ duyá»‡t má»›i trá»« (FIFO) â”€â”€
+// PHIáº¾U XUáº¤T KHÃ”NG CÃ’N Ã” Sá» LÆ¯á»¢NG: tá»•ng = Î£ thanh cá»§a cÃ¡c THáºº LÃ” Ä‘Ã£ gáº¯n.
+// Helper: reset form â†’ set ngÃ y/má»¥c Ä‘Ã­ch â†’ gáº¯n tháº» lÃ´ (kÃ¨m sá»‘ náº¿u muá»‘n).
 function makeExportNote(date, purpose, noteText, lotPicks) {
   x2.setKhoNoteType('xuat');
   x2.resetX2KhoNoteForm(true);
@@ -279,243 +279,243 @@ function makeExportNote(date, purpose, noteText, lotPicks) {
   document.getElementById('x2-kho-purpose').value = purpose;
   document.getElementById('x2-kho-note').value = noteText || '';
   (lotPicks || []).forEach(([id, qty]) => {
-    x2.khoPickLot(id);                       // chọn = nguyên phần còn lại của lô
-    if (qty != null) x2.khoSetLotQty(id, qty);  // chỉnh xuống 1 phần (VD 300/600)
+    x2.khoPickLot(id);                       // chá»n = nguyÃªn pháº§n cÃ²n láº¡i cá»§a lÃ´
+    if (qty != null) x2.khoSetLotQty(id, qty);  // chá»‰nh xuá»‘ng 1 pháº§n (VD 300/600)
   });
   x2.handleKhoNoteSubmit({ preventDefault(){} });
 }
-makeExportNote('2026-09-15', 'baotinh', 'Xuất bào tinh tuần 38', [['k1', 300]]);
+makeExportNote('2026-09-15', 'baotinh', 'Xuáº¥t bÃ o tinh tuáº§n 38', [['k1', 300]]);
 const note1 = state.khoNotes[0];
-check('PHIẾU: gửi phiếu xuất 300 → trạng thái CHỜ DUYỆT + ghi người tạo',
+check('PHIáº¾U: gá»­i phiáº¿u xuáº¥t 300 â†’ tráº¡ng thÃ¡i CHá»œ DUYá»†T + ghi ngÆ°á»i táº¡o',
   !!note1 && note1.status === 'cho_duyet' && note1.type === 'xuat' && note1.purpose === 'baotinh' &&
   note1.createdBy === 'admin' && note1.qty === 300);
-check('PHIẾU: chờ duyệt KHÔNG trừ tồn (vẫn 2.200) + chip chờ = 1 phiếu / 300 thanh',
+check('PHIáº¾U: chá» duyá»‡t KHÃ”NG trá»« tá»“n (váº«n 2.200) + chip chá» = 1 phiáº¿u / 300 thanh',
   utils.khoStockSummary().remainingThanh === 2200 &&
   utils.khoStockSummary().pendingCount === 1 && utils.khoStockSummary().pendingQty === 300);
 x2.khoApproveNote(note1.id);
-check('PHIẾU: Admin duyệt → ĐÃ DUYỆT + tồn giảm còn 1.900 + người duyệt được ghi',
+check('PHIáº¾U: Admin duyá»‡t â†’ ÄÃƒ DUYá»†T + tá»“n giáº£m cÃ²n 1.900 + ngÆ°á»i duyá»‡t Ä‘Æ°á»£c ghi',
   note1.status === 'da_duyet' && utils.khoStockSummary().remainingThanh === 1900 &&
   note1.approvedByName === 'admin');
-check('FIFO: 300 trừ lô VÀO KHO LÂU NHẤT trước (k1) — k1 còn 300, k2/k3 nguyên',
+check('FIFO: 300 trá»« lÃ´ VÃ€O KHO LÃ‚U NHáº¤T trÆ°á»›c (k1) â€” k1 cÃ²n 300, k2/k3 nguyÃªn',
   utils.khoLotRemainingOf(state.batches[0]) === 300 &&
   utils.khoLotRemainingOf(state.batches[1]) === 800 && utils.khoLotRemainingOf(state.batches[2]) === 800);
-check('KẾ HOẠCH: tồn nan TOÀN NHÓM (công thức mới) = 500 (đang sấy) + 1.900 (tồn kho sau phiếu) = 2.400',
+check('Káº¾ HOáº CH: tá»“n nan TOÃ€N NHÃ“M (cÃ´ng thá»©c má»›i) = 500 (Ä‘ang sáº¥y) + 1.900 (tá»“n kho sau phiáº¿u) = 2.400',
   utils.khoStockSummary().poolThanh === 2400);
 
-// PHIẾU purpose 'say2' — trừ TỒN KHO nhưng KHÔNG trừ tồn nan toàn nhóm
-makeExportNote('2026-09-15', 'say2', 'Quay lại sấy', [['k2', 400]]);
+// PHIáº¾U purpose 'say2' â€” trá»« Tá»’N KHO nhÆ°ng KHÃ”NG trá»« tá»“n nan toÃ n nhÃ³m
+makeExportNote('2026-09-15', 'say2', 'Quay láº¡i sáº¥y', [['k2', 400]]);
 const noteSay2 = state.khoNotes[1];
 x2.khoApproveNote(noteSay2.id);
-check('SẤY 2: duyệt phiếu "Sấy 2" → tồn Kho giảm còn 1.500 · toàn nhóm 2.400 → 2.000 (phiếu trừ theo tồn kho từng lô)',
+check('Sáº¤Y 2: duyá»‡t phiáº¿u "Sáº¥y 2" â†’ tá»“n Kho giáº£m cÃ²n 1.500 Â· toÃ n nhÃ³m 2.400 â†’ 2.000 (phiáº¿u trá»« theo tá»“n kho tá»«ng lÃ´)',
   utils.khoStockSummary().remainingThanh === 1500 && utils.khoStockSummary().poolThanh === 2000);
 
-// CHẶN XUẤT VỚI TỒN (lúc gửi)
+// CHáº¶N XUáº¤T Vá»šI Tá»’N (lÃºc gá»­i)
 const notesBefore = state.khoNotes.length;
 x2.setKhoNoteType('xuat');
 x2.resetX2KhoNoteForm(true);
 document.getElementById('x2-kho-date').value = '2026-09-15';
 document.getElementById('x2-kho-purpose').value = 'baotinh';
 x2.handleKhoNoteSubmit({ preventDefault(){} });
-check('CHẶN: phiếu xuất chưa gắn thẻ lô → KHÔNG tạo phiếu (vẫn ' + notesBefore + ' phiếu)',
+check('CHáº¶N: phiáº¿u xuáº¥t chÆ°a gáº¯n tháº» lÃ´ â†’ KHÃ”NG táº¡o phiáº¿u (váº«n ' + notesBefore + ' phiáº¿u)',
   state.khoNotes.length === notesBefore);
 
-// Lô DÙNG HẾT → ẨN mặc định + công tắc hiện lại (xuất nốt phần còn lại của k1)
+// LÃ´ DÃ™NG Háº¾T â†’ áº¨N máº·c Ä‘á»‹nh + cÃ´ng táº¯c hiá»‡n láº¡i (xuáº¥t ná»‘t pháº§n cÃ²n láº¡i cá»§a k1)
 makeExportNote('2026-09-15', 'baotinh', '', [['k1']]);
 x2.khoApproveNote(state.khoNotes[state.khoNotes.length - 1].id);
-check('LÔ HẾT: xuất nốt 300 của k1 → k1 tồn 0, đếm "lô đã xuất hết" = 1',
+check('LÃ” Háº¾T: xuáº¥t ná»‘t 300 cá»§a k1 â†’ k1 tá»“n 0, Ä‘áº¿m "lÃ´ Ä‘Ã£ xuáº¥t háº¿t" = 1',
   utils.khoLotRemainingOf(state.batches[0]) === 0 && utils.khoStockSummary().usedUpLots === 1);
-check('LÔ HẾT: ẨN mặc định (hide có k1) — bật công tắc → hiện lại',
+check('LÃ” Háº¾T: áº¨N máº·c Ä‘á»‹nh (hide cÃ³ k1) â€” báº­t cÃ´ng táº¯c â†’ hiá»‡n láº¡i',
   utils.khoVisibilityMap().hide.has('k1') && !utils.khoVisibilityMap().hide.has('k2'));
 x2.khoSetShowUsed(true);
-check('LÔ HẾT: công tắc BẬT → không ẩn lô nào + lưu localStorage',
+check('LÃ” Háº¾T: cÃ´ng táº¯c Báº¬T â†’ khÃ´ng áº©n lÃ´ nÃ o + lÆ°u localStorage',
   utils.khoVisibilityMap().hide.size === 0 && state.khoShowUsed === true);
 x2.khoSetShowUsed(false);
 
-// QUYỀN DUYỆT: editor (Tổ trưởng — có quyền nhập Công Đoạn) KHÔNG duyệt được
+// QUYá»€N DUYá»†T: editor (Tá»• trÆ°á»Ÿng â€” cÃ³ quyá»n nháº­p CÃ´ng Äoáº¡n) KHÃ”NG duyá»‡t Ä‘Æ°á»£c
 state.currentUser = { username: 'editor1', role: 'editor', editTabs: ['kanban'], allowAdvanced: false };
 makeExportNote('2026-09-16', 'bullig', '', [['k2', 100]]);
 const noteEditor = state.khoNotes[state.khoNotes.length - 1];
 x2.khoApproveNote(noteEditor.id);
-check('QUYỀN: editor gửi phiếu được nhưng KHÔNG duyệt được (vẫn chờ duyệt)',
+check('QUYá»€N: editor gá»­i phiáº¿u Ä‘Æ°á»£c nhÆ°ng KHÃ”NG duyá»‡t Ä‘Æ°á»£c (váº«n chá» duyá»‡t)',
   noteEditor.status === 'cho_duyet');
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 x2.khoRejectNote(noteEditor.id);
-check('QUYỀN: Admin từ chối phiếu → trạng thái TỪ CHỐI (không trừ tồn)',
+check('QUYá»€N: Admin tá»« chá»‘i phiáº¿u â†’ tráº¡ng thÃ¡i Tá»ª CHá»I (khÃ´ng trá»« tá»“n)',
   noteEditor.status === 'tu_choi' && utils.khoStockSummary().remainingThanh === 1200);
 
-// ─── C. PHIẾU XỬ LÝ LỖI (tiêu hủy / tái chế) + TỒN TRUNG GIAN ──
+// â”€â”€â”€ C. PHIáº¾U Xá»¬ LÃ Lá»–I (tiÃªu há»§y / tÃ¡i cháº¿) + Tá»’N TRUNG GIAN â”€â”€
 state.xuong2BulligRecords = [
-  { id: 'bl1', kind: 'ct', date: '2026-09-16', inSizeKey: '1240×16×6', inDims: [1240, 16, 6], qtyOk: 100, qtyErr: 60, createdAt: '2026-09-16T02:00:00.000Z' }
+  { id: 'bl1', kind: 'ct', date: '2026-09-16', inSizeKey: '1240Ã—16Ã—6', inDims: [1240, 16, 6], qtyOk: 100, qtyErr: 60, createdAt: '2026-09-16T02:00:00.000Z' }
 ];
 state.xuong2ChonNanThoRecords = [
-  { id: 'cnr', baothoId: 'bt-x', date: '2026-09-16', dims: [1250, 18, 7], sizeKey: '1250×18×7', cls: 'reject', quantity: 50, unitVol: 0.0001575, volume: 0.0079, createdAt: '2026-09-16T02:00:00.000Z' }
+  { id: 'cnr', baothoId: 'bt-x', date: '2026-09-16', dims: [1250, 18, 7], sizeKey: '1250Ã—18Ã—7', cls: 'reject', quantity: 50, unitVol: 0.0001575, volume: 0.0079, createdAt: '2026-09-16T02:00:00.000Z' }
 ];
-check('WIP MỚI: tồn lỗi Chọn thanh Bullig = 60 thanh (trước đây KHÔNG có sổ)',
+check('WIP Má»šI: tá»“n lá»—i Chá»n thanh Bullig = 60 thanh (trÆ°á»›c Ä‘Ã¢y KHÃ”NG cÃ³ sá»•)',
   x2.bulligDefectStock().length === 1 && x2.bulligDefectStock()[0].remaining === 60);
-check('WIP MỚI: tồn nan "Loại hẳn" Chọn Nan Thô = 50 thanh (trước đây chỉ tính tỷ lệ)',
+check('WIP Má»šI: tá»“n nan "Loáº¡i háº³n" Chá»n Nan ThÃ´ = 50 thanh (trÆ°á»›c Ä‘Ã¢y chá»‰ tÃ­nh tá»· lá»‡)',
   x2.nanRejectStock().length === 1 && x2.nanRejectStock()[0].remaining === 50);
-// Phiếu TIÊU HỦY 20 thanh lỗi Bullig (cỡ 1240×16×6)
+// Phiáº¿u TIÃŠU Há»¦Y 20 thanh lá»—i Bullig (cá»¡ 1240Ã—16Ã—6)
 x2.setKhoNoteType('xu_ly');
 document.getElementById('x2-kho-date').value = '2026-09-17';
 document.getElementById('x2-kho-source').value = 'bullig_loi';
 document.getElementById('x2-kho-method').value = 'tieu_huy';
-document.getElementById('x2-kho-size').value = '1240×16×6';
+document.getElementById('x2-kho-size').value = '1240Ã—16Ã—6';
 document.getElementById('x2-kho-qty').value = '20';
 document.getElementById('x2-kho-note').value = 'Thanh cong queo';
 x2.handleKhoNoteSubmit({ preventDefault(){} });
 const scr1 = state.khoNotes[state.khoNotes.length - 1];
 x2.khoApproveNote(scr1.id);
-check('TIÊU HỦY: duyệt phiếu 20 thanh lỗi Bullig → tồn lỗi còn 40 (đã có sổ xử lý)',
+check('TIÃŠU Há»¦Y: duyá»‡t phiáº¿u 20 thanh lá»—i Bullig â†’ tá»“n lá»—i cÃ²n 40 (Ä‘Ã£ cÃ³ sá»• xá»­ lÃ½)',
   scr1.type === 'tieuhuy' && scr1.status === 'da_duyet' && x2.bulligDefectStock()[0].remaining === 40);
-// Chặn vượt tồn lỗi
+// Cháº·n vÆ°á»£t tá»“n lá»—i
 document.getElementById('x2-kho-qty').value = '999';
 const scrCountBefore = state.khoNotes.length;
 x2.handleKhoNoteSubmit({ preventDefault(){} });
-check('TIÊU HỦY: chặn vượt tồn lỗi của cỡ (không tạo phiếu)',
+check('TIÃŠU Há»¦Y: cháº·n vÆ°á»£t tá»“n lá»—i cá»§a cá»¡ (khÃ´ng táº¡o phiáº¿u)',
   state.khoNotes.length === scrCountBefore);
-// Phiếu TÁI CHẾ nan "Loại hẳn" 10 thanh
+// Phiáº¿u TÃI CHáº¾ nan "Loáº¡i háº³n" 10 thanh
 document.getElementById('x2-kho-source').value = 'nan_loai_han';
 document.getElementById('x2-kho-method').value = 'taiche';
-document.getElementById('x2-kho-size').value = '1250×18×7';
+document.getElementById('x2-kho-size').value = '1250Ã—18Ã—7';
 document.getElementById('x2-kho-qty').value = '10';
 x2.handleKhoNoteSubmit({ preventDefault(){} });
 x2.khoApproveNote(state.khoNotes[state.khoNotes.length - 1].id);
-check('TÁI CHẾ: phiếu tái chế 10 nan Loại hẳn → tồn còn 40',
+check('TÃI CHáº¾: phiáº¿u tÃ¡i cháº¿ 10 nan Loáº¡i háº³n â†’ tá»“n cÃ²n 40',
   x2.nanRejectStock()[0].remaining === 40);
-// Thanh lỗi BÀO TINH: trừ phiếu xử lý (tồn lỗi của lượt bào tinh ở trên)
+// Thanh lá»—i BÃ€O TINH: trá»« phiáº¿u xá»­ lÃ½ (tá»“n lá»—i cá»§a lÆ°á»£t bÃ o tinh á»Ÿ trÃªn)
 state.xuong2BaoTinhRecords = [
-  { id: 'bt1', kind: 'tinh', date: '2026-09-16', sources: [{ batchId: 'k3', qty: 500 }], qtyOk: 480, qtyErr: 20, outSizeKey: '1230×14×5', createdAt: '2026-09-16T02:00:00.000Z' }
+  { id: 'bt1', kind: 'tinh', date: '2026-09-16', sources: [{ batchId: 'k3', qty: 500 }], qtyOk: 480, qtyErr: 20, outSizeKey: '1230Ã—14Ã—5', createdAt: '2026-09-16T02:00:00.000Z' }
 ];
 document.getElementById('x2-kho-source').value = 'baotinh_loi';
 document.getElementById('x2-kho-method').value = 'tai_che';
-document.getElementById('x2-kho-size').value = '1230×14×5';
+document.getElementById('x2-kho-size').value = '1230Ã—14Ã—5';
 document.getElementById('x2-kho-qty').value = '5';
 x2.handleKhoNoteSubmit({ preventDefault(){} });
 x2.khoApproveNote(state.khoNotes[state.khoNotes.length - 1].id);
-check('LỖI BÀO TINH: tồn lỗi 20 − tái chế 5 = 15 (baoTinhDefectStock trừ phiếu đã duyệt)',
-  x2.baoTinhDefectStock().find(x => x.sizeKey === '1230×14×5').remaining === 15);
+check('Lá»–I BÃ€O TINH: tá»“n lá»—i 20 âˆ’ tÃ¡i cháº¿ 5 = 15 (baoTinhDefectStock trá»« phiáº¿u Ä‘Ã£ duyá»‡t)',
+  x2.baoTinhDefectStock().find(x => x.sizeKey === '1230Ã—14Ã—5').remaining === 15);
 
-// Thanh Tóp: chức năng đã chuyển sang thẻ gộp Xử lý lỗi / Bó Thanh Tóp
+// Thanh TÃ³p: chá»©c nÄƒng Ä‘Ã£ chuyá»ƒn sang tháº» gá»™p Xá»­ lÃ½ lá»—i / BÃ³ Thanh TÃ³p
 const baoTinhRecordsBeforeTopTest = (state.xuong2BaoTinhRecords || []).slice();
 state.xuong2BaoTinhRecords = [
   ...baoTinhRecordsBeforeTopTest,
   { id: 'bt-top', kind: 'tinh', date: '2026-09-17', qtyTop: 30, qtyOk: 470, qtyErr: 20,
-    batchDims: [1250, 22, 9], batchSizeKey: '1250×22×9',
-    inDims: [1250, 22, 9], inSizeKey: '1250×22×9',
-    outDims: [1240, 16, 6], outSizeKey: '1240×16×6',
+    batchDims: [1250, 22, 9], batchSizeKey: '1250Ã—22Ã—9',
+    inDims: [1250, 22, 9], inSizeKey: '1250Ã—22Ã—9',
+    outDims: [1240, 16, 6], outSizeKey: '1240Ã—16Ã—6',
     createdAt: '2026-09-17T02:00:00.000Z' }
 ];
-check('THANH TỐP THEO CỠ: truy vết kích thước TRƯỚC BÀO 1250×22×9, không dùng cỡ sau bào',
-  x2.baoTinhTopSizeRows().some(row => row.sizeKey === '1250×22×9' && row.remaining === 30) &&
-  !x2.baoTinhTopSizeRows().some(row => row.sizeKey === '1240×16×6'));
-check('CHUYỂN THẺ: thao tác Bó Thanh Tóp nằm trong thẻ Xử lý lỗi, Kho không còn form tái chế Tóp',
+check('THANH Tá»P THEO Cá» : truy váº¿t kÃ­ch thÆ°á»›c TRÆ¯á»šC BÃ€O 1250Ã—22Ã—9, khÃ´ng dÃ¹ng cá»¡ sau bÃ o',
+  x2.baoTinhTopSizeRows().some(row => row.sizeKey === '1250Ã—22Ã—9' && row.remaining === 30) &&
+  !x2.baoTinhTopSizeRows().some(row => row.sizeKey === '1240Ã—16Ã—6'));
+check('CHUYá»‚N THáºº: thao tÃ¡c BÃ³ Thanh TÃ³p náº±m trong tháº» Xá»­ lÃ½ lá»—i, Kho khÃ´ng cÃ²n form tÃ¡i cháº¿ TÃ³p',
   x2.X2_CARD_DEFS['x2-xu-ly-loi-card'] &&
   typeof x2.switchX2XuLyLoiTab === 'function');
 x2.switchX2XuLyLoiTab('top');
-check('BÓ TÓP: ô Công Đoạn Xử lý lỗi có 5 lựa chọn và tạo nhiều lô',
+check('BÃ“ TÃ“P: Ã´ CÃ´ng Äoáº¡n Xá»­ lÃ½ lá»—i cÃ³ 5 lá»±a chá»n vÃ  táº¡o nhiá»u lÃ´',
   document.getElementById('x2-xl-kind') &&
   typeof x2.handleX2TopBundleSubmit === 'function');
 state.xuong2BaoTinhRecords = baoTinhRecordsBeforeTopTest;
 
-// ─── D. ĐỐI CHIẾU + RÀ SOÁT SỔ KHO (bù dữ liệu cũ) ─────────────
-check('ĐỐI CHIẾU: hệ thống suy ra k3 = 500 (lượt bào tinh) — phiếu gắn k3 chưa có → lệch +500',
+// â”€â”€â”€ D. Äá»I CHIáº¾U + RÃ€ SOÃT Sá»” KHO (bÃ¹ dá»¯ liá»‡u cÅ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+check('Äá»I CHIáº¾U: há»‡ thá»‘ng suy ra k3 = 500 (lÆ°á»£t bÃ o tinh) â€” phiáº¿u gáº¯n k3 chÆ°a cÃ³ â†’ lá»‡ch +500',
   utils.khoDerivedOutOf('k3') === 500 && utils.khoStockSummary().mismatchThanh > 400);
 const notesBeforeBackfill = state.khoNotes.length;
-x2.khoBackfillFromLegacy(); // confirm() stub trả true
-// Rà soát: k3 thiếu phiếu Bào Tinh → sinh 1 phiếu bù 'khac'. k2 ĐÃ có phiếu 'say2'
-// (ngày 15/09) nên KHÔNG sinh thêm (trước đây bù mù theo ngày thật → sinh trùng).
+x2.khoBackfillFromLegacy(); // confirm() stub tráº£ true
+// RÃ  soÃ¡t: k3 thiáº¿u phiáº¿u BÃ o Tinh â†’ sinh 1 phiáº¿u bÃ¹ 'khac'. k2 ÄÃƒ cÃ³ phiáº¿u 'say2'
+// (ngÃ y 15/09) nÃªn KHÃ”NG sinh thÃªm (trÆ°á»›c Ä‘Ã¢y bÃ¹ mÃ¹ theo ngÃ y tháº­t â†’ sinh trÃ¹ng).
 const backfill = state.khoNotes.find(n => n && n.status === 'da_duyet' && n.type === 'xuat' &&
-  String(n.purposeNote || '').includes('Khởi tạo từ dữ liệu cũ') &&
+  String(n.purposeNote || '').includes('Khá»Ÿi táº¡o tá»« dá»¯ liá»‡u cÅ©') &&
   (n.lots || []).some(l => String(l.batchId) === 'k3'));
-check('RÀ SOÁT (D4): sinh phiếu bù ĐÃ DUYỆT gắn đúng lô k3 (500 thanh, ngày = ngày lượt Bào Tinh)', (() => {
+check('RÃ€ SOÃT (D4): sinh phiáº¿u bÃ¹ ÄÃƒ DUYá»†T gáº¯n Ä‘Ãºng lÃ´ k3 (500 thanh, ngÃ y = ngÃ y lÆ°á»£t BÃ o Tinh)', (() => {
   const btDate = (state.xuong2BaoTinhRecords || []).find(r => r && r.kind === 'tinh' &&
     (r.sources || []).some(s => String(s.batchId) === 'k3'))?.date || '';
   return !!backfill && backfill.status === 'da_duyet' && backfill.lots[0].batchId === 'k3' && backfill.lots[0].qty === 500 &&
-    backfill.date === btDate && backfill.note.includes('Rà soát sổ kho') &&
+    backfill.date === btDate && backfill.note.includes('RÃ  soÃ¡t sá»• kho') &&
     state.khoNotes.length === notesBeforeBackfill + 1;
 })());
-check('RÀ SOÁT: snapshot vị trí lô lúc bù (lots[0].loc = K13) để kiểm chứng',
+check('RÃ€ SOÃT: snapshot vá»‹ trÃ­ lÃ´ lÃºc bÃ¹ (lots[0].loc = K13) Ä‘á»ƒ kiá»ƒm chá»©ng',
   !!backfill && backfill.lots[0].loc === 'K13');
-x2.khoBackfillFromLegacy(); // chạy lần 2 → KHÔNG sinh trùng
-check('RÀ SOÁT: chạy lần 2 KHÔNG sinh trùng (số phiếu giữ nguyên)',
+x2.khoBackfillFromLegacy(); // cháº¡y láº§n 2 â†’ KHÃ”NG sinh trÃ¹ng
+check('RÃ€ SOÃT: cháº¡y láº§n 2 KHÃ”NG sinh trÃ¹ng (sá»‘ phiáº¿u giá»¯ nguyÃªn)',
   state.khoNotes.length === notesBeforeBackfill + 1);
-check('ĐỐI CHIẾU: sau khi rà soát → lệch ≈ 0 (chỉ còn sai số làm tròn)',
+check('Äá»I CHIáº¾U: sau khi rÃ  soÃ¡t â†’ lá»‡ch â‰ˆ 0 (chá»‰ cÃ²n sai sá»‘ lÃ m trÃ²n)',
   Math.abs(utils.khoStockSummary().mismatchThanh) < 2);
-// k2 đã có phiếu xuất say2 do người dùng tạo (15/09) → rà soát KHÔNG tạo thêm phiếu
-// say2 trùng cho cùng lần đi; phiếu tự động chỉ sinh khi còn THIẾU.
-check('RÀ SOÁT: KHÔNG sinh phiếu say2 trùng cho k2 (đã có phiếu say2 ngày 15/09)', (() => {
+// k2 Ä‘Ã£ cÃ³ phiáº¿u xuáº¥t say2 do ngÆ°á»i dÃ¹ng táº¡o (15/09) â†’ rÃ  soÃ¡t KHÃ”NG táº¡o thÃªm phiáº¿u
+// say2 trÃ¹ng cho cÃ¹ng láº§n Ä‘i; phiáº¿u tá»± Ä‘á»™ng chá»‰ sinh khi cÃ²n THIáº¾U.
+check('RÃ€ SOÃT: KHÃ”NG sinh phiáº¿u say2 trÃ¹ng cho k2 (Ä‘Ã£ cÃ³ phiáº¿u say2 ngÃ y 15/09)', (() => {
   const say2Notes = state.khoNotes.filter(n => n && n.status === 'da_duyet' && n.type === 'xuat' && n.purpose === 'say2' &&
     (n.lots || []).some(l => String(l.batchId) === 'k2'));
   return say2Notes.length === 1 && say2Notes[0].date === '2026-09-15';
 })());
 
-// ─── E. SỔ NHẬP/XUẤT + PLANNING (trừ tồn theo phiếu ĐÃ DUYỆT) ──
+// â”€â”€â”€ E. Sá»” NHáº¬P/XUáº¤T + PLANNING (trá»« tá»“n theo phiáº¿u ÄÃƒ DUYá»†T) â”€â”€
 const ledger = utils.khoLedgerEvents();
-check('SỔ: 4 dòng NHẬP (k1 1 lần · k2 2 lần · k3 1 lần) — dòng của k2 ghi rõ "Lần"',
+check('Sá»”: 4 dÃ²ng NHáº¬P (k1 1 láº§n Â· k2 2 láº§n Â· k3 1 láº§n) â€” dÃ²ng cá»§a k2 ghi rÃµ "Láº§n"',
   ledger.inRows.length === 4 && ledger.inRows.some(r => r.lotId === 'k2' && r.round === 2));
-check('SỔ: dòng XUẤT = các phiếu ĐÃ DUYỆT (phiếu chờ/từ chối không vào sổ)',
+check('Sá»”: dÃ²ng XUáº¤T = cÃ¡c phiáº¿u ÄÃƒ DUYá»†T (phiáº¿u chá»/tá»« chá»‘i khÃ´ng vÃ o sá»•)',
   ledger.outRows.length === utils.khoApprovedXuatNotes().length);
-check('SỔ: dòng ĐỐI CHIẾU có "quay lại Sấy 2" của k2 (ngày 2026-09-13, 400 thanh)',
+check('Sá»”: dÃ²ng Äá»I CHIáº¾U cÃ³ "quay láº¡i Sáº¥y 2" cá»§a k2 (ngÃ y 2026-09-13, 400 thanh)',
   ledger.derived.some(d => d.kind === 'say2' && d.lotId === 'k2' && d.qty === 400));
-// Tồn cuối kỳ TÍNH NGƯỢC — nhóm ngày 09-10 (k1 nhập đầu tiên)
+// Tá»“n cuá»‘i ká»³ TÃNH NGÆ¯á»¢C â€” nhÃ³m ngÃ y 09-10 (k1 nháº­p Ä‘áº§u tiÃªn)
 const planning = await import('../js/planning.js');
-state.planningItems = []; // bỏ kế hoạch cũ để tính tồn thuần
+state.planningItems = []; // bá» káº¿ hoáº¡ch cÅ© Ä‘á»ƒ tÃ­nh tá»“n thuáº§n
 const tonByWeek = planning.getPlanningTonByWeek ? planning.getPlanningTonByWeek(new Date().getFullYear()) : null;
-check('PLANNING: getPlanningTonByWeek chạy được với nguồn phiếu kho (không lỗi)',
+check('PLANNING: getPlanningTonByWeek cháº¡y Ä‘Æ°á»£c vá»›i nguá»“n phiáº¿u kho (khÃ´ng lá»—i)',
   tonByWeek !== null && typeof tonByWeek === 'object');
 
-// ─── F. RENDER THẺ + MINI CARD + SỔ THEO KỲ ─────────────────────
+// â”€â”€â”€ F. RENDER THáºº + MINI CARD + Sá»” THEO Ká»² â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 x2.renderX2KhoCard();
-check('THẺ: mở thẻ Kho Nan trả về true (pop-up bật, không lỗi render)',
+check('THáºº: má»Ÿ tháº» Kho Nan tráº£ vá» true (pop-up báº­t, khÃ´ng lá»—i render)',
   x2.x2OpenCard('x2-kho-card') === true &&
   document.getElementById('x2-detail-overlay').classList.contains('show'));
-check('THẺ: thanh tồn in "Tồn Kho:" + chip "phiếu chờ duyệt" khi có phiếu chờ',
-  document.getElementById('x2-kho-stock-bar').innerHTML.includes('Tồn Kho:'));
-check('THẺ: khối WIP có dòng "Thanh lỗi Bào Tinh" + dòng "Thanh lỗi Chọn thanh Bullig"',
-  document.getElementById('x2-kho-wip-bar').innerHTML.includes('Thanh lỗi Bào Tinh') &&
-  document.getElementById('x2-kho-wip-bar').innerHTML.includes('Thanh lỗi Chọn thanh Bullig'));
-check('THẺ: mini card đếm "Tồn … thanh" (số tồn thực sau các phiếu)',
-  /^Tồn [\d.,]+ thanh$/.test(document.getElementById('x2-mini-count-kho').textContent));
-check('SỔ: thẻ ngày có bảng NHẬP (Lần) + bảng XUẤT + dòng chú thích "ra/vào kho NHIỀU LẦN"', (() => {
+check('THáºº: thanh tá»“n in "Tá»“n Kho:" + chip "phiáº¿u chá» duyá»‡t" khi cÃ³ phiáº¿u chá»',
+  document.getElementById('x2-kho-stock-bar').innerHTML.includes('Tá»“n Kho:'));
+check('THáºº: khá»‘i WIP cÃ³ dÃ²ng "Thanh lá»—i BÃ o Tinh" + dÃ²ng "Thanh lá»—i Chá»n thanh Bullig"',
+  document.getElementById('x2-kho-wip-bar').innerHTML.includes('Thanh lá»—i BÃ o Tinh') &&
+  document.getElementById('x2-kho-wip-bar').innerHTML.includes('Thanh lá»—i Chá»n thanh Bullig'));
+check('THáºº: mini card Ä‘áº¿m "Tá»“n â€¦ thanh" (sá»‘ tá»“n thá»±c sau cÃ¡c phiáº¿u)',
+  /^Tá»“n [\d.,]+ thanh$/.test(document.getElementById('x2-mini-count-kho').textContent));
+check('Sá»”: tháº» ngÃ y cÃ³ báº£ng NHáº¬P (Láº§n) + báº£ng XUáº¤T + dÃ²ng chÃº thÃ­ch "ra/vÃ o kho NHIá»€U Láº¦N"', (() => {
   const h = document.getElementById('x2-kho-day-cards').innerHTML;
-  return h.includes('NHẬP KHO') && h.includes('XUẤT KHO') && h.includes('ra/vào kho NHIỀU LẦN');
+  return h.includes('NHáº¬P KHO') && h.includes('XUáº¤T KHO') && h.includes('ra/vÃ o kho NHIá»€U Láº¦N');
 })());
-check('SỔ XUẤT: có cột Vị trí + nút Mở lại/Xóa cho admin (kiểu A) + dòng ghi rõ số từng lô', (() => {
+check('Sá»” XUáº¤T: cÃ³ cá»™t Vá»‹ trÃ­ + nÃºt Má»Ÿ láº¡i/XÃ³a cho admin (kiá»ƒu A) + dÃ²ng ghi rÃµ sá»‘ tá»«ng lÃ´', (() => {
   const h = document.getElementById('x2-kho-day-cards').innerHTML;
-  return h.includes('<th>Vị trí</th>') && h.includes('data-kho-reopen=') && h.includes('data-kho-ledger-del=') &&
-    h.includes('Mở lại') && h.includes('data-admin-only');
+  return h.includes('<th>Vá»‹ trÃ­</th>') && h.includes('data-kho-reopen=') && h.includes('data-kho-ledger-del=') &&
+    h.includes('Má»Ÿ láº¡i') && h.includes('data-admin-only');
 })());
-// Ghi nhận id phiếu bù k3 để kiểm MỞ LẠI ở cuối tệp (tránh đổi tồn giữa chừng
-// làm lệch các kiểm thử BẢNG TỒN / SỔ LỆCH ở dưới).
+// Ghi nháº­n id phiáº¿u bÃ¹ k3 Ä‘á»ƒ kiá»ƒm Má»ž Láº I á»Ÿ cuá»‘i tá»‡p (trÃ¡nh Ä‘á»•i tá»“n giá»¯a chá»«ng
+// lÃ m lá»‡ch cÃ¡c kiá»ƒm thá»­ Báº¢NG Tá»’N / Sá»” Lá»†CH á»Ÿ dÆ°á»›i).
 const khoReopenBackfillId = backfill && backfill.id;
 x2.setKhoPeriodMode('tuan');
-check('SỔ: gạt TUẦN → tiêu đề kỳ dạng "Tuần N / NNNN"',
-  document.getElementById('x2-kho-day-cards').innerHTML.includes('Tuần'));
+check('Sá»”: gáº¡t TUáº¦N â†’ tiÃªu Ä‘á» ká»³ dáº¡ng "Tuáº§n N / NNNN"',
+  document.getElementById('x2-kho-day-cards').innerHTML.includes('Tuáº§n'));
 x2.setKhoPeriodMode('thang');
-check('SỔ: gạt THÁNG → tiêu đề kỳ dạng "Tháng MM/YYYY"',
-  document.getElementById('x2-kho-day-cards').innerHTML.includes('Tháng'));
+check('Sá»”: gáº¡t THÃNG â†’ tiÃªu Ä‘á» ká»³ dáº¡ng "ThÃ¡ng MM/YYYY"',
+  document.getElementById('x2-kho-day-cards').innerHTML.includes('ThÃ¡ng'));
 x2.setKhoPeriodMode('day');
-x2.khoSetShowUsed(true); // phiếu bù mới trừ hết k2 → bật công tắc để vẫn thấy dòng k2
-check('BẢNG TỒN: mỗi lô 1 dòng + chip "ra/vào" trên lô quay lại (k2)',
+x2.khoSetShowUsed(true); // phiáº¿u bÃ¹ má»›i trá»« háº¿t k2 â†’ báº­t cÃ´ng táº¯c Ä‘á»ƒ váº«n tháº¥y dÃ²ng k2
+check('Báº¢NG Tá»’N: má»—i lÃ´ 1 dÃ²ng + chip "ra/vÃ o" trÃªn lÃ´ quay láº¡i (k2)',
   document.getElementById('x2-kho-stock-rows').innerHTML.includes('260911-01') &&
-  document.getElementById('x2-kho-stock-rows').innerHTML.includes('ra/vào 1 lần'));
+  document.getElementById('x2-kho-stock-rows').innerHTML.includes('ra/vÃ o 1 láº§n'));
 x2.khoSetShowUsed(false);
-// THẺ LÔ GẮN PHIẾU: cùng mẫu thẻ nguồn Than Hóa + Sấy (mã · tồn · badge S1/S2/K, bỏ ngày vào kho)
+// THáºº LÃ” Gáº®N PHIáº¾U: cÃ¹ng máº«u tháº» nguá»“n Than HÃ³a + Sáº¥y (mÃ£ Â· tá»“n Â· badge S1/S2/K, bá» ngÃ y vÃ o kho)
 x2.renderX2KhoLotsList();
-check('THẺ LÔ: dòng 1 có mã lô + tồn (còn X thanh) · dòng 2 có chip Dùng cho + badge S1/S2/K (mẫu Than Hóa + Sấy)', (() => {
+check('THáºº LÃ”: dÃ²ng 1 cÃ³ mÃ£ lÃ´ + tá»“n (cÃ²n X thanh) Â· dÃ²ng 2 cÃ³ chip DÃ¹ng cho + badge S1/S2/K (máº«u Than HÃ³a + Sáº¥y)', (() => {
   const h = document.getElementById('x2-kho-lots-list').innerHTML;
   return h.includes('kho-lot-card') && h.includes('kho-lot-line1') && h.includes('kho-lot-line2') &&
-    /26091\d-01/.test(h) && h.includes('còn') && h.includes('thanh') &&
+    /26091\d-01/.test(h) && h.includes('cÃ²n') && h.includes('thanh') &&
     h.includes('al-use-tag') && h.includes('al-day-badge day-s1') &&
     h.includes('al-day-badge day-s2') && h.includes('al-day-badge day-k') &&
-    /S1-\d+ ngày/.test(h) && /S2-\d+ ngày/.test(h) && /K-\d+ ngày/.test(h);
+    /S1-\d+ ngÃ y/.test(h) && /S2-\d+ ngÃ y/.test(h) && /K-\d+ ngÃ y/.test(h);
 })());
-check('THẺ LÔ: BỎ dòng "vào kho dd/mm/yy" (giữ mã + tồn + chip ra/vào kho)', (() => {
+check('THáºº LÃ”: Bá»Ž dÃ²ng "vÃ o kho dd/mm/yy" (giá»¯ mÃ£ + tá»“n + chip ra/vÃ o kho)', (() => {
   const h = document.getElementById('x2-kho-lots-list').innerHTML;
-  return h.includes('kho-round-badge') && h.includes('ra/vào kho') &&
-    h.includes('kho-in-date') === false && /vào kho \d{1,2}\/\d{1,2}\/\d{2}/.test(h) === false;
+  return h.includes('kho-round-badge') && h.includes('ra/vÃ o kho') &&
+    h.includes('kho-in-date') === false && /vÃ o kho \d{1,2}\/\d{1,2}\/\d{2}/.test(h) === false;
 })());
-check('THẺ LÔ: KHÔNG lặp badge ngày — mỗi thẻ chỉ 1 badge S1 + 1 badge S2 + 1 badge K (ở dòng 2)', (() => {
+check('THáºº LÃ”: KHÃ”NG láº·p badge ngÃ y â€” má»—i tháº» chá»‰ 1 badge S1 + 1 badge S2 + 1 badge K (á»Ÿ dÃ²ng 2)', (() => {
   const h = document.getElementById('x2-kho-lots-list').innerHTML;
   const cards = h.split('kho-lot-card').slice(1);
   if (!cards.length) return false;
@@ -525,24 +525,24 @@ check('THẺ LÔ: KHÔNG lặp badge ngày — mỗi thẻ chỉ 1 badge S1 + 1 
     (c.match(/al-day-badge day-k/g) || []).length === 1 &&
     c.indexOf('kho-lot-line1') < c.indexOf('al-day-badge day-s1'));
 })());
-check('THẺ LÔ: helper khoStageDaysOf tính đúng ngày S1/S2/K theo lịch sử công đoạn', (() => {
+check('THáºº LÃ”: helper khoStageDaysOf tÃ­nh Ä‘Ãºng ngÃ y S1/S2/K theo lá»‹ch sá»­ cÃ´ng Ä‘oáº¡n', (() => {
   const d1 = x2.khoStageDaysOf(state.batches[0]);
   const d2 = x2.khoStageDaysOf(state.batches[1]);
   return d1 && d2 && typeof d1.say1 === 'number' && typeof d1.say2 === 'number' && typeof d1.kho === 'number' &&
     typeof d2.say1 === 'number' && typeof d2.say2 === 'number' && typeof d2.kho === 'number';
 })());
-// GIAI ĐOẠN 2 (05/10/2026): bản đồ VÙNG DỮ LIỆU thêm 8 thẻ XƯỞNG 1 → 18;
-// THẺ CẮT VÁN (09/10/2026) → 19 · THẺ BÀO VÁN (09/10/2026) → 20.
-// THẺ HỖ TRỢ + CÔNG ĐOẠN LẺ (10/10/2026) → 21.
-// Nguồn XUẤT EXCEL 13 → 21 (17/10/2026: thêm 8 thẻ Xưởng 1 — trước đây nút
-// "Xuất Dữ Liệu" của thẻ X1 rơi về 'batch' nên xuất nhầm Lô nan).
+// GIAI ÄOáº N 2 (05/10/2026): báº£n Ä‘á»“ VÃ™NG Dá»® LIá»†U thÃªm 8 tháº» XÆ¯á»žNG 1 â†’ 18;
+// THáºº Cáº®T VÃN (09/10/2026) â†’ 19 Â· THáºº BÃ€O VÃN (09/10/2026) â†’ 20.
+// THáºº Há»– TRá»¢ + CÃ”NG ÄOáº N Láºº (10/10/2026) â†’ 21.
+// Nguá»“n XUáº¤T EXCEL 13 â†’ 21 (17/10/2026: thÃªm 8 tháº» XÆ°á»Ÿng 1 â€” trÆ°á»›c Ä‘Ã¢y nÃºt
+// "Xuáº¥t Dá»¯ Liá»‡u" cá»§a tháº» X1 rÆ¡i vá» 'batch' nÃªn xuáº¥t nháº§m LÃ´ nan).
 const X2_IDS = ['x2-bo-luong-card', 'x2-cut-card', 'x2-bo-ong-card', 'x2-bao-tho-card',
   'x2-chon-nan-tho-card', 'x2-than-hoa-card', 'x2-kho-card', 'x2-bao-tinh-card',
   'x2-bullig-card', 'x2-xu-ly-loi-card', 'x2-ho-tro-card', 'x2-ep-van-card'];
 const X1_IDS = ['x1-cat-ong-card', 'x1-say-sinh-card', 'x1-boc-card', 'x1-loc-ong-card',
   'x1-cat-mat-card', 'x1-bo-card', 'x1-phoi-say-card', 'x1-loc-thanh-card', 'x1-kho-card',
   'x1-nan-plan-card'];
-check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ + 9 thẻ X1 đủ vùng dữ liệu + nguồn xuất',
+check('DÃ™NG CHUNG: tháº» Xá»­ lÃ½ lá»—i thay 2 tháº» cÅ© + 9 tháº» X1 Ä‘á»§ vÃ¹ng dá»¯ liá»‡u + nguá»“n xuáº¥t',
   Object.keys(x2.X2_CARD_EXPORT_SOURCE).length === 25 &&
   Object.keys(x2.X2_CARD_HISTORY_DOMAIN).length === 25 &&
   [...X2_IDS, ...X1_IDS].every(id => !!x2.X2_CARD_HISTORY_DOMAIN[id] && !!x2.X2_CARD_EXPORT_SOURCE[id]) &&
@@ -553,9 +553,9 @@ check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ + 9 thẻ X1 đủ vù
   x2.X2_CARD_EXPORT_SOURCE['x1-loc-thanh-card'] === 'x1locthanh' &&
   x2.X2_CARD_EXPORT_SOURCE['x1-nan-plan-card'] === 'x1nanplan');
 
-// ─── F3. SỬA LỖI 06/10/2026: chặn theo TỪNG LÔ · SỔ LỆCH KHÔNG KHÓA · NÚT THU GỌN ──
-// (a) SỔ LỆCH (honestThanh = 0 do phiếu bù cũ gắn lô ĐÃ RỜI kho) NHƯNG lô ở Kho vẫn
-//     còn tồn → PHẢI tạo được phiếu (trước đây chặn tổng kho → không phiếu nào tạo được)
+// â”€â”€â”€ F3. Sá»¬A Lá»–I 06/10/2026: cháº·n theo Tá»ªNG LÃ” Â· Sá»” Lá»†CH KHÃ”NG KHÃ“A Â· NÃšT THU Gá»ŒN â”€â”€
+// (a) Sá»” Lá»†CH (honestThanh = 0 do phiáº¿u bÃ¹ cÅ© gáº¯n lÃ´ ÄÃƒ Rá»œI kho) NHÆ¯NG lÃ´ á»Ÿ Kho váº«n
+//     cÃ²n tá»“n â†’ PHáº¢I táº¡o Ä‘Æ°á»£c phiáº¿u (trÆ°á»›c Ä‘Ã¢y cháº·n tá»•ng kho â†’ khÃ´ng phiáº¿u nÃ o táº¡o Ä‘Æ°á»£c)
 {
   state.batches.push({ id: 'k-ghost-out', code: 'GHOST-01', stage: 'say1', date: '2026-09-01',
     length: 1250, width: 18, thickness: 7, quantity: 99999, location: 'S1G',
@@ -564,7 +564,7 @@ check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ + 9 thẻ X1 đủ vù
     date: '2026-09-01', qty: 99999, lots: [{ batchId: 'k-ghost-out', qty: 99999 }] });
   const lotK3 = state.batches.find(b => b.id === 'k3');
   const remK3 = utils.khoLotRemainingOf(lotK3);
-  check('SỔ LỆCH: honestThanh = 0 (phiếu bù gắn lô đã rời kho) NHƯNG lô Kho vẫn còn tồn',
+  check('Sá»” Lá»†CH: honestThanh = 0 (phiáº¿u bÃ¹ gáº¯n lÃ´ Ä‘Ã£ rá»i kho) NHÆ¯NG lÃ´ Kho váº«n cÃ²n tá»“n',
     utils.khoStockSummary().honestThanh === 0 && remK3 > 0);
   x2.setKhoNoteType('xuat');
   x2.resetX2KhoNoteForm(true);
@@ -573,41 +573,41 @@ check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ + 9 thẻ X1 đủ vù
   x2.khoPickLot('k3');
   const nBefore = state.khoNotes.length;
   x2.handleKhoNoteSubmit({ preventDefault(){} });
-  check('SỔ LỆCH: vẫn TẠO ĐƯỢC phiếu gắn lô còn tồn (không còn chặn "Vượt tồn khả dụng 0 thanh")',
+  check('Sá»” Lá»†CH: váº«n Táº O ÄÆ¯á»¢C phiáº¿u gáº¯n lÃ´ cÃ²n tá»“n (khÃ´ng cÃ²n cháº·n "VÆ°á»£t tá»“n kháº£ dá»¥ng 0 thanh")',
     state.khoNotes.length === nBefore + 1);
-  // dọn dữ liệu giả
+  // dá»n dá»¯ liá»‡u giáº£
   state.khoNotes = state.khoNotes.filter(n => n && n.id !== 'note-ghost');
   state.batches = state.batches.filter(b => b && b.id !== 'k-ghost-out');
   x2.resetX2KhoNoteForm(true);
 }
-// (b) CHẶN THEO TỪNG LÔ: phiếu gắn lô VƯỢT phần còn lại của CHÍNH lô đó → bị từ chối
+// (b) CHáº¶N THEO Tá»ªNG LÃ”: phiáº¿u gáº¯n lÃ´ VÆ¯á»¢T pháº§n cÃ²n láº¡i cá»§a CHÃNH lÃ´ Ä‘Ã³ â†’ bá»‹ tá»« chá»‘i
 {
   x2.setKhoNoteType('xuat');
   x2.resetX2KhoNoteForm(true);
   document.getElementById('x2-kho-date').value = '2026-09-26';
   document.getElementById('x2-kho-purpose').value = 'baotinh';
-  x2.khoPickLot('k3');                                  // qty = toàn bộ tồn k3 tại thời điểm chọn
-  // Giả lập: tồn lô k3 giảm SAU KHI ĐÃ CHỌN (phiếu khác được duyệt trước)
+  x2.khoPickLot('k3');                                  // qty = toÃ n bá»™ tá»“n k3 táº¡i thá»i Ä‘iá»ƒm chá»n
+  // Giáº£ láº­p: tá»“n lÃ´ k3 giáº£m SAU KHI ÄÃƒ CHá»ŒN (phiáº¿u khÃ¡c Ä‘Æ°á»£c duyá»‡t trÆ°á»›c)
   const capK3 = utils.khoLotRemainingOf(state.batches.find(b => b.id === 'k3'));
   state.khoNotes.push({ id: 'note-shrink', type: 'xuat', purpose: 'baotinh', status: 'da_duyet',
     date: '2026-09-20', qty: capK3, lots: [{ batchId: 'k3', qty: capK3 }] });
   const nBefore = state.khoNotes.length;
   x2.handleKhoNoteSubmit({ preventDefault(){} });
-  check('CHẶN THEO LÔ: phiếu ghi vượt tồn CÒN LẠI của lô k3 → KHÔNG tạo phiếu',
+  check('CHáº¶N THEO LÃ”: phiáº¿u ghi vÆ°á»£t tá»“n CÃ’N Láº I cá»§a lÃ´ k3 â†’ KHÃ”NG táº¡o phiáº¿u',
     state.khoNotes.length === nBefore);
-  check('CHẶN THEO LÔ: khoLotsOverflow trả đúng lô + lý do (k3, qty > cap)',
+  check('CHáº¶N THEO LÃ”: khoLotsOverflow tráº£ Ä‘Ãºng lÃ´ + lÃ½ do (k3, qty > cap)',
     (() => {
       const bad = x2.khoLotsOverflow([{ batchId: 'k3', qty: capK3 }]);
       return bad.length === 1 && bad[0].id === 'k3' && bad[0].cap === 0;
     })());
-  check('CHẶN THEO LÔ: phiếu đã duyệt gắn lô vượt tồn → khoApproveCheckError trả lỗi (không duyệt được)',
+  check('CHáº¶N THEO LÃ”: phiáº¿u Ä‘Ã£ duyá»‡t gáº¯n lÃ´ vÆ°á»£t tá»“n â†’ khoApproveCheckError tráº£ lá»—i (khÃ´ng duyá»‡t Ä‘Æ°á»£c)',
     typeof x2.khoApproveCheckError(state.khoNotes.find(n => n.id === 'note-shrink')) === 'string');
-  check('CHẶN THEO LÔ: phiếu gắn lô còn tồn → khoApproveCheckError trả null (duyệt được)',
+  check('CHáº¶N THEO LÃ”: phiáº¿u gáº¯n lÃ´ cÃ²n tá»“n â†’ khoApproveCheckError tráº£ null (duyá»‡t Ä‘Æ°á»£c)',
     x2.khoApproveCheckError(state.khoNotes.find(n => n.type === 'xuat' && n.lots && n.lots.length &&
       n.id !== 'note-shrink' && x2.khoLotsOverflow(n.lots).length === 0)) === null);
-// (b2) Lô tạo từ BẢNG KÊ trong thẻ Kho phải gán TRẠNG THÁI SẤY theo mục đích —
-  //      nếu không, lô mới bị coi là "Chưa sấy" và sẽ biến mất khỏi phiếu Bào
-  //      Tinh / Bullig ở lần chọn sau (14/11/2026).
+// (b2) LÃ´ táº¡o tá»« Báº¢NG KÃŠ trong tháº» Kho pháº£i gÃ¡n TRáº NG THÃI Sáº¤Y theo má»¥c Ä‘Ã­ch â€”
+  //      náº¿u khÃ´ng, lÃ´ má»›i bá»‹ coi lÃ  "ChÆ°a sáº¥y" vÃ  sáº½ biáº¿n máº¥t khá»i phiáº¿u BÃ o
+  //      Tinh / Bullig á»Ÿ láº§n chá»n sau (14/11/2026).
   const beforeBatches = state.batches.slice();
   const beforeNotes = state.khoNotes;
   x2.resetX2KhoNoteForm(true);
@@ -624,41 +624,41 @@ check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ + 9 thẻ X1 đủ vù
   const bulkRow = { querySelector: (selector) => bulkValues[selector] || null };
   document.getElementById('x2-kho-bulk-rows').querySelectorAll = (selector) =>
     selector === '[data-x2-kho-bulk-row]' ? [bulkRow] : [];
-  x2.toggleKhoBulkEntry();   // bật chế độ "Tạo lô mới theo bảng kê"
+  x2.toggleKhoBulkEntry();   // báº­t cháº¿ Ä‘á»™ "Táº¡o lÃ´ má»›i theo báº£ng kÃª"
   const notesBeforeBulk = state.khoNotes.length;
   x2.handleKhoNoteSubmit({ preventDefault(){} });
   const bulkNew = state.batches.find(b => b.code && b.code.startsWith('260930') &&
     b.location === '' && b.dryStage === 'say2');
-  check('BẢNG KÊ: lô mới của phiếu Bào Tinh được gán dryStage "say2" (không bị mất ở lần chọn sau)',
+  check('Báº¢NG KÃŠ: lÃ´ má»›i cá»§a phiáº¿u BÃ o Tinh Ä‘Æ°á»£c gÃ¡n dryStage "say2" (khÃ´ng bá»‹ máº¥t á»Ÿ láº§n chá»n sau)',
     !!bulkNew && bulkNew.dryStage === 'say2' && bulkNew.stage === 'kho');
-  check('BẢNG KÊ: phiếu + lô mới đã được tạo thật', state.khoNotes.length === notesBeforeBulk + 1);
-  // dọn: bỏ lô mới + phiếu vừa tạo để không lệch các mục kiểm thử phía dưới
+  check('Báº¢NG KÃŠ: phiáº¿u + lÃ´ má»›i Ä‘Ã£ Ä‘Æ°á»£c táº¡o tháº­t', state.khoNotes.length === notesBeforeBulk + 1);
+  // dá»n: bá» lÃ´ má»›i + phiáº¿u vá»«a táº¡o Ä‘á»ƒ khÃ´ng lá»‡ch cÃ¡c má»¥c kiá»ƒm thá»­ phÃ­a dÆ°á»›i
   state.batches = bulkNew ? beforeBatches.filter(b => b && b.id !== bulkNew.id) : beforeBatches;
   state.khoNotes = beforeNotes;
-  x2.resetX2KhoNoteForm(true);   // cũng tự tắt chế độ bảng kê
-  // dọn: trả tồn k3 về như cũ
+  x2.resetX2KhoNoteForm(true);   // cÅ©ng tá»± táº¯t cháº¿ Ä‘á»™ báº£ng kÃª
+  // dá»n: tráº£ tá»“n k3 vá» nhÆ° cÅ©
   state.khoNotes = state.khoNotes.filter(n => n && n.id !== 'note-shrink');
   x2.resetX2KhoNoteForm(true);
 }
-// (c) NÚT THU GỌN: phải gắn class x2-cut-collapsed (CHUẨN của .x2-cut-table-wrap) —
-//     trước đây gắn rate-table-collapsed (CSS chỉ áp .planning-card) → bấm không ăn
+// (c) NÃšT THU Gá»ŒN: pháº£i gáº¯n class x2-cut-collapsed (CHUáº¨N cá»§a .x2-cut-table-wrap) â€”
+//     trÆ°á»›c Ä‘Ã¢y gáº¯n rate-table-collapsed (CSS chá»‰ Ã¡p .planning-card) â†’ báº¥m khÃ´ng Äƒn
 {
   x2.toggleX2KhoTable();
   const collapsed = document.getElementById('x2-kho-table-wrap').classList.contains('x2-cut-collapsed');
   x2.toggleX2KhoTable();
   const expanded = !document.getElementById('x2-kho-table-wrap').classList.contains('x2-cut-collapsed');
-  check('NÚT THU GỌN SỔ: bấm → wrap #x2-kho-table-wrap gắn class x2-cut-collapsed (ẩn bảng) → bấm lại mở', collapsed && expanded);
+  check('NÃšT THU Gá»ŒN Sá»”: báº¥m â†’ wrap #x2-kho-table-wrap gáº¯n class x2-cut-collapsed (áº©n báº£ng) â†’ báº¥m láº¡i má»Ÿ', collapsed && expanded);
   x2.toggleX2KhoStockTable();
   const st1 = document.getElementById('x2-kho-stock-wrap').classList.contains('x2-cut-collapsed');
   x2.toggleX2KhoStockTable();
   const st2 = !document.getElementById('x2-kho-stock-wrap').classList.contains('x2-cut-collapsed');
-  check('NÚT THU GỌN TỒN: bấm → wrap #x2-kho-stock-wrap gắn class x2-cut-collapsed → bấm lại mở', st1 && st2);
-  check('NÚT THU GỌN: không còn dính class rate-table-collapsed (nguyên nhân cũ)',
+  check('NÃšT THU Gá»ŒN Tá»’N: báº¥m â†’ wrap #x2-kho-stock-wrap gáº¯n class x2-cut-collapsed â†’ báº¥m láº¡i má»Ÿ', st1 && st2);
+  check('NÃšT THU Gá»ŒN: khÃ´ng cÃ²n dÃ­nh class rate-table-collapsed (nguyÃªn nhÃ¢n cÅ©)',
     !fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8')
       .includes("toggle('rate-table-collapsed'"));
 }
 
-// ─── F2. LẬP PHIẾU XUẤT KÈM NHIỀU LÔ MỚI ─────────────────────
+// â”€â”€â”€ F2. Láº¬P PHIáº¾U XUáº¤T KÃˆM NHIá»€U LÃ” Má»šI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 {
   const previousBatches = state.batches;
   const previousNotes = state.khoNotes;
@@ -684,7 +684,7 @@ check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ + 9 thẻ X1 đủ vù
   x2.handleKhoNoteSubmit({ preventDefault(){} });
   const note = state.khoNotes.find(n => n.type === 'xuat' && n.status === 'cho_duyet');
   const created = state.batches.slice();
-  check('PHIẾU XUẤT NHANH: tự tạo các lô A/A1 ở Kho và gắn đủ số lượng vào cùng phiếu chờ duyệt',
+  check('PHIáº¾U XUáº¤T NHANH: tá»± táº¡o cÃ¡c lÃ´ A/A1 á»Ÿ Kho vÃ  gáº¯n Ä‘á»§ sá»‘ lÆ°á»£ng vÃ o cÃ¹ng phiáº¿u chá» duyá»‡t',
     note && note.qty === 1750 && note.lots.length === 2 &&
     created.length === 2 && created.every(b => b.stage === 'kho' && b.location === '' &&
       b.stageHistory.length === 1 && b.stageHistory[0].stage === 'kho') &&
@@ -693,7 +693,7 @@ check('DÙNG CHUNG: thẻ Xử lý lỗi thay 2 thẻ cũ + 9 thẻ X1 đủ vù
   state.khoNotes = previousNotes;
 }
 
-// ─── G. CẤU TRÚC (index.html · js · sw.js · npm test) ───────────
+// â”€â”€â”€ G. Cáº¤U TRÃšC (index.html Â· js Â· sw.js Â· npm test) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const jsState = fs.readFileSync(new URL('../js/state.js', import.meta.url), 'utf8');
 const jsStorage = fs.readFileSync(new URL('../js/storage.js', import.meta.url), 'utf8');
@@ -706,72 +706,72 @@ const jsXlsx = fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url),
 const swJs = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const cssCss = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-// ─── F2. TRÌNH BÀY LẠI THANH TỒN (A) + KHUNG VÙNG .x2-zone (B/C) ────
-check('TỒN TOÀN NHÓM (công thức mới): = số lô đang sấy + tồn kho → KHÔNG BAO GIỜ về 0 vô nghĩa', (() => {
+// â”€â”€â”€ F2. TRÃŒNH BÃ€Y Láº I THANH Tá»’N (A) + KHUNG VÃ™NG .x2-zone (B/C) â”€â”€â”€â”€
+check('Tá»’N TOÃ€N NHÃ“M (cÃ´ng thá»©c má»›i): = sá»‘ lÃ´ Ä‘ang sáº¥y + tá»“n kho â†’ KHÃ”NG BAO GIá»œ vá» 0 vÃ´ nghÄ©a', (() => {
   const s = utils.khoStockSummary();
   return s.poolThanh === s.poolSayThanh + s.remainingThanh && s.poolSayThanh === 500 && s.poolThanh > s.remainingThanh;
 })());
-check('THANH TỒN: 3 ô KPI — "Tồn Kho:" · "Đang sấy:" · "Tổng trong nhà máy:" (giải thích chỉ ở tooltip)', (() => {
+check('THANH Tá»’N: 3 Ã´ KPI â€” "Tá»“n Kho:" Â· "Äang sáº¥y:" Â· "Tá»•ng trong nhÃ  mÃ¡y:" (giáº£i thÃ­ch chá»‰ á»Ÿ tooltip)', (() => {
   const h = document.getElementById('x2-kho-stock-bar').innerHTML;
-  return h.includes('Tồn Kho:') && h.includes('Đang sấy:') && h.includes('Tổng trong nhà máy:') &&
+  return h.includes('Tá»“n Kho:') && h.includes('Äang sáº¥y:') && h.includes('Tá»•ng trong nhÃ  mÃ¡y:') &&
     h.includes('kho-kpi') && h.includes('title="') &&
-    h.includes('Tồn nan toàn nhóm') === false && h.includes('Đối chiếu lệch') === false;
+    h.includes('Tá»“n nan toÃ n nhÃ³m') === false && h.includes('Äá»‘i chiáº¿u lá»‡ch') === false;
 })());
-check('THỐNG KÊ Kho: thêm ô "Đang sấy" + "Tổng trong nhà máy" · nhãn "Thiếu phiếu kho" thay "Đối chiếu lệch"', (() => {
+check('THá»NG KÃŠ Kho: thÃªm Ã´ "Äang sáº¥y" + "Tá»•ng trong nhÃ  mÃ¡y" Â· nhÃ£n "Thiáº¿u phiáº¿u kho" thay "Äá»‘i chiáº¿u lá»‡ch"', (() => {
   const st = document.getElementById('x2-kho-stats').innerHTML;
-  return st.includes('Đang sấy (S1+S2)') && st.includes('Tổng trong nhà máy') &&
-    st.includes('Thiếu phiếu kho') && st.includes('title="') && st.includes('Đối chiếu lệch') === false;
+  return st.includes('Äang sáº¥y (S1+S2)') && st.includes('Tá»•ng trong nhÃ  mÃ¡y') &&
+    st.includes('Thiáº¿u phiáº¿u kho') && st.includes('title="') && st.includes('Äá»‘i chiáº¿u lá»‡ch') === false;
 })());
-check('VÙNG: Thẻ Kho Nan có ĐÚNG 5 khung .x2-zone + 5 header đánh số (mô tả nằm trong title)', (() => {
+check('VÃ™NG: Tháº» Kho Nan cÃ³ ÄÃšNG 5 khung .x2-zone + 5 header Ä‘Ã¡nh sá»‘ (mÃ´ táº£ náº±m trong title)', (() => {
   const slice = idxHtml.slice(idxHtml.indexOf('id="x2-kho-card"'), idxHtml.indexOf('id="x2-bao-tinh-card"'));
   return (slice.match(/class="x2-zone"/g) || []).length === 5 &&
     (slice.match(/class="x2-zone-head"/g) || []).length === 5 && slice.includes('title="');
 })());
-check('VÙNG: thẻ Bào Tinh được bọc 3 khung (Nhập Liệu · Thống Kê · Lịch Sử)', (() => {
+check('VÃ™NG: tháº» BÃ o Tinh Ä‘Æ°á»£c bá»c 3 khung (Nháº­p Liá»‡u Â· Thá»‘ng KÃª Â· Lá»‹ch Sá»­)', (() => {
   const slice = idxHtml.slice(idxHtml.indexOf('id="x2-bao-tinh-card"'), idxHtml.indexOf('id="x2-ep-van-card"'));
   return (slice.match(/class="x2-zone"/g) || []).length === 3;
 })());
-check('VÙNG: head thanh trong khung tab (Than Hóa · Ép Ván) + CSS .x2-zone/.kho-kpi + RÀ SOÁT SỔ KHO', (() => {
+check('VÃ™NG: head thanh trong khung tab (Than HÃ³a Â· Ã‰p VÃ¡n) + CSS .x2-zone/.kho-kpi + RÃ€ SOÃT Sá»” KHO', (() => {
   const jsXuong2 = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
   return idxHtml.includes('x2-zone-bar') && cssCss.includes('.x2-zone {') && cssCss.includes('.kho-kpi {') &&
-    jsXuong2.includes('khoLedgerEvents().derived') && jsXuong2.includes('Rà soát sổ kho') &&
+    jsXuong2.includes('khoLedgerEvents().derived') && jsXuong2.includes('RÃ  soÃ¡t sá»• kho') &&
     jsXuong2.includes('khoReopenNote') && jsXuong2.includes('data-kho-reopen');
 })());
-check('CẤU TRÚC (index.html): mini card + thẻ Kho Nan đủ khối (tồn · WIP · phiếu · sổ · tồn)',
+check('Cáº¤U TRÃšC (index.html): mini card + tháº» Kho Nan Ä‘á»§ khá»‘i (tá»“n Â· WIP Â· phiáº¿u Â· sá»• Â· tá»“n)',
   idxHtml.includes('data-x2-card="x2-kho-card"') && idxHtml.includes('id="x2-kho-card"') &&
   idxHtml.includes('id="x2-kho-stock-bar"') && idxHtml.includes('id="x2-kho-wip-bar"') &&
   idxHtml.includes('id="x2-kho-note-form"') && idxHtml.includes('id="x2-kho-pending-rows"') &&
   idxHtml.includes('id="x2-kho-day-cards"') && idxHtml.includes('id="x2-kho-stock-rows"') &&
-  idxHtml.includes('<option value="top_other">Thanh Tóp</option>') &&
+  idxHtml.includes('<option value="top_other">Thanh TÃ³p</option>') &&
   idxHtml.includes('data-x2-card="x2-xu-ly-loi-card"') &&
   idxHtml.includes('id="x2-error-top-panel"') &&
   idxHtml.includes('id="x2-xl-top-rows"') &&
-  idxHtml.includes('Vị trí (tham khảo)') &&
+  idxHtml.includes('Vá»‹ trÃ­ (tham kháº£o)') &&
   idxHtml.includes('id="btn-kho-add-manual"'));
-check('CẤU TRÚC (js): key riêng + nối đủ state/storage/cloud/history/main/events',
+check('Cáº¤U TRÃšC (js): key riÃªng + ná»‘i Ä‘á»§ state/storage/cloud/history/main/events',
   jsState.includes('bamboo_tracker_kho_notes_v1') && jsStorage.includes('restoreKhoNotes') &&
   jsCloud.includes('khoNotes') && jsHistory.includes('khoNotes') &&
   jsMain.includes('loadKhoNotes') && jsEvents.includes('x2-kho-note-form'));
-check('CẤU TRÚC (planning.js): getNanStockEvents trừ tồn theo PHIẾU ĐÃ DUYỆT (không còn trừ lượt bào tinh)',
+check('Cáº¤U TRÃšC (planning.js): getNanStockEvents trá»« tá»“n theo PHIáº¾U ÄÃƒ DUYá»†T (khÃ´ng cÃ²n trá»« lÆ°á»£t bÃ o tinh)',
   jsPlanning.includes('khoApprovedXuatNotes') && jsPlanning.includes("khoNormPurpose(n.purpose) !== 'say2'"));
-check('CẤU TRÚC (kanban.js): cột Kho dùng tồn thật + ẨN lô đã xuất hết',
+check('Cáº¤U TRÃšC (kanban.js): cá»™t Kho dÃ¹ng tá»“n tháº­t + áº¨N lÃ´ Ä‘Ã£ xuáº¥t háº¿t',
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('khoVisibilityMap') &&
   fs.readFileSync(new URL('../js/kanban.js', import.meta.url), 'utf8').includes('kho-card-remain'));
-check('CẤU TRÚC (export-xlsx.js): có nguồn xuất "kho" + dùng khoLedgerEvents/khoStockSummary',
+check('Cáº¤U TRÃšC (export-xlsx.js): cÃ³ nguá»“n xuáº¥t "kho" + dÃ¹ng khoLedgerEvents/khoStockSummary',
   jsXlsx.includes("id: 'kho'") && jsXlsx.includes('khoLedgerEvents'));
-check('NHẬP NHANH PHIẾU XUẤT: có bảng kê nhiều dòng và điều khiển thêm dòng',
+check('NHáº¬P NHANH PHIáº¾U XUáº¤T: cÃ³ báº£ng kÃª nhiá»u dÃ²ng vÃ  Ä‘iá»u khiá»ƒn thÃªm dÃ²ng',
   idxHtml.includes('id="x2-kho-bulk-toggle"') && idxHtml.includes('id="x2-kho-bulk-rows"') &&
   idxHtml.includes('id="x2-kho-bulk-add-row"') && jsEvents.includes('x2-kho-bulk-toggle'));
-check('CẤU TRÚC (sw.js): đã tăng CACHE_NAME v456', /nha-may-ngoc-son-v456/.test(swJs));
-check('CẤU TRÚC (styles.css): có khối KHO NAN (badge · chip · bảng sổ · thẻ lô)',
+check('Cáº¤U TRÃšC (sw.js): Ä‘Ã£ tÄƒng CACHE_NAME v486', /nha-may-ngoc-son-v486/.test(swJs));
+check('Cáº¤U TRÃšC (styles.css): cÃ³ khá»‘i KHO NAN (badge Â· chip Â· báº£ng sá»• Â· tháº» lÃ´)',
   cssCss.includes('.kho-type-btn') && cssCss.includes('.kho-day-card') && cssCss.includes('.kho-lot-card'));
-check('CẤU TRÚC (package.json): tests/kho.test.mjs đã vào npm test',
+check('Cáº¤U TRÃšC (package.json): tests/kho.test.mjs Ä‘Ã£ vÃ o npm test',
   pkg.scripts.test.includes('tests/kho.test.mjs'));
 
-// ─── H. MỞ LẠI PHIẾU ĐÃ DUYỆT (kiểu A — lô RIÊNG để không lệch tồn chung) ──
-check('MỞ LẠI (kiểu A): tạo phiếu riêng 200 thanh → duyệt → mở lại → tồn hồi đúng 200', (() => {
+// â”€â”€â”€ H. Má»ž Láº I PHIáº¾U ÄÃƒ DUYá»†T (kiá»ƒu A â€” lÃ´ RIÃŠNG Ä‘á»ƒ khÃ´ng lá»‡ch tá»“n chung) â”€â”€
+check('Má»ž Láº I (kiá»ƒu A): táº¡o phiáº¿u riÃªng 200 thanh â†’ duyá»‡t â†’ má»Ÿ láº¡i â†’ tá»“n há»“i Ä‘Ãºng 200', (() => {
   state.batches.push({ id: 'k-reopen', code: '260927-99', stage: 'kho', date: '2026-09-27', week: '2026-W39',
-    length: 1250, width: 18, thickness: 7, quantity: 200, volume: 0.0315, bambooType: 'A', useFor: 'Ván',
+    length: 1250, width: 18, thickness: 7, quantity: 200, volume: 0.0315, bambooType: 'A', useFor: 'VÃ¡n',
     location: 'K99', stageHistory: [{ stage: 'kho', date: '2026-09-27' }] });
   const lot = () => state.batches.find(b => b && b.id === 'k-reopen');
   x2.setKhoNoteType('xuat');
@@ -787,173 +787,173 @@ check('MỞ LẠI (kiểu A): tạo phiếu riêng 200 thanh → duyệt → m�
   const n = state.khoNotes.find(x => x && x.id === nid);
   return n && n.status === 'cho_duyet' && utils.khoLotRemainingOf(lot()) === 200;
 })());
-check('MỞ LẠI: ô chọn lô khi sửa vẫn thấy lô trong phiếu (kể cả tồn 0) để thêm/bớt', (() => {
+check('Má»ž Láº I: Ã´ chá»n lÃ´ khi sá»­a váº«n tháº¥y lÃ´ trong phiáº¿u (ká»ƒ cáº£ tá»“n 0) Ä‘á»ƒ thÃªm/bá»›t', (() => {
   x2.renderX2KhoLotsList();
   return document.getElementById('x2-kho-lots-list').innerHTML.includes('260927-99');
 })());
-check('MỞ LẠI: duyệt lại phiếu riêng → tồn trừ đúng 200 (kiểu A đủ vòng)', (() => {
+check('Má»ž Láº I: duyá»‡t láº¡i phiáº¿u riÃªng â†’ tá»“n trá»« Ä‘Ãºng 200 (kiá»ƒu A Ä‘á»§ vÃ²ng)', (() => {
   const nid = (state.khoNotes.find(n => n && (n.lots || []).some(l => String(l.batchId) === 'k-reopen')) || {}).id;
   x2.khoApproveNote(nid);
   const n = state.khoNotes.find(x => x && x.id === nid);
   return n && n.status === 'da_duyet' && utils.khoLotRemainingOf(state.batches.find(b => b.id === 'k-reopen')) === 0;
 })());
 
-// ─── E2. NGƯỜI DUYỆT TRÊN PHIẾU KHO (14/11/2026) ──
-check('NGƯỜI DUYỆT: form có ô riêng · phiếu hiện "Người duyệt" · duyệt tự điền · sổ/Excel có cột',
+// â”€â”€â”€ E2. NGÆ¯á»œI DUYá»†T TRÃŠN PHIáº¾U KHO (14/11/2026) â”€â”€
+check('NGÆ¯á»œI DUYá»†T: form cÃ³ Ã´ riÃªng Â· phiáº¿u hiá»‡n "NgÆ°á»i duyá»‡t" Â· duyá»‡t tá»± Ä‘iá»n Â· sá»•/Excel cÃ³ cá»™t',
   idxHtml.includes('id="x2-kho-approver"') &&
   fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8').includes('if (!n.approverName) n.approverName = n.approvedByName') &&
   fs.readFileSync(new URL('../js/utils.js', import.meta.url), 'utf8').includes('approverName: n.approverName') &&
-  fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url), 'utf8').includes("'Người Duyệt'"));
+  fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url), 'utf8').includes("'NgÆ°á»i Duyá»‡t'"));
 state.batches.push({ id: 'k-ap', code: '261101-55', stage: 'kho', date: '2026-10-10', week: '2026-W41',
-  length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.079, bambooType: 'A', useFor: 'Ván',
+  length: 1250, width: 18, thickness: 7, quantity: 500, volume: 0.079, bambooType: 'A', useFor: 'VÃ¡n',
   location: 'K55', dryStage: 'say2', stageHistory: [{ stage: 'kho', date: '2026-10-10' }] });
-// (a) ghi sẵn trên form → duyệt GIỮ nguyên người đã ghi
+// (a) ghi sáºµn trÃªn form â†’ duyá»‡t GIá»® nguyÃªn ngÆ°á»i Ä‘Ã£ ghi
 x2.resetX2KhoNoteForm(true);
 document.getElementById('x2-kho-date').value = '2026-10-11';
 document.getElementById('x2-kho-purpose').value = 'baotinh';
-document.getElementById('x2-kho-approver').value = 'Nguyễn Văn A';
+document.getElementById('x2-kho-approver').value = 'Nguyá»…n VÄƒn A';
 x2.khoPickLot('k-ap');
 x2.khoSetLotQty('k-ap', 100);
 x2.handleKhoNoteSubmit({ preventDefault(){} });
 const apNote = state.khoNotes[state.khoNotes.length - 1];
-check('Phiếu kho ghi được Người Duyệt nhập tay trên form', apNote.approverName === 'Nguyễn Văn A');
+check('Phiáº¿u kho ghi Ä‘Æ°á»£c NgÆ°á»i Duyá»‡t nháº­p tay trÃªn form', apNote.approverName === 'Nguyá»…n VÄƒn A');
 x2.khoApproveNote(apNote.id);
-check('Duyệt GIỮ nguyên Người Duyệt đã ghi (không ghi đè người bấm Duyệt)',
-  state.khoNotes.find(nnn => nnn.id === apNote.id).approverName === 'Nguyễn Văn A');
-// (b) phiếu KHÔNG ghi → lưu rỗng · hiện "Người duyệt: —" · duyệt tự điền người bấm
-makeExportNote('2026-10-12', 'baotinh', 'Không ghi người duyệt', [['k-ap', 100]]);
+check('Duyá»‡t GIá»® nguyÃªn NgÆ°á»i Duyá»‡t Ä‘Ã£ ghi (khÃ´ng ghi Ä‘Ã¨ ngÆ°á»i báº¥m Duyá»‡t)',
+  state.khoNotes.find(nnn => nnn.id === apNote.id).approverName === 'Nguyá»…n VÄƒn A');
+// (b) phiáº¿u KHÃ”NG ghi â†’ lÆ°u rá»—ng Â· hiá»‡n "NgÆ°á»i duyá»‡t: â€”" Â· duyá»‡t tá»± Ä‘iá»n ngÆ°á»i báº¥m
+makeExportNote('2026-10-12', 'baotinh', 'KhÃ´ng ghi ngÆ°á»i duyá»‡t', [['k-ap', 100]]);
 const ap2 = state.khoNotes[state.khoNotes.length - 1];
-check('Phiếu không ghi Người Duyệt → lưu rỗng (không bịa tên)', ap2.approverName === '');
+check('Phiáº¿u khÃ´ng ghi NgÆ°á»i Duyá»‡t â†’ lÆ°u rá»—ng (khÃ´ng bá»‹a tÃªn)', ap2.approverName === '');
 x2.renderX2KhoPending();
-check('Phiếu chờ duyệt hiện dòng "Người duyệt"',
-  document.getElementById('x2-kho-pending-rows').innerHTML.includes('Người duyệt'));
-// (c) sửa phiếu nạp sẵn + cập nhật; Làm Mới Form xóa ô
+check('Phiáº¿u chá» duyá»‡t hiá»‡n dÃ²ng "NgÆ°á»i duyá»‡t"',
+  document.getElementById('x2-kho-pending-rows').innerHTML.includes('NgÆ°á»i duyá»‡t'));
+// (c) sá»­a phiáº¿u náº¡p sáºµn + cáº­p nháº­t; LÃ m Má»›i Form xÃ³a Ã´
 x2.khoEditNote(ap2.id);
-check('Sửa phiếu nạp sẵn ô Người Duyệt',
+check('Sá»­a phiáº¿u náº¡p sáºµn Ã´ NgÆ°á»i Duyá»‡t',
   document.getElementById('x2-kho-approver').value === (ap2.approverName || ''));
-document.getElementById('x2-kho-approver').value = 'Trần Thị B';
+document.getElementById('x2-kho-approver').value = 'Tráº§n Thá»‹ B';
 x2.handleKhoNoteSubmit({ preventDefault(){} });
-check('Sửa phiếu cập nhật Người Duyệt',
-  state.khoNotes.find(nnn => nnn.id === ap2.id).approverName === 'Trần Thị B');
+check('Sá»­a phiáº¿u cáº­p nháº­t NgÆ°á»i Duyá»‡t',
+  state.khoNotes.find(nnn => nnn.id === ap2.id).approverName === 'Tráº§n Thá»‹ B');
 x2.resetX2KhoNoteForm(true);
-check('Làm Mới Form xóa ô Người Duyệt',
+check('LÃ m Má»›i Form xÃ³a Ã´ NgÆ°á»i Duyá»‡t',
   document.getElementById('x2-kho-approver').value === '');
 x2.khoApproveNote(ap2.id);
-check('Duyệt GIỮ Người Duyệt đã sửa (chỉ tự điền khi còn trống)',
-  state.khoNotes.find(nnn => nnn.id === ap2.id).approverName === 'Trần Thị B');
-// (d) phiếu hoàn toàn không ghi → duyệt TỰ ĐIỀN người bấm
-makeExportNote('2026-10-13', 'baotinh', 'Không ghi người duyệt lần 2', [['k-ap', 100]]);
+check('Duyá»‡t GIá»® NgÆ°á»i Duyá»‡t Ä‘Ã£ sá»­a (chá»‰ tá»± Ä‘iá»n khi cÃ²n trá»‘ng)',
+  state.khoNotes.find(nnn => nnn.id === ap2.id).approverName === 'Tráº§n Thá»‹ B');
+// (d) phiáº¿u hoÃ n toÃ n khÃ´ng ghi â†’ duyá»‡t Tá»° ÄIá»€N ngÆ°á»i báº¥m
+makeExportNote('2026-10-13', 'baotinh', 'KhÃ´ng ghi ngÆ°á»i duyá»‡t láº§n 2', [['k-ap', 100]]);
 const ap3 = state.khoNotes[state.khoNotes.length - 1];
 x2.khoApproveNote(ap3.id);
-check('Duyệt tự điền Người Duyệt = tài khoản đang đăng nhập',
+check('Duyá»‡t tá»± Ä‘iá»n NgÆ°á»i Duyá»‡t = tÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p',
   state.khoNotes.find(nnn => nnn.id === ap3.id).approverName === 'admin');
 
-// ─── D2. PHIẾU XUẤT SẤY 2 TỰ ĐỘNG + CẢNH BÁO VƯỢT SỐ LƯỢNG (17/10/2026) ──
+// â”€â”€â”€ D2. PHIáº¾U XUáº¤T Sáº¤Y 2 Tá»° Äá»˜NG + Cáº¢NH BÃO VÆ¯á»¢T Sá» LÆ¯á»¢NG (17/10/2026) â”€â”€
 state.batches.push({ id: 'k-auto', code: '260930-77', stage: 'kho', date: '2026-09-30', week: '2026-W40',
-  length: 1250, width: 18, thickness: 9, quantity: 1000, volume: 0.2025, bambooType: 'B', useFor: 'Ván',
+  length: 1250, width: 18, thickness: 9, quantity: 1000, volume: 0.2025, bambooType: 'B', useFor: 'VÃ¡n',
   location: 'K77', stageHistory: [{ stage: 'kho', date: '2026-09-30' }] });
 const autoLot = state.batches.find(b => b.id === 'k-auto');
 const autoBefore = state.khoNotes.length;
 const auto1 = x2.addKhoSay2AutoNote(autoLot, 1000, '2026-10-02', 'move');
-check('AUTO: tạo phiếu xuất "say2" ĐÃ DUYỆT, qty = SỐ LƯỢNG CHUẨN, autoSay2 = true (không cần duyệt tay)',
+check('AUTO: táº¡o phiáº¿u xuáº¥t "say2" ÄÃƒ DUYá»†T, qty = Sá» LÆ¯á»¢NG CHUáº¨N, autoSay2 = true (khÃ´ng cáº§n duyá»‡t tay)',
   !!auto1 && auto1.type === 'xuat' && auto1.purpose === 'say2' && auto1.status === 'da_duyet' &&
   auto1.qty === 1000 && auto1.autoSay2 === true && auto1.lots[0].batchId === 'k-auto' &&
-  auto1.note.includes('Tự động'));
-check('AUTO: gọi lần 2 CÙNG NGÀY → KHÔNG sinh trùng (vẫn 1 phiếu)',
+  auto1.note.includes('Tá»± Ä‘á»™ng'));
+check('AUTO: gá»i láº§n 2 CÃ™NG NGÃ€Y â†’ KHÃ”NG sinh trÃ¹ng (váº«n 1 phiáº¿u)',
   x2.addKhoSay2AutoNote(autoLot, 1000, '2026-10-02', 'move') === null && state.khoNotes.length === autoBefore + 1);
-// Lô quay lại Kho: Kho 30/09 → Sấy 2 02/10 → Kho 05/10 ⇒ 2 lần nhập kho
+// LÃ´ quay láº¡i Kho: Kho 30/09 â†’ Sáº¥y 2 02/10 â†’ Kho 05/10 â‡’ 2 láº§n nháº­p kho
 autoLot.stage = 'say2';
 autoLot.stageHistory.push({ stage: 'say2', date: '2026-10-02' });
 autoLot.stage = 'kho';
 autoLot.stageHistory.push({ stage: 'kho', date: '2026-10-05' });
-check('AUTO: lô quay lại Kho → TỒN KHÔNG bị nhân đôi (2 lần nhập × 1.000 − phiếu say2 1.000 = 1.000)',
+check('AUTO: lÃ´ quay láº¡i Kho â†’ Tá»’N KHÃ”NG bá»‹ nhÃ¢n Ä‘Ã´i (2 láº§n nháº­p Ã— 1.000 âˆ’ phiáº¿u say2 1.000 = 1.000)',
   utils.khoInCountOf(autoLot) === 2 && utils.khoLotRemainingOf(autoLot) === 1000);
-check('AUTO: phiếu tự động KHÔNG mở lại được (báo lỗi, giữ nguyên ĐÃ DUYỆT)', (() => {
+check('AUTO: phiáº¿u tá»± Ä‘á»™ng KHÃ”NG má»Ÿ láº¡i Ä‘Æ°á»£c (bÃ¡o lá»—i, giá»¯ nguyÃªn ÄÃƒ DUYá»†T)', (() => {
   x2.khoReopenNote(auto1.id);
   return state.khoNotes.find(n => n.id === auto1.id).status === 'da_duyet';
 })());
-// Phiếu vượt sức chứa lô (bù cũ) → CẢNH BÁO chứ không im lặng kẹp tồn về 0
+// Phiáº¿u vÆ°á»£t sá»©c chá»©a lÃ´ (bÃ¹ cÅ©) â†’ Cáº¢NH BÃO chá»© khÃ´ng im láº·ng káº¹p tá»“n vá» 0
 state.batches.push({ id: 'k-over', code: '261001-99', stage: 'kho', date: '2026-10-01', week: '2026-W40',
-  length: 1250, width: 18, thickness: 7, quantity: 100, volume: 0.0158, bambooType: 'A', useFor: 'Ván',
+  length: 1250, width: 18, thickness: 7, quantity: 100, volume: 0.0158, bambooType: 'A', useFor: 'VÃ¡n',
   location: 'K99B', stageHistory: [{ stage: 'kho', date: '2026-10-01' }] });
 const overLot = state.batches.find(b => b.id === 'k-over');
 state.khoNotes.push({ id: 'over-1', type: 'xuat', status: 'da_duyet', purpose: 'khac', date: '2026-10-08',
-  qty: 150, lots: [{ batchId: 'k-over', qty: 150 }], createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)' });
-check('CẢNH BÁO: phiếu vượt sức chứa lô → khoOverAllocOf = phần vượt + khoStockSummary đếm lô vượt',
+  qty: 150, lots: [{ batchId: 'k-over', qty: 150 }], createdBy: 'system', createdByName: 'Há»‡ thá»‘ng (khá»Ÿi táº¡o)' });
+check('Cáº¢NH BÃO: phiáº¿u vÆ°á»£t sá»©c chá»©a lÃ´ â†’ khoOverAllocOf = pháº§n vÆ°á»£t + khoStockSummary Ä‘áº¿m lÃ´ vÆ°á»£t',
   utils.khoOverAllocOf(overLot) === 50 && utils.khoStockSummary().overThanh >= 50 && utils.khoStockSummary().overLots >= 1);
-check('CẢNH BÁO: có CSS + markup chip "phiếu vượt" trong thẻ lô/bảng tồn',
+check('Cáº¢NH BÃO: cÃ³ CSS + markup chip "phiáº¿u vÆ°á»£t" trong tháº» lÃ´/báº£ng tá»“n',
   cssCss.includes('.kho-over-badge') &&
   fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8').includes('kho-over-badge'));
-// Rà soát D1: phiếu hệ thống TRÙNG y hệt → giữ bản đầu, xóa bản sau
+// RÃ  soÃ¡t D1: phiáº¿u há»‡ thá»‘ng TRÃ™NG y há»‡t â†’ giá»¯ báº£n Ä‘áº§u, xÃ³a báº£n sau
 state.khoNotes.push({ id: 'dup-a', type: 'xuat', status: 'da_duyet', purpose: 'khac', date: '2026-10-07',
-  qty: 100, lots: [{ batchId: 'k-auto', qty: 100 }], createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)' });
+  qty: 100, lots: [{ batchId: 'k-auto', qty: 100 }], createdBy: 'system', createdByName: 'Há»‡ thá»‘ng (khá»Ÿi táº¡o)' });
 state.khoNotes.push({ id: 'dup-b', type: 'xuat', status: 'da_duyet', purpose: 'khac', date: '2026-10-07',
-  qty: 100, lots: [{ batchId: 'k-auto', qty: 100 }], createdBy: 'system', createdByName: 'Hệ thống (khởi tạo)' });
+  qty: 100, lots: [{ batchId: 'k-auto', qty: 100 }], createdBy: 'system', createdByName: 'Há»‡ thá»‘ng (khá»Ÿi táº¡o)' });
 const dupPlan = x2.khoReconcilePlan();
-check('RÀ SOÁT (D1): phát hiện phiếu hệ thống TRÙNG y hệt (giữ bản đầu, xóa bản sau)',
+check('RÃ€ SOÃT (D1): phÃ¡t hiá»‡n phiáº¿u há»‡ thá»‘ng TRÃ™NG y há»‡t (giá»¯ báº£n Ä‘áº§u, xÃ³a báº£n sau)',
   dupPlan.dupIds.includes('dup-b') && !dupPlan.dupIds.includes('dup-a'));
-check('AUTO — CẤU TRÚC: form phiếu xuất KHÔNG còn lựa chọn "Sấy 2 (sấy lại)" + batch-modals gọi phiếu tự động (3 luồng Sấy 2 · 2 luồng Tóp)',
-  !idxHtml.includes('Sấy 2 (sấy lại)') &&
+check('AUTO â€” Cáº¤U TRÃšC: form phiáº¿u xuáº¥t KHÃ”NG cÃ²n lá»±a chá»n "Sáº¥y 2 (sáº¥y láº¡i)" + batch-modals gá»i phiáº¿u tá»± Ä‘á»™ng (3 luá»“ng Sáº¥y 2 Â· 2 luá»“ng TÃ³p)',
+  !idxHtml.includes('Sáº¥y 2 (sáº¥y láº¡i)') &&
   (fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8').match(/addKhoSay2AutoNote\(/g) || []).length === 4 &&
   (fs.readFileSync(new URL('../js/batch-modals.js', import.meta.url), 'utf8').match(/addKhoReworkAutoNote\(/g) || []).length === 2);
 
-// ─── D3. CẢNH BÁO: MISMATCH ẢO + D2 TRÙNG PHIẾU + CHỐT LỆCH (17/10/2026) ──
-// (a) Lô đang Sấy 2 ĐÃ có phiếu Sấy 2 → không còn bị coi là "thiếu phiếu"
+// â”€â”€â”€ D3. Cáº¢NH BÃO: MISMATCH áº¢O + D2 TRÃ™NG PHIáº¾U + CHá»T Lá»†CH (17/10/2026) â”€â”€
+// (a) LÃ´ Ä‘ang Sáº¥y 2 ÄÃƒ cÃ³ phiáº¿u Sáº¥y 2 â†’ khÃ´ng cÃ²n bá»‹ coi lÃ  "thiáº¿u phiáº¿u"
 state.batches.push({ id: 'k-say2', code: '261003-88', stage: 'say2', date: '2026-10-01', week: '2026-W40',
-  length: 1250, width: 18, thickness: 7, quantity: 800, volume: 0.126, bambooType: 'A', useFor: 'Ván',
+  length: 1250, width: 18, thickness: 7, quantity: 800, volume: 0.126, bambooType: 'A', useFor: 'VÃ¡n',
   location: 'LS9', say2Date: '2026-10-02',
   stageHistory: [{ stage: 'kho', date: '2026-10-01' }, { stage: 'say2', date: '2026-10-02' }] });
 state.khoNotes.push({ id: 'n-say2', type: 'xuat', status: 'da_duyet', purpose: 'say2', date: '2026-10-02',
-  qty: 800, lots: [{ batchId: 'k-say2', qty: 800 }], createdBy: 'system', createdByName: 'Hệ thống' });
-check('MISMATCH: lô đang Sấy 2 ĐÃ có phiếu Sấy 2 → KHÔNG nằm trong danh sách "thiếu phiếu" (hết cảnh báo ảo)',
+  qty: 800, lots: [{ batchId: 'k-say2', qty: 800 }], createdBy: 'system', createdByName: 'Há»‡ thá»‘ng' });
+check('MISMATCH: lÃ´ Ä‘ang Sáº¥y 2 ÄÃƒ cÃ³ phiáº¿u Sáº¥y 2 â†’ KHÃ”NG náº±m trong danh sÃ¡ch "thiáº¿u phiáº¿u" (háº¿t cáº£nh bÃ¡o áº£o)',
   !utils.khoStockSummary().mismatchLots.some(x => x.id === 'k-say2'));
 
-// (b) D2: phiếu bù HỆ THỐNG trùng với phiếu TAY → rà soát cắt phần trùng
+// (b) D2: phiáº¿u bÃ¹ Há»† THá»NG trÃ¹ng vá»›i phiáº¿u TAY â†’ rÃ  soÃ¡t cáº¯t pháº§n trÃ¹ng
 state.batches.push({ id: 'k-dup', code: '261004-77', stage: 'kho', date: '2026-10-04', week: '2026-W40',
-  length: 1250, width: 18, thickness: 7, quantity: 1000, volume: 0.1575, bambooType: 'A', useFor: 'Ván',
+  length: 1250, width: 18, thickness: 7, quantity: 1000, volume: 0.1575, bambooType: 'A', useFor: 'VÃ¡n',
   location: 'K88', stageHistory: [{ stage: 'kho', date: '2026-10-04' }] });
 state.khoNotes.push({ id: 'kdup-manual', type: 'xuat', status: 'da_duyet', purpose: 'baotinh', date: '2026-10-05',
-  qty: 1000, lots: [{ batchId: 'k-dup', qty: 1000 }], createdBy: 'user1', createdByName: 'Tổ trưởng' });
+  qty: 1000, lots: [{ batchId: 'k-dup', qty: 1000 }], createdBy: 'user1', createdByName: 'Tá»• trÆ°á»Ÿng' });
 state.khoNotes.push({ id: 'kdup-sys', type: 'xuat', status: 'da_duyet', purpose: 'khac', date: '2026-10-05',
-  qty: 1000, lots: [{ batchId: 'k-dup', qty: 1000 }], createdBy: 'system', createdByName: 'Hệ thống' });
+  qty: 1000, lots: [{ batchId: 'k-dup', qty: 1000 }], createdBy: 'system', createdByName: 'Há»‡ thá»‘ng' });
 const dupLot = () => state.batches.find(b => b.id === 'k-dup');
-check('D2: lô 1.000 có phiếu tay 1.000 + phiếu bù hệ thống 1.000 → bị ghi vượt 1.000 (cảnh báo)',
+check('D2: lÃ´ 1.000 cÃ³ phiáº¿u tay 1.000 + phiáº¿u bÃ¹ há»‡ thá»‘ng 1.000 â†’ bá»‹ ghi vÆ°á»£t 1.000 (cáº£nh bÃ¡o)',
   utils.khoOverAllocOf(dupLot()) === 1000);
-check('D2: kế hoạch rà soát phát hiện phần "khac" hệ thống TRÙNG (cắt đúng 1.000)',
+check('D2: káº¿ hoáº¡ch rÃ  soÃ¡t phÃ¡t hiá»‡n pháº§n "khac" há»‡ thá»‘ng TRÃ™NG (cáº¯t Ä‘Ãºng 1.000)',
   x2.khoReconcilePlan().trims.some(t => t.lotId === 'k-dup' && t.qty === 1000));
 x2.khoReconcileLedger();
-check('D2: sau rà soát lô KHÔNG còn phiếu vượt (đã dùng đúng 1.000, tồn 0 hợp lệ)',
+check('D2: sau rÃ  soÃ¡t lÃ´ KHÃ”NG cÃ²n phiáº¿u vÆ°á»£t (Ä‘Ã£ dÃ¹ng Ä‘Ãºng 1.000, tá»“n 0 há»£p lá»‡)',
   utils.khoOverAllocOf(dupLot()) === 0 && utils.khoLotRemainingOf(dupLot()) === 0);
 
-// (c) CHỐT LỆCH (Admin/BQL) — phần vượt thật của lô k-over (tạo ở mục D2 phía trên)
+// (c) CHá»T Lá»†CH (Admin/BQL) â€” pháº§n vÆ°á»£t tháº­t cá»§a lÃ´ k-over (táº¡o á»Ÿ má»¥c D2 phÃ­a trÃªn)
 const overBefore = utils.khoStockSummary().overThanh;
 x2.khoAckOverAlloc('k-over');
-check('CHỐT LỆCH: lưu khoOverAck trên lô + cảnh báo giảm đúng phần vượt (50)',
+check('CHá»T Lá»†CH: lÆ°u khoOverAck trÃªn lÃ´ + cáº£nh bÃ¡o giáº£m Ä‘Ãºng pháº§n vÆ°á»£t (50)',
   Number((state.batches.find(b => b.id === 'k-over') || {}).khoOverAck?.qty) === 50 &&
   utils.khoStockSummary().overThanh === overBefore - 50);
-check('CHỐT LỆCH: lô đã chốt KHÔNG còn trong panel chi tiết',
+check('CHá»T Lá»†CH: lÃ´ Ä‘Ã£ chá»‘t KHÃ”NG cÃ²n trong panel chi tiáº¿t',
   !x2.khoWarnOverRows().some(r => r.b.id === 'k-over'));
 x2.khoClearOverAck('k-over');
-check('BỎ CHỐT: cảnh báo hiện lại (overThanh trở về như trước)',
+check('Bá»Ž CHá»T: cáº£nh bÃ¡o hiá»‡n láº¡i (overThanh trá»Ÿ vá» nhÆ° trÆ°á»›c)',
   utils.khoStockSummary().overThanh === overBefore &&
   x2.khoWarnOverRows().some(r => r.b.id === 'k-over'));
 
-// (d) Panel chi tiết render đúng lô + nút thao tác
+// (d) Panel chi tiáº¿t render Ä‘Ãºng lÃ´ + nÃºt thao tÃ¡c
 x2.renderKhoWarnDetail('over');
 const warnHtml = document.getElementById('kho-warn-body').innerHTML;
-check('PANEL: chi tiết cảnh báo liệt kê lô + nút "Chốt lệch" + "Mở thẻ lô"',
+check('PANEL: chi tiáº¿t cáº£nh bÃ¡o liá»‡t kÃª lÃ´ + nÃºt "Chá»‘t lá»‡ch" + "Má»Ÿ tháº» lÃ´"',
   warnHtml.includes('data-kho-warn-ack') && warnHtml.includes('data-kho-warn-edit') &&
-  warnHtml.includes('Chốt lệch') && warnHtml.includes('261001-99'));
+  warnHtml.includes('Chá»‘t lá»‡ch') && warnHtml.includes('261001-99'));
 
 const summaryWithSharedAllocation = utils.khoStockSummary(utils.khoFifoAllocation());
 const summaryWithFreshAllocation = utils.khoStockSummary();
-check('HIỆU NĂNG: truyền FIFO allocation dùng chung không đổi kết quả tổng tồn/đối chiếu',
+check('HIá»†U NÄ‚NG: truyá»n FIFO allocation dÃ¹ng chung khÃ´ng Ä‘á»•i káº¿t quáº£ tá»•ng tá»“n/Ä‘á»‘i chiáº¿u',
   summaryWithSharedAllocation.remainingThanh === summaryWithFreshAllocation.remainingThanh &&
   summaryWithSharedAllocation.honestThanh === summaryWithFreshAllocation.honestThanh &&
   summaryWithSharedAllocation.mismatchThanh === summaryWithFreshAllocation.mismatchThanh &&
   JSON.stringify(summaryWithSharedAllocation.mismatchLots) === JSON.stringify(summaryWithFreshAllocation.mismatchLots));
 
-// ─── E. XÓA NHIỀU LÔ TRONG BẢNG TỒN KHO (CHỈ ADMIN) ───────────────
+// â”€â”€â”€ E. XÃ“A NHIá»€U LÃ” TRONG Báº¢NG Tá»’N KHO (CHá»ˆ ADMIN) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const bulkStateBefore = {
   batches: state.batches,
   khoNotes: state.khoNotes,
@@ -983,12 +983,12 @@ state.khoStockPickMode = false;
 state.khoStockPicked = [];
 state.currentUser = { username: 'editor', role: 'editor', editTabs: ['kanban', 'x2'], allowAdvanced: true };
 batchModals.toggleKhoStockPickMode();
-check('XÓA NHIỀU KHO — CHẶN QUYỀN: editor không bật được chế độ chọn',
+check('XÃ“A NHIá»€U KHO â€” CHáº¶N QUYá»€N: editor khÃ´ng báº­t Ä‘Æ°á»£c cháº¿ Ä‘á»™ chá»n',
   state.khoStockPickMode === false && state.khoStockPicked.length === 0);
 state.khoStockPickMode = true;
 state.khoStockPicked = ['bulk-k1'];
 batchModals.deletePickedKhoStockLots();
-check('XÓA NHIỀU KHO — CHẶN HANDLER: editor không xóa được dù gửi yêu cầu trực tiếp',
+check('XÃ“A NHIá»€U KHO â€” CHáº¶N HANDLER: editor khÃ´ng xÃ³a Ä‘Æ°á»£c dÃ¹ gá»­i yÃªu cáº§u trá»±c tiáº¿p',
   state.batches.some(b => b.id === 'bulk-k1'));
 state.khoStockPickMode = false;
 state.khoStockPicked = [];
@@ -996,7 +996,7 @@ state.khoStockPicked = [];
 state.currentUser = { username: 'admin', role: 'admin', editTabs: [], allowAdvanced: true };
 const khoIndexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const eventSource = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
-check('XÓA NHIỀU KHO — GIAO DIỆN: nút chọn nhiều nằm trong quyền Admin và đủ hành động',
+check('XÃ“A NHIá»€U KHO â€” GIAO DIá»†N: nÃºt chá»n nhiá»u náº±m trong quyá»n Admin vÃ  Ä‘á»§ hÃ nh Ä‘á»™ng',
   khoIndexHtml.includes('id="x2-kho-bulk-controls"') &&
   khoIndexHtml.includes('class="kho-stock-bulk-controls admin-only-btn"') &&
   khoIndexHtml.includes('id="x2-kho-bulk-select-all"') &&
@@ -1004,12 +1004,12 @@ check('XÓA NHIỀU KHO — GIAO DIỆN: nút chọn nhiều nằm trong quyền
   eventSource.includes("safeOn('x2-kho-pick-toggle'") &&
   eventSource.includes("safeOn('x2-kho-bulk-select-all'") &&
   eventSource.includes("safeOn('x2-kho-bulk-delete'"));
-check('XÓA NHIỀU KHO — id nút chọn nhiều KHÔNG trùng id nào khác trong index.html',
+check('XÃ“A NHIá»€U KHO â€” id nÃºt chá»n nhiá»u KHÃ”NG trÃ¹ng id nÃ o khÃ¡c trong index.html',
   [...khoIndexHtml.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]).filter((v, i, a) => a.indexOf(v) !== i).length === 0);
 batchModals.toggleKhoStockPickMode();
 x2.renderX2KhoStockTable();
 const bulkRowsHtml = document.getElementById('x2-kho-stock-rows').innerHTML;
-check('XÓA NHIỀU KHO — DANH SÁCH: hiện checkbox cho lô đang tồn, ẩn lô hết tồn và lô ngoài Kho',
+check('XÃ“A NHIá»€U KHO â€” DANH SÃCH: hiá»‡n checkbox cho lÃ´ Ä‘ang tá»“n, áº©n lÃ´ háº¿t tá»“n vÃ  lÃ´ ngoÃ i Kho',
   bulkRowsHtml.includes('data-x2-kho-pick-id="bulk-k1"') &&
   bulkRowsHtml.includes('data-x2-kho-pick-id="bulk-k3"') &&
   !bulkRowsHtml.includes('data-x2-kho-pick-id="bulk-k2"') &&
@@ -1024,16 +1024,16 @@ document.querySelectorAll = selector => {
 };
 batchModals.selectAllKhoStockLots();
 document.querySelectorAll = originalQuerySelectorAll;
-check('XÓA NHIỀU KHO — CHỌN TẤT CẢ: chỉ chọn lô đang hiển thị sau lọc',
+check('XÃ“A NHIá»€U KHO â€” CHá»ŒN Táº¤T Cáº¢: chá»‰ chá»n lÃ´ Ä‘ang hiá»ƒn thá»‹ sau lá»c',
   state.khoStockPicked.slice().sort().join(',') === 'bulk-k1,bulk-k3');
 batchModals.onKhoStockPickChange('bulk-s1', true);
-check('XÓA NHIỀU KHO — GIỚI HẠN: không nhận lô không ở Kho',
+check('XÃ“A NHIá»€U KHO â€” GIá»šI Háº N: khÃ´ng nháº­n lÃ´ khÃ´ng á»Ÿ Kho',
   state.khoStockPicked.slice().sort().join(',') === 'bulk-k1,bulk-k3');
 
 x2.resetX2KhoNoteForm(true);
 x2.khoPickLot('bulk-k1');
 batchModals.deletePickedKhoStockLots();
-check('XÓA NHIỀU KHO — PHIẾU ĐANG NHẬP: chặn xóa lô đang được chọn trong phiếu chưa lưu',
+check('XÃ“A NHIá»€U KHO â€” PHIáº¾U ÄANG NHáº¬P: cháº·n xÃ³a lÃ´ Ä‘ang Ä‘Æ°á»£c chá»n trong phiáº¿u chÆ°a lÆ°u',
   state.batches.some(b => b.id === 'bulk-k1') && state.khoStockPicked.includes('bulk-k1'));
 x2.resetX2KhoNoteForm(true);
 
@@ -1042,23 +1042,23 @@ let bulkConfirmText = '';
 global.confirm = text => { bulkConfirmText = text; return true; };
 batchModals.deletePickedKhoStockLots();
 global.confirm = originalConfirm;
-check('XÓA NHIỀU KHO — XÁC NHẬN: cảnh báo rõ xử lý phiếu Kho liên quan',
-  bulkConfirmText.includes('Phiếu Kho liên quan') && !state.khoStockPickMode);
-check('XÓA NHIỀU KHO — KẾT QUẢ: chỉ xóa 2 lô Kho đã chọn',
+check('XÃ“A NHIá»€U KHO â€” XÃC NHáº¬N: cáº£nh bÃ¡o rÃµ xá»­ lÃ½ phiáº¿u Kho liÃªn quan',
+  bulkConfirmText.includes('Phiáº¿u Kho liÃªn quan') && !state.khoStockPickMode);
+check('XÃ“A NHIá»€U KHO â€” Káº¾T QUáº¢: chá»‰ xÃ³a 2 lÃ´ Kho Ä‘Ã£ chá»n',
   !state.batches.some(b => ['bulk-k1', 'bulk-k3'].includes(b.id)) &&
   state.batches.some(b => b.id === 'bulk-k2') && state.batches.some(b => b.id === 'bulk-s1'));
 const partialNote = state.khoNotes.find(n => n.id === 'bulk-note-partial');
-check('XÓA NHIỀU KHO — PHIẾU NHIỀU LÔ: bỏ lô đã xóa, giữ lô còn lại và cập nhật số lượng',
+check('XÃ“A NHIá»€U KHO â€” PHIáº¾U NHIá»€U LÃ”: bá» lÃ´ Ä‘Ã£ xÃ³a, giá»¯ lÃ´ cÃ²n láº¡i vÃ  cáº­p nháº­t sá»‘ lÆ°á»£ng',
   !!partialNote && partialNote.lots.length === 1 && partialNote.lots[0].batchId === 'bulk-k2' &&
   partialNote.qty === 20 && Math.abs(partialNote.m3 - utils.calculateVolume(1250, 18, 7, 20)) < 0.000001);
-check('XÓA NHIỀU KHO — PHIẾU RỖNG: xóa phiếu hết lô và ghi tombstone',
+check('XÃ“A NHIá»€U KHO â€” PHIáº¾U Rá»–NG: xÃ³a phiáº¿u háº¿t lÃ´ vÃ  ghi tombstone',
   !state.khoNotes.some(n => n.id === 'bulk-note-empty') &&
   !!(state.deletedIds.khoNotes && state.deletedIds.khoNotes['bulk-note-empty']) &&
   !state.khoNotes.some(n => n.id === 'bulk-note-other'));
 
 const bulkUndo = await import('../js/events.js');
 bulkUndo.undoLastAction();
-check('XÓA NHIỀU KHO — HOÀN TÁC: khôi phục lô, nội dung phiếu và gỡ tombstone',
+check('XÃ“A NHIá»€U KHO â€” HOÃ€N TÃC: khÃ´i phá»¥c lÃ´, ná»™i dung phiáº¿u vÃ  gá»¡ tombstone',
   state.batches.some(b => b.id === 'bulk-k1') && state.batches.some(b => b.id === 'bulk-k3') &&
   state.khoNotes.find(n => n.id === 'bulk-note-partial')?.lots.length === 2 &&
   state.khoNotes.some(n => n.id === 'bulk-note-empty') &&
@@ -1085,16 +1085,17 @@ const stockSummaryEnd = summaryStart.indexOf('function khoVisibilityMap()', stoc
 const stockSummaryBlock = stockSummaryStart >= 0 && stockSummaryEnd > stockSummaryStart
   ? summaryStart.slice(stockSummaryStart, stockSummaryEnd)
   : '';
-check('HIỆU NĂNG: lọc Kho Nan chia sẻ 1 FIFO allocation thay vì tính lại cho từng lô',
+check('HIá»†U NÄ‚NG: lá»c Kho Nan chia sáº» 1 FIFO allocation thay vÃ¬ tÃ­nh láº¡i cho tá»«ng lÃ´',
   pickerBlock.includes('khoLotRemainingOf(b, alloc)') &&
   !pickerBlock.includes('khoLotRemainingOf(b)') &&
   (listBlock.match(/khoFifoAllocation\(\)/g) || []).length === 1 &&
   listBlock.includes('khoLotPickerList(alloc)') &&
   listBlock.includes('khoLotRemainingOf(b, alloc)') &&
   listBlock.includes('khoLotCardHtml(b, alloc)'));
-check('HIỆU NĂNG: tổng đối chiếu gom dữ liệu theo lô 1 lượt, không quét toàn bộ lịch sử cho từng lô',
+check('HIá»†U NÄ‚NG: tá»•ng Ä‘á»‘i chiáº¿u gom dá»¯ liá»‡u theo lÃ´ 1 lÆ°á»£t, khÃ´ng quÃ©t toÃ n bá»™ lá»‹ch sá»­ cho tá»«ng lÃ´',
   stockSummaryBlock.includes('khoDerivedOutByLot(pool)') &&
   !stockSummaryBlock.includes('khoDerivedOutOf(b.id)'));
 
-console.log(`\nKẾT QUẢ: ${pass} pass, ${fail} fail`);
+console.log(`\nKáº¾T QUáº¢: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);
+

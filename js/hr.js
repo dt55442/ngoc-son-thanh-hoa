@@ -108,7 +108,19 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
   }
   function hrCacheSlice(arr) {
     const months = new Set(hrMonthListBack(HR_CACHE_MONTHS));
-    return (arr || []).filter(r => months.has(hrMonthKeyOf(r)));
+    return (arr || []).filter(r => {
+      if (!r) return false;
+      // ĐƠN NGHỈ / TĂNG CA: giữ theo KHOẢNG NGÀY (from..to), không theo tháng tạo đơn —
+      // đơn gửi từ tháng trước cho ngày nghỉ tháng này vẫn phải còn trong cache.
+      if (r.from || r.to) {
+        const from = String(r.from || r.to || '').slice(0, 7);
+        const to = String(r.to || r.from || '').slice(0, 7);
+        if (!from || !to) return months.has(hrMonthKeyOf(r));
+        for (const m of months) { if (m >= from && m <= to) return true; }
+        return false;
+      }
+      return months.has(hrMonthKeyOf(r));
+    });
   }
   // Gộp 2 nguồn theo id — bản có mốc updatedAt/createdAt MỚI HƠN thắng
   function hrRecStampOf(r) { return String((r && (r.updatedAt || r.createdAt)) || ''); }
@@ -1760,9 +1772,9 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
 
   // Trạng thái chấm công hiển thị: 'work' | 'absent' | 'leave' (phép đã duyệt) | '' (chưa chấm)
   function attStatusOf(employeeId, date) {
+    if (approvedLeaveOn(employeeId, date)) return 'leave';
     const rec = attRecordOf(employeeId, date);
     if (rec && (rec.status === 'work' || rec.status === 'absent')) return rec.status;
-    if (approvedLeaveOn(employeeId, date)) return 'leave';
     return '';
   }
 
@@ -4983,17 +4995,54 @@ import { ensureXlsx } from './xlsx-lazy.js'; // NẠP TRỄ SheetJS — đọc f
         const join = e.joinDate || '';
         const quit = (e.status || 'active') === 'quit' ? String(e.quitDate || '') : '';
         let work = 0, leave = 0, absent = 0, unmarked = 0;
+        let scheduled = 0, hasSchedule = false;
+        let fallbackMarked = 0, fallbackWork = 0, fallbackLeave = 0, fallbackAbsent = 0, fallbackUnmarked = 0;
         dates.forEach(d => {
           if (join && d < join) return; // ngày trước khi vào làm
           if (quit && d > quit) return; // ngày sau khi nghỉ việc — không tính
+          const scheduledToday = hrAssignmentsOf(d).some(a => a && String(a.employeeId) === String(e.id));
+          if (scheduledToday) hasSchedule = true;
           const st = attStatusOf(e.id, d);
-          if (st === 'work') work++;
-          else if (st === 'leave') leave++;
-          else if (st === 'absent') absent++;
-          else unmarked++;
+          if (scheduledToday) {
+            scheduled++;
+            if (st === 'work') work++;
+            else if (st === 'leave') leave++;
+            else if (st === 'absent') absent++;
+            else unmarked++;
+          } else if (st === 'work' || st === 'leave' || st === 'absent') {
+            fallbackMarked++;
+            if (st === 'work') fallbackWork++;
+            else if (st === 'leave') fallbackLeave++;
+            else if (st === 'absent') fallbackAbsent++;
+          } else {
+            fallbackUnmarked++;
+          }
         });
-        const counted = work + leave + absent;
-        return { emp: e, work, leave, absent, unmarked, counted, rate: counted ? Math.round(work * 1000 / counted) / 10 : null };
+        if (hasSchedule) {
+          const counted = scheduled;
+          return {
+            emp: e, work, leave, absent, unmarked, scheduled,
+            denominator: counted,
+            counted,
+            rate: counted ? Math.round(work * 1000 / counted) / 10 : null,
+            fallback: false
+          };
+        }
+        // Không có lịch: dùng các bản ghi đã đánh dấu làm mẫu số fallback,
+        // không suy ra 100% và vẫn trả các số liệu chưa chấm để đối chiếu.
+        const fallback = fallbackMarked > 0;
+        return {
+          emp: e,
+          work: fallbackWork,
+          leave: fallbackLeave,
+          absent: fallbackAbsent,
+          unmarked: fallbackUnmarked,
+          scheduled: 0,
+          denominator: fallbackMarked,
+          counted: fallbackMarked,
+          rate: fallback ? Math.round(fallbackWork * 1000 / fallbackMarked) / 10 : null,
+          fallback: true
+        };
       })
       .filter(s => s.counted > 0 || s.unmarked > 0)
       .sort((a, b) => (b.absent - a.absent) || ((a.rate ?? 101) - (b.rate ?? 101)) ||

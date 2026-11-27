@@ -21,6 +21,7 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   // ─── NHẬP DASHBOARD: LUỒNG + CÁC VÙNG BIỂU ĐỒ ────────────────
   function renderDashboardCharts() {
+    renderDashboardSummary();
     // Thẻ GỘP 2 biểu đồ: nạp chế độ đã nhớ theo máy TRƯỚC khi vẽ
     // (mỗi hàm render tự bỏ qua nếu không phải chế độ đang xem)
     loadPvChartMode();
@@ -31,6 +32,56 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     // Thẻ TRUY XUẤT ĐẦU VÀO → ĐẦU RA nằm trong Vùng Nâng Cao — chỉ vẽ khi
     // người dùng có quyền xem vùng đó (tránh tính toán vô ích cho viewer).
     if (canViewAdvanced()) renderTraceCard();
+  }
+
+  // Tóm tắt đầu trang Tổng quan — chỉ đọc 4 nguồn dữ liệu vận hành chính,
+  // không suy ra tuổi nan hoặc cảnh báo theo thời gian.
+  function dashboardSummaryData() {
+    const batches = Array.isArray(state.batches) ? state.batches : [];
+    const planningItems = Array.isArray(state.planningItems) ? state.planningItems : [];
+    const pressRecords = Array.isArray(state.pressRecords) ? state.pressRecords : [];
+    const incidentReports = Array.isArray(state.x2IncidentReports) ? state.x2IncidentReports : [];
+
+    const batchCount = batches.filter(Boolean).length;
+    const batchQty = batches.reduce((sum, batch) => sum + (Number(batch && batch.quantity) || 0), 0);
+    const planningQty = planningItems.reduce((sum, item) => sum + (Number(item && item.qty) || 0), 0);
+    const planningCount = planningItems.filter(Boolean).length;
+    const pressQty = pressRecords.reduce((sum, record) => sum + (Number(record && record.finishedQty) || 0), 0);
+    const pressCount = pressRecords.filter(Boolean).length;
+    const incidentCount = incidentReports.filter(Boolean).length;
+    const incidentPending = incidentReports.filter(record => record && record.status === 'cho_duyet').length;
+
+    return {
+      batches: batchCount,
+      batchQty,
+      planningItems: planningCount,
+      planningQty,
+      pressRecords: pressCount,
+      pressQty,
+      incidents: incidentCount,
+      incidentPending
+    };
+  }
+
+  function renderDashboardSummary() {
+    const box = document.getElementById('dashboard-summary');
+    if (!box) return false;
+    const data = dashboardSummaryData();
+    const setValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(value);
+    };
+
+    setValue('dashboard-kpi-batches-value', data.batches.toLocaleString('vi-VN'));
+    setValue('dashboard-kpi-batches-meta', `${data.batchQty.toLocaleString('vi-VN')} thanh`);
+    setValue('dashboard-kpi-planning-value', data.planningQty.toLocaleString('vi-VN'));
+    setValue('dashboard-kpi-planning-meta', `${data.planningItems.toLocaleString('vi-VN')} mục kế hoạch`);
+    setValue('dashboard-kpi-press-value', data.pressQty.toLocaleString('vi-VN'));
+    setValue('dashboard-kpi-press-meta', `${data.pressRecords.toLocaleString('vi-VN')} lượt ép`);
+    setValue('dashboard-kpi-incidents-value', data.incidents.toLocaleString('vi-VN'));
+    setValue('dashboard-kpi-incidents-meta', `${data.incidentPending.toLocaleString('vi-VN')} chờ duyệt`);
+    try { initLucide(); } catch (e) { /* icon chưa sẵn sàng — số liệu vẫn hiện */ }
+    return true;
   }
 
   // LUỒNG CÔNG ĐOẠN (Kanban pipeline) ĐÃ GỠ — hàng "Phân bổ khối lượng theo công
@@ -200,7 +251,9 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     // Nút "?" TRỢ GIÚP — mở modal giải thích nhanh THEO THẺ này (nhóm · chỉ số
     // · bộ lọc đang bật — lấy động từ chartDef). Ghi chú phụ đề đã ẨN bằng CSS.
     const helpBtn = `
-      <button class="btn-dash-help" onclick="app.openDashHelp('chart', '${chartDef.id}')" title="Giải thích nhanh biểu đồ này: nhóm · chỉ số · bộ lọc đang bật">?</button>`;
+      <button type="button" class="btn-dash-help" onclick="app.openDashHelp('chart', '${chartDef.id}')"
+              aria-label="Giải thích biểu đồ" aria-haspopup="dialog"
+              title="Giải thích nhanh biểu đồ này: nhóm · chỉ số · bộ lọc đang bật">?</button>`;
     // Nút mở rộng toàn màn hình: LUÔN hiển thị (kể cả người chỉ xem) — quan trọng trên điện thoại
     const expandBtn = `
       <button class="btn btn-outline btn-icon btn-expand-chart" onclick="app.toggleChartExpand(this)" title="Mở rộng toàn màn hình (tự xoay ngang trên điện thoại)">
@@ -1225,11 +1278,6 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
 
   // Tìm instance Chart.js của thẻ (thẻ tùy chỉnh theo data-chart-id, thẻ Ép Ván dùng pressChartInstance)
   function getCardChartInstance(card) {
-    // Thẻ TỔNG HỢP CÔNG SUẤT & HIỆU SUẤT (capacity-card — js/capacity.js):
-    // biểu đồ công đoạn có canvas riêng #cap-stage-chart + instance riêng.
-    if (card && card.querySelector && card.querySelector('#cap-stage-chart')) {
-      return state.capacityStageInstance || null;
-    }
     // Thẻ GỘP 2 biểu đồ Dashboard ("Kế Hoạch vs Đã Ép" + "Khả Năng Đáp Ứng"):
     // thẻ chứa CẢ HAI canvas nên phải chọn instance theo CHẾ ĐỘ ĐANG XEM
     // (state.pvChartMode) — KHÔNG được nhận nhầm biểu đồ đang ẩn.
@@ -1587,12 +1635,42 @@ import { escapeHTML, formatDateDDMMYY, showToast } from './utils.js';
     const bEl = document.getElementById('dash-help-body');
     if (tEl) tEl.textContent = title;
     if (bEl) bEl.innerHTML = html;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'dash-help-title');
+    if (!modal.classList.contains('show')) {
+      const opener = document.activeElement;
+      if (opener && opener !== document.body) {
+        let openerId = opener.id;
+        if (!openerId) {
+          openerId = `dash-help-opener-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          opener.id = openerId;
+        }
+        modal.setAttribute('data-dash-help-opener', openerId);
+      } else if (typeof modal.removeAttribute === 'function') {
+        if (typeof modal.removeAttribute === 'function') {
+          modal.removeAttribute('data-dash-help-opener');
+        }
+      }
+    }
     modal.classList.add('show');
+    const closeBtn = document.getElementById('btn-close-dash-help');
+    if (closeBtn) closeBtn.focus();
     try { initLucide(); } catch (e) { /* icon chưa sẵn sàng — nội dung vẫn thấy */ }
   }
   function closeDashHelp() {
     const modal = document.getElementById('modal-dash-help');
-    if (modal) modal.classList.remove('show');
+    if (!modal) return;
+    const wasOpen = modal.classList.contains('show');
+    modal.classList.remove('show');
+    if (!wasOpen) return;
+    const openerId = modal.getAttribute('data-dash-help-opener');
+    if (typeof modal.removeAttribute === 'function') {
+      modal.removeAttribute('data-dash-help-opener');
+    }
+    if (!openerId) return;
+    const opener = document.getElementById(openerId);
+    if (opener && typeof opener.focus === 'function') opener.focus();
   }
 
 export {
@@ -1604,6 +1682,7 @@ export {
   closeChartBuilderModal,
   closeDashHelp,
   collectBuilderFilterVals,
+  dashboardSummaryData,
   deleteCustomChart,
   formatChartValue,
   handleChartBuilderSubmit,
@@ -1616,6 +1695,7 @@ export {
   renderCustomCharts,
   renderDashboardCharts,
   renderDashboardZones,
+  renderDashboardSummary,
   savedMsSelections,
   setupChartDragAndDrop,
   setupChartResize,

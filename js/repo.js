@@ -99,10 +99,22 @@ function recentMonths(n) {
   return out;
 }
 
-// Lọc mảng bản ghi còn n tháng gần nhất (cache mở app nhanh)
+// Lọc mảng bản ghi còn n tháng gần nhất (cache mở app nhanh).
+// Bản ghi có KHOẢNG NGÀY (đơn nghỉ / tăng ca: from..to) giữ theo khoảng, không
+// theo tháng tạo đơn — đơn gửi từ tháng trước cho ngày nghỉ tháng này vẫn còn.
 function cacheSlice(arr, n) {
   const months = new Set(recentMonths(n || CACHE_MONTHS));
-  return (arr || []).filter(r => months.has(monthOf(r)));
+  return (arr || []).filter(r => {
+    if (!r) return false;
+    if (r.from || r.to) {
+      const from = String(r.from || r.to || '').slice(0, 7);
+      const to = String(r.to || r.from || '').slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(from) || !/^\d{4}-\d{2}$/.test(to)) return months.has(monthOf(r));
+      for (const m of months) { if (m >= from && m <= to) return true; }
+      return false;
+    }
+    return months.has(monthOf(r));
+  });
 }
 
 // Dùng cho quyết định "có được thu gọn localStorage hay chưa": chỉ true khi

@@ -1,4 +1,4 @@
-// tests/xuong1-say-sinh-lot.test.mjs — MÃ LÔ · CHU KỲ · QC · NHẮC LÔ CŨ
+﻿// tests/xuong1-say-sinh-lot.test.mjs â€” MÃƒ LÃ” Â· CHU Ká»² Â· QC Â· NHáº®C LÃ” CÅ¨
 import fs from 'node:fs';
 
 function makeEl(id) {
@@ -44,7 +44,7 @@ function makeSelect(id) {
     }
   });
   if (id === 'x1-say-sinh-qc-status') {
-    el.innerHTML = '<option value="pending">Chờ QC</option><option value="pass">Đạt</option><option value="fail">Không đạt</option>';
+    el.innerHTML = '<option value="pending">Chá» QC</option><option value="pass">Äáº¡t</option><option value="fail">KhÃ´ng Ä‘áº¡t</option>';
   }
   return el;
 }
@@ -111,7 +111,7 @@ function isoAgo(n) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 const rec = (id, date, extra = {}) => Object.assign({
-  id, date, qty: 100, srcType: 'Vầu', srcSupplier: 'Tế', createdAt: date + 'T02:00:00.000Z'
+  id, date, qty: 100, srcType: 'Váº§u', srcSupplier: 'Táº¿', createdAt: date + 'T02:00:00.000Z'
 }, extra);
 state.hrAssignments = [];
 state.xuong1BocRecords = [];
@@ -120,50 +120,50 @@ state.x1CatOngEditId = null;
 state.x1SaySinhEditId = null;
 state.xuong1SaySinhRecords = [];
 
-console.log('--- A. MÃ LÔ: tiền tố + ngày + số thứ tự 3 chữ số ---');
-check('A1: Vầu → V · Nứa → N · loại khác lấy chữ đầu · rỗng → X',
-  x2.x1SsPrefixOf('Vầu cây tươi') === 'V' && x2.x1SsPrefixOf('NỨA khô') === 'N' &&
-  x2.x1SsPrefixOf('Luồng cây') === 'L' && x2.x1SsPrefixOf('') === 'X');
-check('A2: mã lô đầu tháng = V + yymmdd + 001', x2.x1SsMakeCode('2026-10-19', 'Vầu cây') === 'V261019001');
+console.log('--- A. MÃƒ LÃ”: tiá»n tá»‘ + ngÃ y + sá»‘ thá»© tá»± 3 chá»¯ sá»‘ ---');
+check('A1: Váº§u â†’ V Â· Ná»©a â†’ N Â· loáº¡i khÃ¡c láº¥y chá»¯ Ä‘áº§u Â· rá»—ng â†’ X',
+  x2.x1SsPrefixOf('Váº§u cÃ¢y tÆ°Æ¡i') === 'V' && x2.x1SsPrefixOf('Ná»¨A khÃ´') === 'N' &&
+  x2.x1SsPrefixOf('Luá»“ng cÃ¢y') === 'L' && x2.x1SsPrefixOf('') === 'X');
+check('A2: mÃ£ lÃ´ Ä‘áº§u thÃ¡ng = V + yymmdd + 001', x2.x1SsMakeCode('2026-10-19', 'Váº§u cÃ¢y') === 'V261019001');
 state.xuong1SaySinhRecords = [
   rec('a1', '2026-10-01', { code: 'V261001001' }),
   rec('a2', '2026-10-19', { code: 'V261019002' })
 ];
-check('A3: số thứ tự nối tiếp trong THÁNG (V lô 3)', x2.x1SsMakeCode('2026-10-19', 'Vầu') === 'V261019003');
-check('A4: N có dãy RIÊNG (N lô 1) và năm mới reset về 001',
-  x2.x1SsMakeCode('2026-10-19', 'Nứa') === 'N261019001' &&
-  x2.x1SsMakeCode('2026-11-02', 'Vầu') === 'V261102003');
+check('A3: sá»‘ thá»© tá»± ná»‘i tiáº¿p trong THÃNG (V lÃ´ 3)', x2.x1SsMakeCode('2026-10-19', 'Váº§u') === 'V261019003');
+check('A4: N cÃ³ dÃ£y RIÃŠNG (N lÃ´ 1) vÃ  nÄƒm má»›i reset vá» 001',
+  x2.x1SsMakeCode('2026-10-19', 'Ná»©a') === 'N261019001' &&
+  x2.x1SsMakeCode('2026-11-02', 'Váº§u') === 'V261102003');
 state.xuong1SaySinhRecords = [];
-const sameDayV1 = x2.x1SsMakeCode('2026-11-01', 'Vầu');
+const sameDayV1 = x2.x1SsMakeCode('2026-11-01', 'Váº§u');
 state.xuong1SaySinhRecords.push(rec('same-day-v1', '2026-11-01', { code: sameDayV1 }));
-const sameDayV2 = x2.x1SsMakeCode('2026-11-01', 'Vầu');
-const sameDayN1 = x2.x1SsMakeCode('2026-11-01', 'Nứa');
-check('A5: cùng ngày, cùng loại tăng số; loại nguyên liệu khác dùng dãy riêng',
+const sameDayV2 = x2.x1SsMakeCode('2026-11-01', 'Váº§u');
+const sameDayN1 = x2.x1SsMakeCode('2026-11-01', 'Ná»©a');
+check('A5: cÃ¹ng ngÃ y, cÃ¹ng loáº¡i tÄƒng sá»‘; loáº¡i nguyÃªn liá»‡u khÃ¡c dÃ¹ng dÃ£y riÃªng',
   sameDayV1 === 'V261101001' && sameDayV2 === 'V261101002' &&
   sameDayN1 === 'N261101001');
 
-console.log('--- B. MIGRATE lô cũ + không đổi mã khi sửa/xoá ---');
+console.log('--- B. MIGRATE lÃ´ cÅ© + khÃ´ng Ä‘á»•i mÃ£ khi sá»­a/xoÃ¡ ---');
 state.xuong1SaySinhRecords = [
   rec('old2', '2026-09-12', { qty: 50 }),
   rec('old1', '2026-09-10', { qty: 60 }),
   rec('old3', '2026-09-12', { qty: 70, createdAt: '2026-09-12T05:00:00.000Z' }),
-  rec('n1', '2026-09-11', { qty: 40, srcType: 'Nứa' })
+  rec('n1', '2026-09-11', { qty: 40, srcType: 'Ná»©a' })
 ];
 state.xuong1SaySinhRecords.forEach(r => { delete r.code; });
 const migrated = x2.ensureX1SaySinhCodes(false);
 const codeOf = id => (state.xuong1SaySinhRecords.find(r => r.id === id) || {}).code;
-check('B1: lô cũ được cấp mã theo THỨ TỰ thời gian (old1 → old2 → old3)',
+check('B1: lÃ´ cÅ© Ä‘Æ°á»£c cáº¥p mÃ£ theo THá»¨ Tá»° thá»i gian (old1 â†’ old2 â†’ old3)',
   migrated && codeOf('old1') === 'V260910001' && codeOf('old2') === 'V260912002' && codeOf('old3') === 'V260912003');
-check('B2: N có dãy riêng (n1 = N260911001)', codeOf('n1') === 'N260911001');
+check('B2: N cÃ³ dÃ£y riÃªng (n1 = N260911001)', codeOf('n1') === 'N260911001');
 const snapshot = state.xuong1SaySinhRecords.map(r => r.code).join(',');
 x2.ensureX1SaySinhCodes(false);
-check('B3: chạy lại KHÔNG đổi mã (idempotent)', state.xuong1SaySinhRecords.map(r => r.code).join(',') === snapshot);
+check('B3: cháº¡y láº¡i KHÃ”NG Ä‘á»•i mÃ£ (idempotent)', state.xuong1SaySinhRecords.map(r => r.code).join(',') === snapshot);
 state.xuong1SaySinhRecords.push(rec('dup', '2026-09-15', { code: 'V260910001' }));
 x2.ensureX1SaySinhCodes(false);
-check('B4: mã TRÙNG được cấp lại (không còn 2 lô cùng mã)',
+check('B4: mÃ£ TRÃ™NG Ä‘Æ°á»£c cáº¥p láº¡i (khÃ´ng cÃ²n 2 lÃ´ cÃ¹ng mÃ£)',
   codeOf('dup') !== 'V260910001' && state.xuong1SaySinhRecords.filter(r => r.code === 'V260910001').length === 1);
-// SỬA lô: đổi chu kỳ/đánh giá QC nhưng mã giữ nguyên
-state.materialRecords = [{ id: 'mat-v', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-09-01', createdAt: '2026-09-01T02:00:00.000Z' }];
+// Sá»¬A lÃ´: Ä‘á»•i chu ká»³/Ä‘Ã¡nh giÃ¡ QC nhÆ°ng mÃ£ giá»¯ nguyÃªn
+state.materialRecords = [{ id: 'mat-v', type: 'Váº§u tÆ°Æ¡i', supplier: 'Táº¿', location: 'xuong-1', weight: 1000, date: '2026-09-01', createdAt: '2026-09-01T02:00:00.000Z' }];
 state.xuong1SaySinhRecords = [rec('edit-me', '2026-09-20', { materialId: 'mat-v', code: 'V260920007', qty: 100, sulfurQty: 1 })];
 x2.fillX1SaySinhOptions();
 selectValues('x1-say-sinh-source', ['mat-v']);
@@ -177,46 +177,46 @@ setAllocation('mat-v', 90);
 document.getElementById('x1-say-sinh-sulfur-qty').value = '2';
 x2.handleX1SaySinhSubmit({ preventDefault(){} });
 const edited = state.xuong1SaySinhRecords.find(r => r.id === 'edit-me');
-check('B5: sửa phân bổ/chu kỳ và QC, mã lô giữ nguyên',
+check('B5: sá»­a phÃ¢n bá»•/chu ká»³ vÃ  QC, mÃ£ lÃ´ giá»¯ nguyÃªn',
   edited.code === 'V260920007' && edited.date === '2026-09-25' &&
   edited.sourceAllocations[0].qty === 90 && edited.cycles[0].sulfurQty === 2 && edited.qcStatus === 'pass');
-// XOÁ lô giữa: mã các lô khác không đổi
+// XOÃ lÃ´ giá»¯a: mÃ£ cÃ¡c lÃ´ khÃ¡c khÃ´ng Ä‘á»•i
 state.xuong1SaySinhRecords = [
   rec('k1', '2026-09-01', { code: 'V260901001' }),
   rec('k2', '2026-09-02', { code: 'V260902002' }),
   rec('k3', '2026-09-03', { code: 'V260903003' })
 ];
 x2.deleteX1SaySinh('k2');
-check('B6: XOÁ lô không đánh lại số (k3 vẫn V260903003)',
+check('B6: XOÃ lÃ´ khÃ´ng Ä‘Ã¡nh láº¡i sá»‘ (k3 váº«n V260903003)',
   (state.xuong1SaySinhRecords.find(r => r.id === 'k3') || {}).code === 'V260903003');
 
-console.log('--- C. TUỔI LÔ + ƯU TIÊN LÔ CŨ NHẤT ---');
+console.log('--- C. TUá»”I LÃ” + Æ¯U TIÃŠN LÃ” CÅ¨ NHáº¤T ---');
 state.xuong1BocRecords = [];
 state.xuong1SaySinhRecords = [
   rec('today', isoAgo(0), { qty: 100, code: 'V000000001' }),
   rec('d5', isoAgo(5), { qty: 100, code: 'V000000002', cycles: [{ date: isoAgo(5), sulfurQty: 1 }, { date: isoAgo(4), sulfurQty: 2 }] }),
   rec('d2', isoAgo(4), { qty: 100, code: 'V000000003' })
 ];
-check('C1: hôm nay = 0 ngày · lô 5 ngày trước = 5 ngày',
+check('C1: hÃ´m nay = 0 ngÃ y Â· lÃ´ 5 ngÃ y trÆ°á»›c = 5 ngÃ y',
   x2.x1SsDaysOf(state.xuong1SaySinhRecords[0]) === 0 &&
   x2.x1SsDaysOf(state.xuong1SaySinhRecords[1]) === 5);
-check('C2: lô cũ thiếu đánh giá QC được xếp Chờ QC', x2.x1SsQcStatusOf(state.xuong1SaySinhRecords[2]) === 'pending');
-check('C3: số lần sấy và lượng lưu huỳnh cộng dồn theo chu kỳ',
+check('C2: lÃ´ cÅ© thiáº¿u Ä‘Ã¡nh giÃ¡ QC Ä‘Æ°á»£c xáº¿p Chá» QC', x2.x1SsQcStatusOf(state.xuong1SaySinhRecords[2]) === 'pending');
+check('C3: sá»‘ láº§n sáº¥y vÃ  lÆ°á»£ng lÆ°u huá»³nh cá»™ng dá»“n theo chu ká»³',
   x2.x1SsCyclesOf(state.xuong1SaySinhRecords[1]).length === 2 &&
   x2.x1SaySinhDisplay(state.xuong1SaySinhRecords[1]).sulfurQty === 3);
 state.xuong1BocRecords.push({ id: 'b-full', saySinhId: 'd5', date: isoAgo(1), qty: 100 });
-check('C4: lô đã Bốc hết được bỏ khỏi danh sách nhắc tồn', !x2.x1SsOldLots().some(r => r.id === 'd5'));
+check('C4: lÃ´ Ä‘Ã£ Bá»‘c háº¿t Ä‘Æ°á»£c bá» khá»i danh sÃ¡ch nháº¯c tá»“n', !x2.x1SsOldLots().some(r => r.id === 'd5'));
 state.xuong1BocRecords = [];
-check('C5: danh sách nhắc xếp lô cũ nhất trước; tổng số chu kỳ được đếm',
+check('C5: danh sÃ¡ch nháº¯c xáº¿p lÃ´ cÅ© nháº¥t trÆ°á»›c; tá»•ng sá»‘ chu ká»³ Ä‘Æ°á»£c Ä‘áº¿m',
   x2.x1SsOldLots().map(r => r.id).join(',') === 'd5,d2,today' && x2.x1SsTotalCycleCount() === 4);
 
-console.log('--- D. NHIỀU PHIẾU + CHU KỲ LẶP + QC ---');
+console.log('--- D. NHIá»€U PHIáº¾U + CHU Ká»² Láº¶P + QC ---');
 state.xuong1BocRecords = [];
 state.xuong1SaySinhRecords = [];
 state.xuong1CatOngRecords = [];
 state.materialRecords = [
-  { id: 'mat-v', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-10-01', createdAt: '2026-10-01T02:00:00.000Z' },
-  { id: 'mat-n', type: 'Nứa khô', supplier: 'Lý', location: 'xuong-1', weight: 500, date: '2026-10-02', createdAt: '2026-10-02T02:00:00.000Z' }
+  { id: 'mat-v', type: 'Váº§u tÆ°Æ¡i', supplier: 'Táº¿', location: 'xuong-1', weight: 1000, date: '2026-10-01', createdAt: '2026-10-01T02:00:00.000Z' },
+  { id: 'mat-n', type: 'Ná»©a khÃ´', supplier: 'LÃ½', location: 'xuong-1', weight: 500, date: '2026-10-02', createdAt: '2026-10-02T02:00:00.000Z' }
 ];
 x2.fillX1SaySinhOptions();
 selectValues('x1-say-sinh-source', ['mat-v', 'mat-n']);
@@ -227,17 +227,17 @@ document.getElementById('x1-say-sinh-date').value = '2026-10-19';
 document.getElementById('x1-say-sinh-sulfur-qty').value = '3.5';
 x2.handleX1SaySinhSubmit({ preventDefault(){} });
 const created = state.xuong1SaySinhRecords[0];
-check('D1: một lô liên kết nhiều phiếu và giữ phân bổ khối lượng chính xác',
+check('D1: má»™t lÃ´ liÃªn káº¿t nhiá»u phiáº¿u vÃ  giá»¯ phÃ¢n bá»• khá»‘i lÆ°á»£ng chÃ­nh xÃ¡c',
   !!created && created.code === 'V261019001' && created.qty === 300 &&
   created.sourceAllocations.length === 2 &&
   created.sourceAllocations.find(a => a.sourceId === 'mat-v').qty === 100 &&
   created.sourceAllocations.find(a => a.sourceId === 'mat-n').qty === 200);
-check('D2: chu kỳ đầu lưu lượng lưu huỳnh và trạng thái QC Chờ QC',
+check('D2: chu ká»³ Ä‘áº§u lÆ°u lÆ°á»£ng lÆ°u huá»³nh vÃ  tráº¡ng thÃ¡i QC Chá» QC',
   created.cycles.length === 1 && created.cycles[0].sulfurQty === 3.5 && created.qcStatus === 'pending');
-check('D3: số lượng còn lại được trừ chính xác ở từng phiếu',
+check('D3: sá»‘ lÆ°á»£ng cÃ²n láº¡i Ä‘Æ°á»£c trá»« chÃ­nh xÃ¡c á»Ÿ tá»«ng phiáº¿u',
   x2.x1SaySinhDirectRemainingOf(state.materialRecords[0], null) === 900 &&
   x2.x1SaySinhDirectRemainingOf(state.materialRecords[1], null) === 300);
-check('D3b: lịch sử và display thể hiện khối lượng phân bổ của từng phiếu',
+check('D3b: lá»‹ch sá»­ vÃ  display thá»ƒ hiá»‡n khá»‘i lÆ°á»£ng phÃ¢n bá»• cá»§a tá»«ng phiáº¿u',
   x2.x1SaySinhDisplay(created).sourceSummary.includes('100 kg') &&
   x2.x1SaySinhDisplay(created).sourceSummary.includes('200 kg'));
 document.getElementById('x1-say-sinh-repeat-lot').value = created.id;
@@ -245,17 +245,17 @@ x2.x1SaySinhSyncLinked(true);
 document.getElementById('x1-say-sinh-date').value = '2026-10-20';
 document.getElementById('x1-say-sinh-sulfur-qty').value = '1.25';
 x2.handleX1SaySinhSubmit({ preventDefault(){} });
-check('D4: sấy tiếp bổ sung chu kỳ cùng lô, không đổi mã hoặc trừ lại nguyên liệu',
+check('D4: sáº¥y tiáº¿p bá»• sung chu ká»³ cÃ¹ng lÃ´, khÃ´ng Ä‘á»•i mÃ£ hoáº·c trá»« láº¡i nguyÃªn liá»‡u',
   created.cycles.length === 2 && created.cycles[1].sulfurQty === 1.25 &&
   created.code === 'V261019001' && created.qty === 300 && created.qcStatus === 'pending' &&
   x2.x1SaySinhDirectRemainingOf(state.materialRecords[0], null) === 900);
-check('D4b: chu kỳ mới đưa QC về Chờ QC cho đến khi kiểm tra thủ công',
+check('D4b: chu ká»³ má»›i Ä‘Æ°a QC vá» Chá» QC cho Ä‘áº¿n khi kiá»ƒm tra thá»§ cÃ´ng',
   x2.setX1SaySinhQcStatus(created.id, 'pass') && created.qcStatus === 'pass');
-check('D5: sửa lô nạp đúng phân bổ và đánh giá QC hiện tại',
+check('D5: sá»­a lÃ´ náº¡p Ä‘Ãºng phÃ¢n bá»• vÃ  Ä‘Ã¡nh giÃ¡ QC hiá»‡n táº¡i',
   (x2.editX1SaySinh(created.id), created.qcStatus === 'pass' &&
    document.getElementById('x1-say-sinh-sulfur-qty').value === '3.5'));
 
-console.log('--- E. CẢNH BÁO LÔ CŨ NHẤT + BỐC ---');
+console.log('--- E. Cáº¢NH BÃO LÃ” CÅ¨ NHáº¤T + Bá»C ---');
 state.x1SaySinhEditId = null;
 state.xuong1SaySinhRecords = [
   rec('r-old', isoAgo(10), { qty: 100, code: 'V261001001', cycles: [{ date: isoAgo(10), sulfurQty: 2 }, { date: isoAgo(8), sulfurQty: 1 }] }),
@@ -264,52 +264,52 @@ state.xuong1SaySinhRecords = [
 ];
 x2.renderX1SaySinhCard();
 const barHtml = document.getElementById('x1-say-sinh-stock-bar').innerHTML;
-check('E1: thanh tồn chỉ nhắc số lần sấy và tuổi lô cũ nhất',
-  barHtml.includes('4 lần sấy sinh') && barHtml.includes('lô cũ nhất 10 ngày') && !barHtml.includes('đạt ngày'));
-// E2 (KPI Thống Kê) ĐÃ GỠ khỏi thẻ — kiểm tra cấu trúc chuyển xuống mục F7
+check('E1: thanh tá»“n chá»‰ nháº¯c sá»‘ láº§n sáº¥y vÃ  tuá»•i lÃ´ cÅ© nháº¥t',
+  barHtml.includes('4 láº§n sáº¥y sinh') && barHtml.includes('lÃ´ cÅ© nháº¥t 10 ngÃ y') && !barHtml.includes('Ä‘áº¡t ngÃ y'));
+// E2 (KPI Thá»‘ng KÃª) ÄÃƒ Gá»  khá»i tháº» â€” kiá»ƒm tra cáº¥u trÃºc chuyá»ƒn xuá»‘ng má»¥c F7
 const table = document.getElementById('x1-say-sinh-day-cards').innerHTML;
-check('E3: lịch sử = THẺ LÔ (dòng thời gian từng lần + QC thủ công, không nhãn đạt ngày)',
+check('E3: lá»‹ch sá»­ = THáºº LÃ” (dÃ²ng thá»i gian tá»«ng láº§n + QC thá»§ cÃ´ng, khÃ´ng nhÃ£n Ä‘áº¡t ngÃ y)',
   table.includes('x1-ss-lot-card') && table.includes('x1-ss-tl-row') &&
-  table.includes('Chờ QC') && table.includes('Không đạt') && !table.includes('đạt ngày'));
-check('E3b: QC cập nhật trực tiếp trên lô, không cần sửa chu kỳ',
+  table.includes('Chá» QC') && table.includes('KhÃ´ng Ä‘áº¡t') && !table.includes('Ä‘áº¡t ngÃ y'));
+check('E3b: QC cáº­p nháº­t trá»±c tiáº¿p trÃªn lÃ´, khÃ´ng cáº§n sá»­a chu ká»³',
   x2.setX1SaySinhQcStatus('r-new', 'pass') &&
   state.xuong1SaySinhRecords.find(r => r.id === 'r-new').qcStatus === 'pass');
-check('E4: chip launcher nhắc lô cũ nhất, không đánh dấu tự động Đạt',
-  x2.x1CardCountText('x1-say-sinh-card').includes('lô cũ nhất 10 ngày') &&
-  !x2.x1CardCountText('x1-say-sinh-card').includes('lô đạt'));
+check('E4: chip launcher nháº¯c lÃ´ cÅ© nháº¥t, khÃ´ng Ä‘Ã¡nh dáº¥u tá»± Ä‘á»™ng Äáº¡t',
+  x2.x1CardCountText('x1-say-sinh-card').includes('lÃ´ cÅ© nháº¥t 10 ngÃ y') &&
+  !x2.x1CardCountText('x1-say-sinh-card').includes('lÃ´ Ä‘áº¡t'));
 x2.x1SsOpenOldPanel();
 const panel = document.getElementById('x1-ss-ready-panel');
-check('E5: panel mở và ưu tiên lô cũ nhất',
+check('E5: panel má»Ÿ vÃ  Æ°u tiÃªn lÃ´ cÅ© nháº¥t',
   panel.hidden === false && panel.innerHTML.includes('V261001001') &&
-  panel.innerHTML.includes('2 lần sấy sinh') && panel.innerHTML.includes('10 ngày'));
+  panel.innerHTML.includes('2 láº§n sáº¥y sinh') && panel.innerHTML.includes('10 ngÃ y'));
 x2.x1SsOldStep(1);
-check('E6: điều hướng sang lô kế tiếp theo thứ tự ngày', panel.innerHTML.includes('V261002002'));
+check('E6: Ä‘iá»u hÆ°á»›ng sang lÃ´ káº¿ tiáº¿p theo thá»© tá»± ngÃ y', panel.innerHTML.includes('V261002002'));
 x2.x1SsOldStep(1);
-check('E7: điều hướng tiếp theo vẫn xếp lô cũ trước', panel.innerHTML.includes('V261003003'));
+check('E7: Ä‘iá»u hÆ°á»›ng tiáº¿p theo váº«n xáº¿p lÃ´ cÅ© trÆ°á»›c', panel.innerHTML.includes('V261003003'));
 x2.x1SsOldStep(1);
-check('E8: điều hướng vòng về lô cũ nhất', panel.innerHTML.includes('V261001001'));
+check('E8: Ä‘iá»u hÆ°á»›ng vÃ²ng vá» lÃ´ cÅ© nháº¥t', panel.innerHTML.includes('V261001001'));
 x2.x1SsCloseReadyPanel();
-check('E9: Đóng panel → ẩn', panel.hidden === true);
+check('E9: ÄÃ³ng panel â†’ áº©n', panel.hidden === true);
 x2.renderX1BocCard();
 const bocSel = document.getElementById('x1-boc-source');
 const oldBocOption = (bocSel.innerHTML.match(/<option[^>]*value="r-old"[^>]*>([\s\S]*?)<\/option>/) || [])[1] || '';
-check('E10: ô chọn Bốc hiện mã lô, NCC, ngày sấy, tuổi lô và tồn',
-  oldBocOption.includes('[V261001001] · NCC Tế') &&
-  /Sấy Sinh \d{2}\/\d{2}\/\d{2}/.test(oldBocOption) &&
-  oldBocOption.includes('10 ngày sấy sinh') && oldBocOption.includes('Tồn 100 kg') &&
-  oldBocOption.includes('Chờ QC') && !oldBocOption.includes('⚠ đạt'));
+check('E10: Ã´ chá»n Bá»‘c hiá»‡n mÃ£ lÃ´, NCC, ngÃ y sáº¥y, tuá»•i lÃ´ vÃ  tá»“n',
+  oldBocOption.includes('[V261001001] Â· NCC Táº¿') &&
+  /Sáº¥y Sinh \d{2}\/\d{2}\/\d{2}/.test(oldBocOption) &&
+  oldBocOption.includes('10 ngÃ y sáº¥y sinh') && oldBocOption.includes('Tá»“n 100 kg') &&
+  oldBocOption.includes('Chá» QC') && !oldBocOption.includes('âš  Ä‘áº¡t'));
 x2.x1SsOpenBocFor('r-new');
-check('E11: "Mở thẻ Bốc" chọn sẵn đúng lô được nhắc', bocSel.value === 'r-new');
+check('E11: "Má»Ÿ tháº» Bá»‘c" chá»n sáºµn Ä‘Ãºng lÃ´ Ä‘Æ°á»£c nháº¯c', bocSel.value === 'r-new');
 
 const bocStatsHtml = document.getElementById('x1-boc-stats').innerHTML;
-check('E12: thống kê Bốc giữ 3 ô nội bộ và không gắn thống kê lô Lọc Thanh',
-  bocStatsHtml.includes('Lượt bốc') &&
-  bocStatsHtml.includes('Tổng KL bốc (kg)') &&
-  bocStatsHtml.includes('Còn chờ bốc (kg)') &&
-  !bocStatsHtml.includes('Tỷ lệ lô đã chốt') &&
+check('E12: thá»‘ng kÃª Bá»‘c giá»¯ 3 Ã´ ná»™i bá»™ vÃ  khÃ´ng gáº¯n thá»‘ng kÃª lÃ´ Lá»c Thanh',
+  bocStatsHtml.includes('LÆ°á»£t bá»‘c') &&
+  bocStatsHtml.includes('Tá»•ng KL bá»‘c (kg)') &&
+  bocStatsHtml.includes('CÃ²n chá» bá»‘c (kg)') &&
+  !bocStatsHtml.includes('Tá»· lá»‡ lÃ´ Ä‘Ã£ chá»‘t') &&
   !bocStatsHtml.includes('ratio') &&
   !bocStatsHtml.includes('closedHas'));
-console.log('--- F. CẤU TRÚC (index/events/CSS/export/sw) ---');
+console.log('--- F. Cáº¤U TRÃšC (index/events/CSS/export/sw) ---');
 const idxHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const evSrc = fs.readFileSync(new URL('../js/events.js', import.meta.url), 'utf8');
 const cssSrc = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
@@ -317,81 +317,81 @@ const expSrc = fs.readFileSync(new URL('../js/export-xlsx.js', import.meta.url),
 const swSrc = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const xuong2Src = fs.readFileSync(new URL('../js/xuong2.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-check('F1: form có chọn nhiều phiếu, phân bổ, lưu huỳnh, QC và lô sấy tiếp',
+check('F1: form cÃ³ chá»n nhiá»u phiáº¿u, phÃ¢n bá»•, lÆ°u huá»³nh, QC vÃ  lÃ´ sáº¥y tiáº¿p',
   idxHtml.includes('id="x1-say-sinh-source" multiple') &&
   idxHtml.includes('id="x1-say-sinh-allocations"') &&
   idxHtml.includes('id="x1-say-sinh-sulfur-qty"') &&
   idxHtml.includes('id="x1-say-sinh-repeat-lot"') &&
   !idxHtml.includes('id="x1-say-sinh-qc-status"') &&
   table.includes('data-x1-say-sinh-qc'));
-check('F2: events.js nối chọn nhiều nguồn, chu kỳ sấy lại và cảnh báo lô cũ',
+check('F2: events.js ná»‘i chá»n nhiá»u nguá»“n, chu ká»³ sáº¥y láº¡i vÃ  cáº£nh bÃ¡o lÃ´ cÅ©',
   evSrc.includes("'x1-say-sinh-allocations'") && evSrc.includes("'x1-say-sinh-repeat-lot'") &&
   evSrc.includes("'x1-say-sinh-day-cards', 'change'") &&
   evSrc.includes("'x1-ss-ready-btn'") && evSrc.includes('x1SsOpenOldPanel'));
-check('F3: styles.css có kiểu phân bổ, trạng thái QC và panel cảnh báo',
+check('F3: styles.css cÃ³ kiá»ƒu phÃ¢n bá»•, tráº¡ng thÃ¡i QC vÃ  panel cáº£nh bÃ¡o',
   cssSrc.includes('.x1-ss-allocation-list') && cssSrc.includes('.x1-ss-qc.is-pass') &&
   cssSrc.includes('.x1-ss-ready-panel[hidden]'));
-check('F4: export Excel có chu kỳ, lưu huỳnh và đánh giá QC thủ công',
-  expSrc.includes("'Số Lần Sấy'") && expSrc.includes("'KL Lưu Huỳnh (kg)'") &&
-  expSrc.includes("'Đánh Giá QC'") && expSrc.includes("'Phiếu Đầu Vào / Phân Bổ'") &&
-  !expSrc.includes("'Ngày Đạt'"));
-check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v456/.test(swSrc));
-check('F6: file test này đã nằm trong chuỗi npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
-check('F7: KPI Vùng ② Thống Kê ĐÃ GỠ khỏi thẻ Sấy Sinh (tổng hợp ở bảng toàn xưởng sau)',
+check('F4: export Excel cÃ³ chu ká»³, lÆ°u huá»³nh vÃ  Ä‘Ã¡nh giÃ¡ QC thá»§ cÃ´ng',
+  expSrc.includes("'Sá»‘ Láº§n Sáº¥y'") && expSrc.includes("'KL LÆ°u Huá»³nh (kg)'") &&
+  expSrc.includes("'ÄÃ¡nh GiÃ¡ QC'") && expSrc.includes("'Phiáº¿u Äáº§u VÃ o / PhÃ¢n Bá»•'") &&
+  !expSrc.includes("'NgÃ y Äáº¡t'"));
+check('F5: sw.js cache version bumped', /nha-may-ngoc-son-v486/.test(swSrc));
+check('F6: file test nÃ y Ä‘Ã£ náº±m trong chuá»—i npm test', (pkg.scripts.test || '').includes('xuong1-say-sinh-lot.test.mjs'));
+check('F7: KPI VÃ¹ng â‘¡ Thá»‘ng KÃª ÄÃƒ Gá»  khá»i tháº» Sáº¥y Sinh (tá»•ng há»£p á»Ÿ báº£ng toÃ n xÆ°á»Ÿng sau)',
   !idxHtml.includes('id="x1-say-sinh-stats"') && !xuong2Src.includes('renderX1SaySinhStats') &&
   !evSrc.includes("'x1-say-sinh-stats'") &&
   idxHtml.includes('<span class="x2-zone-no">2</span><i data-lucide="history">'));
 
-console.log('--- G. LƯU HUỲNH TỰ ĐỊNH + GIỜ SẤY + XEM CHI TIẾT ---');
-check('G1: x1SsSulfurHint lần 1 = 1,3 kg/tấn', (() => {
+console.log('--- G. LÆ¯U HUá»²NH Tá»° Äá»ŠNH + GIá»œ Sáº¤Y + XEM CHI TIáº¾T ---');
+check('G1: x1SsSulfurHint láº§n 1 = 1,3 kg/táº¥n', (() => {
   const h = x2.x1SsSulfurHint(1000, 1);
   return h.rate === 1.3 && Math.abs(h.suggested - 1.3) < 1e-9;
 })());
-check('G2: x1SsSulfurHint lần 2 = 1,3 kg/tấn', (() => {
+check('G2: x1SsSulfurHint láº§n 2 = 1,3 kg/táº¥n', (() => {
   const h = x2.x1SsSulfurHint(1000, 2);
   return h.rate === 1.3 && Math.abs(h.suggested - 1.3) < 1e-9;
 })());
-check('G3: x1SsSulfurHint lần 3 = 0,8 kg/tấn', (() => {
+check('G3: x1SsSulfurHint láº§n 3 = 0,8 kg/táº¥n', (() => {
   const h = x2.x1SsSulfurHint(1000, 3);
   return h.rate === 0.8 && Math.abs(h.suggested - 0.8) < 1e-9;
 })());
-check('G4: x1SsSulfurHint lần 4 = 0,8 kg/tấn', (() => {
+check('G4: x1SsSulfurHint láº§n 4 = 0,8 kg/táº¥n', (() => {
   const h = x2.x1SsSulfurHint(1000, 4);
   return h.rate === 0.8 && Math.abs(h.suggested - 0.8) < 1e-9;
 })());
 check('G5: X1_SS_DEFAULT_HOUR = 08:00', x2.X1_SS_DEFAULT_HOUR === '08:00');
-check('G6: form có ô Giờ Sấy', idxHtml.includes('id="x1-say-sinh-hour"'));
-check('G7: nút chuyển 2 CHẾ ĐỘ ở đầu VÙNG ③ (Thẻ Lô + Báo cáo theo ngày)',
+check('G6: form cÃ³ Ã´ Giá» Sáº¥y', idxHtml.includes('id="x1-say-sinh-hour"'));
+check('G7: nÃºt chuyá»ƒn 2 CHáº¾ Äá»˜ á»Ÿ Ä‘áº§u VÃ™NG â‘¢ (Tháº» LÃ´ + BÃ¡o cÃ¡o theo ngÃ y)',
   idxHtml.includes('id="x1-ss-view-card"') && idxHtml.includes('id="x1-ss-view-day"') &&
-  idxHtml.includes('data-view="day"') && !idxHtml.includes('Xem lịch sử:'));
-check('G8: ĐÃ DỌN code chết — hết detail-wrap cũ, render về đúng 1 container',
+  idxHtml.includes('data-view="day"') && !idxHtml.includes('Xem lá»‹ch sá»­:'));
+check('G8: ÄÃƒ Dá»ŒN code cháº¿t â€” háº¿t detail-wrap cÅ©, render vá» Ä‘Ãºng 1 container',
   !idxHtml.includes('x1-say-sinh-detail-wrap') && idxHtml.includes('id="x1-say-sinh-day-cards"'));
-check('G9: thẻ Lô có dòng thời gian + dòng ⏰ Lần kế tiếp',
-  xuong2Src.includes('x1-ss-tl-row') && xuong2Src.includes('Lần kế tiếp') && xuong2Src.includes('x1SsFmtDateTime'));
-check('G10: chế độ BÁO CÁO THEO NGÀY có người sấy + giờ HC/TC + lần thứ',
-  xuong2Src.includes('renderX1SsDayReport') && xuong2Src.includes('Lần thứ') &&
-  idxHtml.includes('Báo cáo theo ngày'));
-check('G11: events.js IMPORT ĐỦ (sửa lỗi ReferenceError) + wire nút day',
+check('G9: tháº» LÃ´ cÃ³ dÃ²ng thá»i gian + dÃ²ng â° Láº§n káº¿ tiáº¿p',
+  xuong2Src.includes('x1-ss-tl-row') && xuong2Src.includes('Láº§n káº¿ tiáº¿p') && xuong2Src.includes('x1SsFmtDateTime'));
+check('G10: cháº¿ Ä‘á»™ BÃO CÃO THEO NGÃ€Y cÃ³ ngÆ°á»i sáº¥y + giá» HC/TC + láº§n thá»©',
+  xuong2Src.includes('renderX1SsDayReport') && xuong2Src.includes('Láº§n thá»©') &&
+  idxHtml.includes('BÃ¡o cÃ¡o theo ngÃ y'));
+check('G11: events.js IMPORT Äá»¦ (sá»­a lá»—i ReferenceError) + wire nÃºt day',
   evSrc.includes("setX1SsViewMode, x1SsUpdateSulfurHint, x1SsMarkCodeManualEdit, x1SsMarkSulfurManualEdit, x1SsOpenInputModal") &&
   evSrc.includes("'x1-ss-view-day'") && !evSrc.includes('x1SsSulfurHint'));
-check('G12: export mới + ĐÃ GỠ export cũ (setX1SaySinhViewMode/renderX1SaySinhDetail)',
+check('G12: export má»›i + ÄÃƒ Gá»  export cÅ© (setX1SaySinhViewMode/renderX1SaySinhDetail)',
   typeof x2.setX1SsViewMode === 'function' && typeof x2.renderX1SsHistory === 'function' &&
   typeof x2.x1SsFmtDateTime === 'function' && typeof x2.x1SsUpdateSulfurHint === 'function' &&
   x2.setX1SaySinhViewMode === undefined && x2.renderX1SaySinhDetail === undefined);
 
-// Kiểm tra lô đã Đạt không xuất hiện trong select sấy tiếp
+// Kiá»ƒm tra lÃ´ Ä‘Ã£ Äáº¡t khÃ´ng xuáº¥t hiá»‡n trong select sáº¥y tiáº¿p
 state.xuong1SaySinhRecords = [
   rec('pass-lot', isoAgo(5), { qty: 100, code: 'VPASS', qcStatus: 'pass', cycles: [{ date: isoAgo(5), sulfurQty: 1 }] }),
   rec('pending-lot', isoAgo(3), { qty: 100, code: 'VPEND', qcStatus: 'pending', cycles: [{ date: isoAgo(3), sulfurQty: 1 }] })
 ];
 x2.fillX1SaySinhOptions();
 const repeatHtml = document.getElementById('x1-say-sinh-repeat-lot').innerHTML;
-check('G13: lô qcStatus=pass BỊ LỌ KHỎI select sấy tiếp', !repeatHtml.includes('VPASS'));
-check('G14: lô qcStatus=pending CÒN HIỂN select sấy tiếp', repeatHtml.includes('VPEND'));
+check('G13: lÃ´ qcStatus=pass Bá»Š Lá»Œ KHá»ŽI select sáº¥y tiáº¿p', !repeatHtml.includes('VPASS'));
+check('G14: lÃ´ qcStatus=pending CÃ’N HIá»‚N select sáº¥y tiáº¿p', repeatHtml.includes('VPEND'));
 
-// Kiểm tra lưu giờ vào chu kỳ khi tạo mới
+// Kiá»ƒm tra lÆ°u giá» vÃ o chu ká»³ khi táº¡o má»›i
 state.xuong1SaySinhRecords = [];
-state.materialRecords = [{ id: 'mat-v', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-10-01', createdAt: '2026-10-01T02:00:00.000Z' }];
+state.materialRecords = [{ id: 'mat-v', type: 'Váº§u tÆ°Æ¡i', supplier: 'Táº¿', location: 'xuong-1', weight: 1000, date: '2026-10-01', createdAt: '2026-10-01T02:00:00.000Z' }];
 x2.fillX1SaySinhOptions();
 selectValues('x1-say-sinh-source', ['mat-v']);
 x2.x1SaySinhRenderAllocations();
@@ -401,25 +401,25 @@ document.getElementById('x1-say-sinh-hour').value = '09:30';
 document.getElementById('x1-say-sinh-sulfur-qty').value = '1.3';
 x2.handleX1SaySinhSubmit({ preventDefault(){} });
 const newLot = state.xuong1SaySinhRecords[0];
-check('G15: chu kỳ mới lưu đúng giờ', newLot.cycles[0].hour === '09:30');
-check('G16: chu kỳ mới lưu đúng lưu huỳnh', newLot.cycles[0].sulfurQty === 1.3);
+check('G15: chu ká»³ má»›i lÆ°u Ä‘Ãºng giá»', newLot.cycles[0].hour === '09:30');
+check('G16: chu ká»³ má»›i lÆ°u Ä‘Ãºng lÆ°u huá»³nh', newLot.cycles[0].sulfurQty === 1.3);
 
-// Kiểm tra x1SaySinhDisplay có totalHours + nextCheckHour
+// Kiá»ƒm tra x1SaySinhDisplay cÃ³ totalHours + nextCheckHour
 const disp = x2.x1SaySinhDisplay(newLot);
-check('G17: display có totalHours', typeof disp.totalHours === 'number' && disp.totalHours === 24);
-check('G18: display có nextCheckHour', typeof disp.nextCheckHour === 'string' && disp.nextCheckHour.length > 0);
-check('G19: display có cycleDetails', Array.isArray(disp.cycleDetails) && disp.cycleDetails.length === 1);
-check('G20: cycleDetails có num/date/hour/sulfurQty/rate',
+check('G17: display cÃ³ totalHours', typeof disp.totalHours === 'number' && disp.totalHours === 24);
+check('G18: display cÃ³ nextCheckHour', typeof disp.nextCheckHour === 'string' && disp.nextCheckHour.length > 0);
+check('G19: display cÃ³ cycleDetails', Array.isArray(disp.cycleDetails) && disp.cycleDetails.length === 1);
+check('G20: cycleDetails cÃ³ num/date/hour/sulfurQty/rate',
   disp.cycleDetails[0].num === 1 && disp.cycleDetails[0].hour === '09:30' && disp.cycleDetails[0].rate === 1.3);
 
-// G28-G33: tạo lô lần đầu — mã theo loại gộp/ngày và lưu huỳnh tự điền có bảo tồn sửa tay
-console.log('--- G28-G33. TẠO LÔ LẦN ĐẦU — MÃ & LƯU HUỲNH TỰ ĐỘNG ---');
-check('G28: hai nguồn Vầu+Nứa tạo mã theo LOẠI GỘP và Ngày Sấy', (() => {
+// G28-G33: táº¡o lÃ´ láº§n Ä‘áº§u â€” mÃ£ theo loáº¡i gá»™p/ngÃ y vÃ  lÆ°u huá»³nh tá»± Ä‘iá»n cÃ³ báº£o tá»“n sá»­a tay
+console.log('--- G28-G33. Táº O LÃ” Láº¦N Äáº¦U â€” MÃƒ & LÆ¯U HUá»²NH Tá»° Äá»˜NG ---');
+check('G28: hai nguá»“n Váº§u+Ná»©a táº¡o mÃ£ theo LOáº I Gá»˜P vÃ  NgÃ y Sáº¥y', (() => {
   state.xuong1SaySinhRecords = [];
   state.xuong1CatOngRecords = [];
   state.materialRecords = [
-    { id: 'combo-v', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-12-01', createdAt: '2026-12-01T02:00:00.000Z' },
-    { id: 'combo-n', type: 'Nứa khô', supplier: 'Lý', location: 'xuong-1', weight: 1000, date: '2026-12-02', createdAt: '2026-12-02T02:00:00.000Z' }
+    { id: 'combo-v', type: 'Váº§u tÆ°Æ¡i', supplier: 'Táº¿', location: 'xuong-1', weight: 1000, date: '2026-12-01', createdAt: '2026-12-01T02:00:00.000Z' },
+    { id: 'combo-n', type: 'Ná»©a khÃ´', supplier: 'LÃ½', location: 'xuong-1', weight: 1000, date: '2026-12-02', createdAt: '2026-12-02T02:00:00.000Z' }
   ];
   x2.resetX1SaySinhForm();
   x2.fillX1SaySinhOptions();
@@ -429,32 +429,32 @@ check('G28: hai nguồn Vầu+Nứa tạo mã theo LOẠI GỘP và Ngày Sấy'
   const code = document.getElementById('x1-say-sinh-code').value;
   return /^[VN]261203\d{3}$/.test(code);
 })());
-check('G29: đổi Ngày Sấy cập nhật mã còn trống/tự sinh', (() => {
+check('G29: Ä‘á»•i NgÃ y Sáº¥y cáº­p nháº­t mÃ£ cÃ²n trá»‘ng/tá»± sinh', (() => {
   const before = document.getElementById('x1-say-sinh-code').value;
   document.getElementById('x1-say-sinh-date').value = '2026-12-05';
   x2.x1SaySinhSyncLinked(true);
   const after = document.getElementById('x1-say-sinh-code').value;
   return after !== before && /^[VN]261205\d{3}$/.test(after);
 })());
-check('G30: mã nhập tay không bị ghi đè khi đổi Ngày Sấy', (() => {
+check('G30: mÃ£ nháº­p tay khÃ´ng bá»‹ ghi Ä‘Ã¨ khi Ä‘á»•i NgÃ y Sáº¥y', (() => {
   x2.x1SsMarkCodeManualEdit();
   document.getElementById('x1-say-sinh-code').value = 'V261205099';
   document.getElementById('x1-say-sinh-date').value = '2026-12-06';
   x2.x1SaySinhSyncLinked(true);
   return document.getElementById('x1-say-sinh-code').value === 'V261205099';
 })());
-check('G31: lưu huỳnh tự điền công thức 1.3 và làm tròn lên 1 chữ số', (() => {
+check('G31: lÆ°u huá»³nh tá»± Ä‘iá»n cÃ´ng thá»©c 1.3 vÃ  lÃ m trÃ²n lÃªn 1 chá»¯ sá»‘', (() => {
   x2.x1SsResetManualTracking();
   document.getElementById('x1-say-sinh-qty').value = '123';
   x2.x1SsUpdateSulfurHint();
   return document.getElementById('x1-say-sinh-sulfur-qty').value === '0.2';
 })());
-check('G32: phân bổ tăng cập nhật lưu huỳnh tự sinh', (() => {
+check('G32: phÃ¢n bá»• tÄƒng cáº­p nháº­t lÆ°u huá»³nh tá»± sinh', (() => {
   document.getElementById('x1-say-sinh-qty').value = '1000';
   x2.x1SsUpdateSulfurHint();
   return document.getElementById('x1-say-sinh-sulfur-qty').value === '1.3';
 })());
-check('G33: lưu huỳnh nhập tay không bị ghi đè khi đổi phân bổ', (() => {
+check('G33: lÆ°u huá»³nh nháº­p tay khÃ´ng bá»‹ ghi Ä‘Ã¨ khi Ä‘á»•i phÃ¢n bá»•', (() => {
   x2.x1SsMarkSulfurManualEdit();
   document.getElementById('x1-say-sinh-sulfur-qty').value = '2.75';
   document.getElementById('x1-say-sinh-qty').value = '2000';
@@ -462,10 +462,10 @@ check('G33: lưu huỳnh nhập tay không bị ghi đè khi đổi phân bổ',
   return document.getElementById('x1-say-sinh-sulfur-qty').value === '2.75';
 })());
 
-// G21-G23: Yêu cầu mới (ngày sấy tiếp + dòng chữ chọn lô + hiển thị ngày chi tiết)
-check('G21: ô chọn lô sấy tiếp có chữ "sấy tiếp lần"', xuong2Src.includes('sấy tiếp lần'));
+// G21-G23: YÃªu cáº§u má»›i (ngÃ y sáº¥y tiáº¿p + dÃ²ng chá»¯ chá»n lÃ´ + hiá»ƒn thá»‹ ngÃ y chi tiáº¿t)
+check('G21: Ã´ chá»n lÃ´ sáº¥y tiáº¿p cÃ³ chá»¯ "sáº¥y tiáº¿p láº§n"', xuong2Src.includes('sáº¥y tiáº¿p láº§n'));
 check('G22a: x1SsAddDays(2026-10-22, 1) = 2026-10-23', x2.x1SsAddDays('2026-10-22', 1) === '2026-10-23');
-check('G22b: gợi ý ngày lần tiếp theo = ngày cycle cuối + 1', (() => {
+check('G22b: gá»£i Ã½ ngÃ y láº§n tiáº¿p theo = ngÃ y cycle cuá»‘i + 1', (() => {
   state.xuong1SaySinhRecords = [
     rec('lot-1', '2026-10-21', { code: 'V261021003', cycles: [
       { date: '2026-10-21', sulfurQty: 1.3, hour: '08:00' },
@@ -478,42 +478,42 @@ check('G22b: gợi ý ngày lần tiếp theo = ngày cycle cuối + 1', (() => 
   const dateEl = document.getElementById('x1-say-sinh-date');
   return dateEl.value === '2026-10-23';
 })());
-check('G23: chi tiết theo ngày hiển thị đúng ngày từng lần', (() => {
+check('G23: chi tiáº¿t theo ngÃ y hiá»ƒn thá»‹ Ä‘Ãºng ngÃ y tá»«ng láº§n', (() => {
   const d = x2.x1SaySinhDisplay(state.xuong1SaySinhRecords[0]);
   return d.cycleDetails[0].date === '2026-10-21' &&
     d.cycleDetails[1].date === '2026-10-22';
 })());
 
-// G24-G27: 2 CHẾ ĐỘ XEM (Phương án B) — Thẻ Lô mặc định + Báo cáo theo ngày
+// G24-G27: 2 CHáº¾ Äá»˜ XEM (PhÆ°Æ¡ng Ã¡n B) â€” Tháº» LÃ´ máº·c Ä‘á»‹nh + BÃ¡o cÃ¡o theo ngÃ y
 state.xuong1SaySinhRecords = [
   rec('lot-1', '2026-10-21', { code: 'V261021003', cycles: [
     { date: '2026-10-21', sulfurQty: 1.3, hour: '08:00' },
     { date: '2026-10-22', sulfurQty: 1.3, hour: '08:00' }
   ] })
 ];
-state.x1SsViewMode = null; // lazy load từ localStorage (stub trống → 'card')
+state.x1SsViewMode = null; // lazy load tá»« localStorage (stub trá»‘ng â†’ 'card')
 x2.renderX1SsHistory();
 const lotCardHtml = document.getElementById('x1-say-sinh-day-cards').innerHTML;
-check('G24: THẺ LÔ (mặc định) — dòng thời gian từng lần + ⏰ giờ kiểm tra kế tiếp',
-  lotCardHtml.includes('x1-ss-lot-card') && lotCardHtml.includes('Lần 1') &&
-  lotCardHtml.includes('Lần 2') && lotCardHtml.includes('Lần kế tiếp') &&
+check('G24: THáºº LÃ” (máº·c Ä‘á»‹nh) â€” dÃ²ng thá»i gian tá»«ng láº§n + â° giá» kiá»ƒm tra káº¿ tiáº¿p',
+  lotCardHtml.includes('x1-ss-lot-card') && lotCardHtml.includes('Láº§n 1') &&
+  lotCardHtml.includes('Láº§n 2') && lotCardHtml.includes('Láº§n káº¿ tiáº¿p') &&
   lotCardHtml.includes('21/10/26 08:00') &&
   lotCardHtml.includes('x1-ss-accent-dot') && lotCardHtml.includes('border-left-color:#'));
 x2.setX1SsViewMode('day');
 const dayReportHtml = document.getElementById('x1-say-sinh-day-cards').innerHTML;
-check('G25: BÁO CÁO THEO NGÀY — thẻ ngày có người sấy + lần thứ + giờ sấy',
-  dayReportHtml.includes('x2-day-card') && dayReportHtml.includes('Lần 1') &&
-  dayReportHtml.includes('Lần 2') && dayReportHtml.includes('Giờ sấy') &&
+check('G25: BÃO CÃO THEO NGÃ€Y â€” tháº» ngÃ y cÃ³ ngÆ°á»i sáº¥y + láº§n thá»© + giá» sáº¥y',
+  dayReportHtml.includes('x2-day-card') && dayReportHtml.includes('Láº§n 1') &&
+  dayReportHtml.includes('Láº§n 2') && dayReportHtml.includes('Giá» sáº¥y') &&
   dayReportHtml.includes('21/10/26'));
-check('G26: chế độ xem NHỚ THEO MÁY (localStorage)',
+check('G26: cháº¿ Ä‘á»™ xem NHá»š THEO MÃY (localStorage)',
   localStorage.getItem(x2.X1_SS_VIEW_KEY) === 'day');
 x2.setX1SsViewMode('card');
-check('G27: chuyển lại THẺ LÔ — ghi máy + render lại thẻ',
+check('G27: chuyá»ƒn láº¡i THáºº LÃ” â€” ghi mÃ¡y + render láº¡i tháº»',
   localStorage.getItem(x2.X1_SS_VIEW_KEY) === 'card' &&
   document.getElementById('x1-say-sinh-day-cards').innerHTML.includes('x1-ss-lot-card'));
 
-console.log('--- H. 2 NÚT TO + POPUP NHẬP LIỆU + BANNER CẢNH BÁO + THU GỌN MOBILE ---');
-check('H1: 2 nút gọi form + CĐ sau trong VÙNG ① + pop-up cấp trang chứa form (modal trước form)',
+console.log('--- H. 2 NÃšT TO + POPUP NHáº¬P LIá»†U + BANNER Cáº¢NH BÃO + THU Gá»ŒN MOBILE ---');
+check('H1: 2 nÃºt gá»i form + CÄ sau trong VÃ™NG â‘  + pop-up cáº¥p trang chá»©a form (modal trÆ°á»›c form)',
   idxHtml.includes('id="btn-x1-ss-new"') && idxHtml.includes('id="btn-x1-ss-repeat"') &&
   idxHtml.includes('id="btn-x1-say-sinh-stage-next-card"') &&
   idxHtml.includes('x1-ss-input-btns') && idxHtml.includes('id="modal-x1-ss-input"') &&
@@ -521,31 +521,31 @@ check('H1: 2 nút gọi form + CĐ sau trong VÙNG ① + pop-up cấp trang ch�
   idxHtml.includes('id="x1-ss-src-group"') && idxHtml.includes('id="x1-ss-repeat-group"'));
 const saySinhModalStart = idxHtml.indexOf('id="modal-x1-ss-input"');
 const saySinhModalHtml = idxHtml.slice(saySinhModalStart, idxHtml.indexOf('</body>', saySinhModalStart));
-check('H1b: form Sấy Sinh chỉ giữ Làm Mới + Lưu, bỏ nút Lùi/Tiến',
+check('H1b: form Sáº¥y Sinh chá»‰ giá»¯ LÃ m Má»›i + LÆ°u, bá» nÃºt LÃ¹i/Tiáº¿n',
   saySinhModalHtml.includes('id="btn-cancel-x1-say-sinh"') &&
   saySinhModalHtml.includes('x1-stage-save') &&
   !saySinhModalHtml.includes('btn-x1-say-sinh-stage-prev') &&
   !saySinhModalHtml.includes('id="btn-x1-say-sinh-stage-next"'));
-check('H2: banner cảnh báo render (quá hạn + đã Đạt chờ Bốc) + đếm', (() => {
+check('H2: banner cáº£nh bÃ¡o render (quÃ¡ háº¡n + Ä‘Ã£ Äáº¡t chá» Bá»‘c) + Ä‘áº¿m', (() => {
   state.xuong1SaySinhRecords = [
     rec('al-over', isoAgo(3), { code: 'VOVER', cycles: [{ date: isoAgo(3), sulfurQty: 1.3, hour: '08:00' }] }),
     rec('al-pass', isoAgo(5), { code: 'VPASS2', qcStatus: 'pass', cycles: [{ date: isoAgo(5), sulfurQty: 1 }] })
   ];
   x2.renderX1SsAlertBanner();
   const b = document.getElementById('x1-ss-alert-banner');
-  return b.hidden === false && b.innerHTML.includes('QUÁ HẠN') &&
-    b.innerHTML.includes('đã Đạt QC') && b.innerHTML.includes('VOVER') && b.innerHTML.includes('VPASS2');
+  return b.hidden === false && b.innerHTML.includes('QUÃ Háº N') &&
+    b.innerHTML.includes('Ä‘Ã£ Äáº¡t QC') && b.innerHTML.includes('VOVER') && b.innerHTML.includes('VPASS2');
 })());
-check('H3: x1SsAlertKindOf phân loại đúng (over / qcpass)', (() => {
+check('H3: x1SsAlertKindOf phÃ¢n loáº¡i Ä‘Ãºng (over / qcpass)', (() => {
   const over = x2.x1SsAlertKindOf(state.xuong1SaySinhRecords[0]);
   const qcp = x2.x1SsAlertKindOf(state.xuong1SaySinhRecords[1]);
   return !!over && over.kind === 'over' && !!qcp && qcp.kind === 'qcpass';
 })());
-check('H4: pop-up mở/đóng + ẩn/hiện nhóm ô theo chế độ (repeat ẩn phiếu · new ẩn lô tiếp)', (() => {
+check('H4: pop-up má»Ÿ/Ä‘Ã³ng + áº©n/hiá»‡n nhÃ³m Ã´ theo cháº¿ Ä‘á»™ (repeat áº©n phiáº¿u Â· new áº©n lÃ´ tiáº¿p)', (() => {
   const ov = document.getElementById('modal-x1-ss-input');
   x2.x1SsOpenInputModal('repeat');
   const okOpen = ov.classList.contains('show') &&
-    document.getElementById('x1-ss-input-title').textContent === 'Sấy Tiếp Lô Đã Có' &&
+    document.getElementById('x1-ss-input-title').textContent === 'Sáº¥y Tiáº¿p LÃ´ ÄÃ£ CÃ³' &&
     document.getElementById('x1-ss-src-group').hidden === true &&
     document.getElementById('x1-ss-repeat-group').hidden === false;
   x2.x1SsCloseInputModal();
@@ -553,11 +553,11 @@ check('H4: pop-up mở/đóng + ẩn/hiện nhóm ô theo chế độ (repeat �
   x2.x1SsOpenInputModal('new');
   const okNew = document.getElementById('x1-ss-src-group').hidden === false &&
     document.getElementById('x1-ss-repeat-group').hidden === true &&
-    document.getElementById('x1-ss-input-title').textContent === 'Tạo Lô Sấy Lần Đầu';
+    document.getElementById('x1-ss-input-title').textContent === 'Táº¡o LÃ´ Sáº¥y Láº§n Äáº§u';
   x2.x1SsCloseInputModal();
   return okOpen && okClose && okNew;
 })());
-check('H5: thu gọn dòng thời gian — nút toggle đổi trạng thái thẻ', (() => {
+check('H5: thu gá»n dÃ²ng thá»i gian â€” nÃºt toggle Ä‘á»•i tráº¡ng thÃ¡i tháº»', (() => {
   state.xuong1SaySinhRecords = [rec('tl-1', '2026-10-21', { code: 'VTL', cycles: [{ date: '2026-10-21', sulfurQty: 1.3, hour: '08:00' }] })];
   state.x1SsViewMode = 'card';
   x2.renderX1SsHistory();
@@ -567,33 +567,33 @@ check('H5: thu gọn dòng thời gian — nút toggle đổi trạng thái th�
   const after = card.classList.contains('is-closed');
   return !!card.querySelector('.x1-ss-tl-toggle') && after === !before;
 })());
-check('H6: events.js wire đủ (2 nút gọi form + CĐ sau + banner + toggle + pop-up/Esc)',
+check('H6: events.js wire Ä‘á»§ (2 nÃºt gá»i form + CÄ sau + banner + toggle + pop-up/Esc)',
   evSrc.includes("'btn-x1-ss-new'") && evSrc.includes("'btn-x1-ss-repeat'") &&
   evSrc.includes("'btn-x1-say-sinh-stage-next-card'") &&
   evSrc.includes("'x1-ss-alert-banner'") && evSrc.includes('[data-x1-ss-toggle]') &&
   evSrc.includes("'modal-x1-ss-input'") && evSrc.includes('x1SsOpenInputModal'));
-check('H7: CSS banner (chạy chữ) + nút to + thu gọn + mobile gọn',
+check('H7: CSS banner (cháº¡y chá»¯) + nÃºt to + thu gá»n + mobile gá»n',
   cssSrc.includes('.x1-ss-alert-banner') && cssSrc.includes('x1SsMarquee') &&
   cssSrc.includes('.x1-ss-input-btn') && cssSrc.includes('.x1-ss-lot-card.is-closed .x1-ss-timeline') &&
   cssSrc.includes('grid-template-columns: repeat(3, minmax(0, 1fr))') &&
   cssSrc.includes('#btn-x1-say-sinh-stage-next-card') &&
-  cssSrc.includes('Đổ màu đầy cho các thẻ Xưởng 1') &&
+  cssSrc.includes('Äá»• mÃ u Ä‘áº§y cho cÃ¡c tháº» XÆ°á»Ÿng 1') &&
   cssSrc.includes('.x1-bo-actions:not(.cat-ong)') &&
   cssSrc.includes('repeat(2, minmax(0, 1fr))') &&
   idxHtml.includes('x1-boc-actions'));
-check('H8: panel nhắc lô có dòng ⏰ Lần kế tiếp + chip lý do',
+check('H8: panel nháº¯c lÃ´ cÃ³ dÃ²ng â° Láº§n káº¿ tiáº¿p + chip lÃ½ do',
   xuong2Src.includes('x1-ss-ready-when') && xuong2Src.includes('x1-ss-alert-chip') &&
   typeof x2.x1SsOpenInputModal === 'function' && typeof x2.x1SsToggleTimeline === 'function');
-check('H9: 2 nút ĐỔ MÀU ĐẦY + hiệu ứng nổi (gradient · translateY · tắt khi Giảm Hiệu Ứng)',
+check('H9: 2 nÃºt Äá»” MÃ€U Äáº¦Y + hiá»‡u á»©ng ná»•i (gradient Â· translateY Â· táº¯t khi Giáº£m Hiá»‡u á»¨ng)',
   cssSrc.includes('.x1-ss-input-btn:hover') && cssSrc.includes('translateY(-2px)') &&
   cssSrc.includes('linear-gradient(180deg') && cssSrc.includes('.is-repeat') &&
   cssSrc.includes('body[data-fx="low"] .x1-ss-input-btn:hover { transform: none') &&
   cssSrc.includes('text-shadow'));
-check('H10: thẻ lô có VIỀN MÀU LUÂN PHIÊN + chấm màu phân biệt (5 màu chuẩn)',
+check('H10: tháº» lÃ´ cÃ³ VIá»€N MÃ€U LUÃ‚N PHIÃŠN + cháº¥m mÃ u phÃ¢n biá»‡t (5 mÃ u chuáº©n)',
   xuong2Src.includes('X1_SS_CARD_ACCENTS') && xuong2Src.includes('x1-ss-accent-dot') &&
   xuong2Src.includes("border-left-color:' + accent") &&
   cssSrc.includes('.x1-ss-accent-dot'));
-check('H11: gợi ý GIỜ sấy tiếp = giờ lần sấy TRƯỚC (đúng cặp +24h với ngày gợi ý)', (() => {
+check('H11: gá»£i Ã½ GIá»œ sáº¥y tiáº¿p = giá» láº§n sáº¥y TRÆ¯á»šC (Ä‘Ãºng cáº·p +24h vá»›i ngÃ y gá»£i Ã½)', (() => {
   state.xuong1SaySinhRecords = [rec('hr-1', '2026-10-21', { code: 'VHR', cycles: [
     { date: '2026-10-21', sulfurQty: 1.3, hour: '14:30' },
     { date: '2026-10-22', sulfurQty: 1.3, hour: '15:45' }
@@ -605,16 +605,16 @@ check('H11: gợi ý GIỜ sấy tiếp = giờ lần sấy TRƯỚC (đúng c�
   const h = document.getElementById('x1-say-sinh-hour').value;
   return d === '2026-10-23' && h === '15:45';
 })());
-check('H12: form căn đáy hàng ô nhập (nhãn 2 dòng không lệch) + hint dạng hàng ngang',
+check('H12: form cÄƒn Ä‘Ã¡y hÃ ng Ã´ nháº­p (nhÃ£n 2 dÃ²ng khÃ´ng lá»‡ch) + hint dáº¡ng hÃ ng ngang',
   cssSrc.includes('#x1-say-sinh-form .x2-form-row { align-items: flex-end') &&
   cssSrc.includes('#x1-say-sinh-sulfur-hint {') && cssSrc.includes('#x1-say-sinh-sulfur-hint > svg'));
 
-// ─── I. NHẬP TAY MÃ LÔ (yêu cầu người dùng) ───
-console.log('--- I. NHẬP TAY MÃ LÔ ---');
+// â”€â”€â”€ I. NHáº¬P TAY MÃƒ LÃ” (yÃªu cáº§u ngÆ°á»i dÃ¹ng) â”€â”€â”€
+console.log('--- I. NHáº¬P TAY MÃƒ LÃ” ---');
 
-check('I1: nhập tay mã lô được ghi đúng', (() => {
+check('I1: nháº­p tay mÃ£ lÃ´ Ä‘Æ°á»£c ghi Ä‘Ãºng', (() => {
   state.materialRecords = [
-    { id: 'mat-m', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2026-11-05', createdAt: '2026-11-05T02:00:00.000Z' }
+    { id: 'mat-m', type: 'Váº§u tÆ°Æ¡i', supplier: 'Táº¿', location: 'xuong-1', weight: 1000, date: '2026-11-05', createdAt: '2026-11-05T02:00:00.000Z' }
   ];
   state.xuong1CatOngRecords = [];
   state.xuong1SaySinhRecords = [];
@@ -623,39 +623,39 @@ check('I1: nhập tay mã lô được ghi đúng', (() => {
   x2.x1SaySinhRenderAllocations();
   document.getElementById(`x1-say-sinh-allocation-mat-m`).value = '500';
   document.getElementById('x1-say-sinh-date').value = '2026-11-05';
-  document.getElementById('x1-say-sinh-code').value = 'V261105099'; // mã nhập tay
+  document.getElementById('x1-say-sinh-code').value = 'V261105099'; // mÃ£ nháº­p tay
   document.getElementById('x1-say-sinh-sulfur-qty').value = '1.3';
   x2.handleX1SaySinhSubmit({ preventDefault(){} });
   const manualLot = state.xuong1SaySinhRecords[0];
   return manualLot && manualLot.code === 'V261105099';
 })());
 
-check('I2: chặn mã lô trùng', (() => {
+check('I2: cháº·n mÃ£ lÃ´ trÃ¹ng', (() => {
   selectValues('x1-say-sinh-source', ['mat-m']);
   x2.x1SaySinhRenderAllocations();
   document.getElementById(`x1-say-sinh-allocation-mat-m`).value = '300';
   document.getElementById('x1-say-sinh-date').value = '2026-11-05';
-  document.getElementById('x1-say-sinh-code').value = 'V261105099'; // trùng với I1
+  document.getElementById('x1-say-sinh-code').value = 'V261105099'; // trÃ¹ng vá»›i I1
   document.getElementById('x1-say-sinh-sulfur-qty').value = '1.3';
   x2.handleX1SaySinhSubmit({ preventDefault(){} });
   return state.xuong1SaySinhRecords.length === 1;
 })());
 
-check('I3: chặn mã lô sai định dạng', (() => {
-  document.getElementById('x1-say-sinh-code').value = 'V26-11-05'; // sai định dạng
+check('I3: cháº·n mÃ£ lÃ´ sai Ä‘á»‹nh dáº¡ng', (() => {
+  document.getElementById('x1-say-sinh-code').value = 'V26-11-05'; // sai Ä‘á»‹nh dáº¡ng
   x2.handleX1SaySinhSubmit({ preventDefault(){} });
   return state.xuong1SaySinhRecords.length === 1;
 })());
 
-check('I4: tự sinh mã theo năm (không reset tháng)', (() => {
+check('I4: tá»± sinh mÃ£ theo nÄƒm (khÃ´ng reset thÃ¡ng)', (() => {
   document.getElementById('x1-say-sinh-code').value = '';
   document.getElementById('x1-say-sinh-sulfur-qty').value = '1.3';
   x2.handleX1SaySinhSubmit({ preventDefault(){} });
   const autoLot = state.xuong1SaySinhRecords[1];
-  return autoLot && autoLot.code === 'V261105100'; // V + 261105 + 100 (vì 099 đã dùng)
+  return autoLot && autoLot.code === 'V261105100'; // V + 261105 + 100 (vÃ¬ 099 Ä‘Ã£ dÃ¹ng)
 })());
 
-check('I5: sửa mã lô thành công', (() => {
+check('I5: sá»­a mÃ£ lÃ´ thÃ nh cÃ´ng', (() => {
   const autoLot = state.xuong1SaySinhRecords[1];
   x2.editX1SaySinh(autoLot.id);
   document.getElementById('x1-say-sinh-code').value = 'V261105200';
@@ -664,10 +664,10 @@ check('I5: sửa mã lô thành công', (() => {
   return editedLot && editedLot.code === 'V261105200';
 })());
 
-check('I6: năm mới reset số về 001', (() => {
+check('I6: nÄƒm má»›i reset sá»‘ vá» 001', (() => {
   state.xuong1SaySinhRecords = [];
   state.materialRecords = [
-    { id: 'mat-m2', type: 'Vầu tươi', supplier: 'Tế', location: 'xuong-1', weight: 1000, date: '2027-01-05', createdAt: '2027-01-05T02:00:00.000Z' }
+    { id: 'mat-m2', type: 'Váº§u tÆ°Æ¡i', supplier: 'Táº¿', location: 'xuong-1', weight: 1000, date: '2027-01-05', createdAt: '2027-01-05T02:00:00.000Z' }
   ];
   x2.fillX1SaySinhOptions();
   selectValues('x1-say-sinh-source', ['mat-m2']);
@@ -681,10 +681,10 @@ check('I6: năm mới reset số về 001', (() => {
   return newYearLot && newYearLot.code === 'V270105001';
 })());
 
-// ─── J. PHÁT HIỆN LÔ TRÙNG MÃ + KIỂM TRA CÔNG ĐOẠN SAU ───
-console.log('--- J. PHÁT HIỆN LÔ TRÙNG MÃ + CÔNG ĐOẠN SAU ---');
+// â”€â”€â”€ J. PHÃT HIá»†N LÃ” TRÃ™NG MÃƒ + KIá»‚M TRA CÃ”NG ÄOáº N SAU â”€â”€â”€
+console.log('--- J. PHÃT HIá»†N LÃ” TRÃ™NG MÃƒ + CÃ”NG ÄOáº N SAU ---');
 
-check('J1: x1SsFindDupes() trả mảng rỗng khi không có trùng', (() => {
+check('J1: x1SsFindDupes() tráº£ máº£ng rá»—ng khi khÃ´ng cÃ³ trÃ¹ng', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
     { id: 's2', code: 'V261105002', date: '2026-11-05', qty: 200 },
@@ -692,7 +692,7 @@ check('J1: x1SsFindDupes() trả mảng rỗng khi không có trùng', (() => {
   return x2.x1SsFindDupes().length === 0;
 })());
 
-check('J2: x1SsFindDupes() phát hiện 2 lô cùng mã', (() => {
+check('J2: x1SsFindDupes() phÃ¡t hiá»‡n 2 lÃ´ cÃ¹ng mÃ£', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
     { id: 's2', code: 'V261105001', date: '2026-11-06', qty: 200 },
@@ -702,7 +702,7 @@ check('J2: x1SsFindDupes() phát hiện 2 lô cùng mã', (() => {
   return dupes.length === 1 && dupes[0].code === 'V261105001' && dupes[0].count === 2;
 })());
 
-check('J3: x1SsFindDupes() entries có đủ id/date/qty', (() => {
+check('J3: x1SsFindDupes() entries cÃ³ Ä‘á»§ id/date/qty', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
     { id: 's2', code: 'V261105001', date: '2026-11-06', qty: 200 },
@@ -713,7 +713,7 @@ check('J3: x1SsFindDupes() entries có đủ id/date/qty', (() => {
          dupes[0].entries.some(e => e.id === 's2' && e.qty === 200);
 })());
 
-check('J4: x1SsHasDownstream(false) khi lô chưa có công đoạn sau', (() => {
+check('J4: x1SsHasDownstream(false) khi lÃ´ chÆ°a cÃ³ cÃ´ng Ä‘oáº¡n sau', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
   ];
@@ -726,7 +726,7 @@ check('J4: x1SsHasDownstream(false) khi lô chưa có công đoạn sau', (() =>
   return x2.x1SsHasDownstream('s1') === false;
 })());
 
-check('J5: x1SsHasDownstream(true) khi Bốc trực tiếp liên kết saySinhId', (() => {
+check('J5: x1SsHasDownstream(true) khi Bá»‘c trá»±c tiáº¿p liÃªn káº¿t saySinhId', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
   ];
@@ -736,7 +736,7 @@ check('J5: x1SsHasDownstream(true) khi Bốc trực tiếp liên kết saySinhId
   return x2.x1SsHasDownstream('s1') === true;
 })());
 
-check('J6: x1SsHasDownstream(true) qua Lọc Ống → Bốc → Sấy Sinh', (() => {
+check('J6: x1SsHasDownstream(true) qua Lá»c á»ng â†’ Bá»‘c â†’ Sáº¥y Sinh', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
   ];
@@ -749,7 +749,7 @@ check('J6: x1SsHasDownstream(true) qua Lọc Ống → Bốc → Sấy Sinh', ((
   return x2.x1SsHasDownstream('s1') === true;
 })());
 
-check('J7: x1SsHasDownstream(true) qua Cắt Mắt → Lọc Ống → Bốc → Sấy Sinh', (() => {
+check('J7: x1SsHasDownstream(true) qua Cáº¯t Máº¯t â†’ Lá»c á»ng â†’ Bá»‘c â†’ Sáº¥y Sinh', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
   ];
@@ -765,14 +765,14 @@ check('J7: x1SsHasDownstream(true) qua Cắt Mắt → Lọc Ống → Bốc →
   return x2.x1SsHasDownstream('s1') === true;
 })());
 
-check('J8: x1SsHasDownstream(false) khi ssId không tồn tại', (() => {
+check('J8: x1SsHasDownstream(false) khi ssId khÃ´ng tá»“n táº¡i', (() => {
   state.xuong1BocRecords = [
     { id: 'b1', saySinhId: 's9', date: '2026-11-06', qty: 100 },
   ];
   return x2.x1SsHasDownstream('nonexistent') === false;
 })());
 
-check('J9: sửa mã Sấy Sinh lan ra toàn chuỗi công đoạn X1', (() => {
+check('J9: sá»­a mÃ£ Sáº¥y Sinh lan ra toÃ n chuá»—i cÃ´ng Ä‘oáº¡n X1', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's1', code: 'V261105001', date: '2026-11-05', qty: 100 },
   ];
@@ -811,7 +811,7 @@ check('J9: sửa mã Sấy Sinh lan ra toàn chuỗi công đoạn X1', (() => {
          display.lotCode === 'V261105999';
 })());
 
-check('J10: truy vết ưu tiên mã Sấy Sinh sống thay snapshot mã cũ', (() => {
+check('J10: truy váº¿t Æ°u tiÃªn mÃ£ Sáº¥y Sinh sá»‘ng thay snapshot mÃ£ cÅ©', (() => {
   state.xuong1SaySinhRecords = [
     { id: 's-live', code: 'V261105777', date: '2026-11-05', qty: 100 },
   ];
@@ -824,9 +824,10 @@ check('J10: truy vết ưu tiên mã Sấy Sinh sống thay snapshot mã cũ', (
   return x2.x1TraceLotCodeOf(state.xuong1LocOngRecords[0]) === 'V261105777';
 })());
 
-check('J11: cả sửa mã trong form lẫn sửa mã inline đều gọi đồng bộ xuống công đoạn sau',
+check('J11: cáº£ sá»­a mÃ£ trong form láº«n sá»­a mÃ£ inline Ä‘á»u gá»i Ä‘á»“ng bá»™ xuá»‘ng cÃ´ng Ä‘oáº¡n sau',
   evSrc.includes('syncX1SaySinhCodeDownstream(id, newCode, true)') &&
   xuong2Src.includes('syncX1SaySinhCodeDownstream(rec.id, rec.code'));
 
-console.log(`\n=== KẾT QUẢ X1 SẤY SINH LOT: ${pass} PASS / ${fail} FAIL ===`);
+console.log(`\n=== Káº¾T QUáº¢ X1 Sáº¤Y SINH LOT: ${pass} PASS / ${fail} FAIL ===`);
 process.exit(fail > 0 ? 1 : 0);
+

@@ -261,7 +261,10 @@ export function syncPermissionUI() {
     const dashboardView = document.getElementById('dashboard-view');
     if (dashboardView) dashboardView.classList.add('active');
     document.querySelectorAll('.nav-btn, .mobile-nav-item').forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-target') === 'dashboard-view');
+      const active = btn.getAttribute('data-target') === 'dashboard-view';
+      btn.classList.toggle('active', active);
+      if (active) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
     });
   }
   // Mục chỉ dành cho Admin trong menu

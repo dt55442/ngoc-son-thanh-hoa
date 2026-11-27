@@ -44,11 +44,15 @@ check('B. APP_SHELL VẪN precache vendor/xlsx.full.min.js (OFFLINE)', sw.includ
 
 // ─── C. js/main.js ──────────────────────────────────────────────
 const mainSrc = rd('js/main.js');
+const eventsSrc = rd('js/events.js');
 check('C. renderAll lần đầu hoãn vẽ (deferInitialDashDecor + scheduleViewDecor)', mainSrc.includes('let deferInitialDashDecor = false;') && /if \(deferInitialDashDecor\) \{[\s\S]{0,600}scheduleViewDecor\('dashboard-view', true\)/.test(mainSrc));
 check('C. boot bật cờ quanh checkAuthAndRender rồi TẮT', /deferInitialDashDecor = true;\s*\n\s*checkAuthAndRender\(\);\s*\n\s*deferInitialDashDecor = false;/.test(mainSrc));
 check('C. initHistory hoãn setTimeout (vẫn sau mọi load*())', /setTimeout\(\(\) => \{\s*try \{ initHistory\(\);/.test(mainSrc));
 check('C. nội dung nền qua scheduleBootBackgroundTasks (SW + SheetJS)', mainSrc.includes('function scheduleBootBackgroundTasks') && /scheduleBootBackgroundTasks\(\);/.test(mainSrc) && mainSrc.includes('kickXlsxBackgroundLoad'));
 check('C. runWhenIdle có unref cho Node (không giữ process test)', /t\.unref\(\)/.test(mainSrc));
+check('C. switchViewCore khong flush tab cu truoc khi chuyen', /async function switchViewCore\(targetViewId\) {[\s\S]{0,1000}?cleanupByPrefix/.test(mainSrc) && !/async function switchViewCore\(targetViewId\) {[\s\S]{0,1000}?flushRenderAll\(\)/.test(mainSrc));
+check('C. observer ngay chi debounce khi mutation them input[type="date"]', /MutationObserver\(\(mutations\) => {[\s\S]{0,700}?record.addedNodes[\s\S]{0,300}?input\[type=["']date["']\][\s\S]{0,300}?setTimeout\(\(\) => initVnDateInputs\(\), 200\)/.test(mainSrc));
+check('C. events preloads nav/mobile theo data-target khi pointerenter hoac focus', eventsSrc.includes("import { preloadModulesForView } from './module-loader.js';") && /pointerenter[\s\S]{0,300}?preloadModulesForView\(target\)/.test(eventsSrc) && /focus[\s\S]{0,300}?preloadModulesForView\(target\)/.test(eventsSrc));
 
 // ─── D. js/cloud.js ─────────────────────────────────────────────
 const cloudSrc = rd('js/cloud.js');
@@ -70,8 +74,19 @@ check('F. ensureXlsx giải NGAY khi window.XLSX có sẵn', resolved === global
 // ─── G. sw.js CACHE_NAME = APP_VERSION ─────────────────────────
 const stateSrc = rd('js/state.js');
 const swVer = (sw.match(/nha-may-ngoc-son-v(\d+)/) || [])[1];
-check('G. sw.js CACHE_NAME = v456', swVer === '456');
+check('G. sw.js CACHE_NAME = v486', swVer === '486');
 check('G. APP_VERSION khớp CACHE_NAME (quy tắc 73)', stateSrc.includes("APP_VERSION = 'v" + swVer + "'"));
+
+// ─── H. Bảo vệ rapid switchView + retry module lỗi ─────────────────
+check('H. switchViewCore dùng latest-request guard',
+  /let viewSwitchRequestId = 0;/.test(mainSrc)
+  && /async function switchViewCore\(targetViewId\) \{\s*const requestId = \+\+viewSwitchRequestId;/.test(mainSrc)
+  && /await loadModulesForView\(targetViewId\);[\s\S]{0,120}?if \(requestId !== viewSwitchRequestId\) return;/.test(mainSrc)
+  && /if \(requestId !== viewSwitchRequestId\) return;[\s\S]{0,300}?cleanupByPrefix/.test(mainSrc));
+const moduleLoaderSrc = rd('js/module-loader.js');
+check('H. module lỗi không cache false để load/preload có thể retry',
+  !moduleLoaderSrc.includes('loadedModules.set(moduleName, false)')
+  && !/\.catch\([^{}]*=>[^{}]*loadedModules\.set\([^,\n]+,\s*false\)/.test(moduleLoaderSrc));
 
 console.log('─── KẾT QUẢ: ' + pass + ' PASS / ' + fail + ' FAIL ───');
 if (fail) process.exit(1);
